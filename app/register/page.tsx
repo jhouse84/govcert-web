@@ -1,4 +1,4 @@
-"use client";
+ï»¿"use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/api";
@@ -75,14 +75,14 @@ export default function RegisterPage() {
             <input
               type="password" value={form.password} onChange={e => update("password", e.target.value)} required
               style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(11,25,41,.16)", borderRadius: 6, fontSize: 14, outline: "none", boxSizing: "border-box" }}
-              placeholder="••••••••"
+              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
             />
           </div>
           <button
             type="submit" disabled={loading}
             style={{ width: "100%", padding: "12px", background: "#C89B3C", border: "none", borderRadius: 6, color: "#fff", fontSize: 15, fontWeight: 500, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1 }}
           >
-            {loading ? "Creating account…" : "Create Account ?"}
+            {loading ? "Creating accountâ€¦" : "Create Account ?"}
           </button>
         </form>
 

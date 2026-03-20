@@ -27,50 +27,50 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F1E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ background: "#fff", borderRadius: 10, padding: "48px 40px", width: "100%", maxWidth: 420, boxShadow: "0 4px 24px rgba(11,25,41,.08)" }}>
-        <div style={{ marginBottom: 32, textAlign: "center" }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 28, color: "#0B1929", fontWeight: 400, marginBottom: 6 }}>
-            Gov<span style={{ color: "#C89B3C" }}>Cert</span>
+    <div style={{ minHeight: "100vh", background: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #0B1929 0%, #1A3357 50%, #0B1929 100%)", opacity: 0.95 }} />
+      <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: 440, padding: "0 24px" }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 36, height: 36, background: "var(--gold)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+            </div>
+            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#fff", fontWeight: 500, letterSpacing: ".02em" }}>
+              Gov<em style={{ color: "var(--gold2)", fontStyle: "normal" }}>Cert</em>
+            </span>
           </div>
-          <p style={{ color: "#5A7A96", fontSize: 14 }}>Sign in to your account</p>
+          <p style={{ color: "rgba(255,255,255,.5)", fontSize: 14, fontWeight: 300 }}>Sign in to your account</p>
         </div>
 
-        {error && (
-          <div style={{ background: "#FAE8E8", border: "1px solid rgba(139,29,29,.2)", borderRadius: 6, padding: "10px 14px", marginBottom: 20, color: "#8B1D1D", fontSize: 13 }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#0B1929", marginBottom: 6 }}>Email</label>
-            <input
-              type="email" value={email} onChange={e => setEmail(e.target.value)} required
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(11,25,41,.16)", borderRadius: 6, fontSize: 14, outline: "none", boxSizing: "border-box" }}
-              placeholder="you@company.com"
-            />
-          </div>
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#0B1929", marginBottom: 6 }}>Password</label>
-            <input
-              type="password" value={password} onChange={e => setPassword(e.target.value)} required
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(11,25,41,.16)", borderRadius: 6, fontSize: 14, outline: "none", boxSizing: "border-box" }}
-              placeholder="••••••••"
-            />
-          </div>
-          <button
-            type="submit" disabled={loading}
-            style={{ width: "100%", padding: "12px", background: "#C89B3C", border: "none", borderRadius: 6, color: "#fff", fontSize: 15, fontWeight: 500, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1 }}
-          >
-            {loading ? "Signing in…" : "Sign In ?"}
-          </button>
-        </form>
-
-        <p style={{ textAlign: "center", marginTop: 24, fontSize: 13, color: "#5A7A96" }}>
-          No account?{" "}
-          <a href="/register" style={{ color: "#C89B3C", textDecoration: "none", fontWeight: 500 }}>Register here</a>
-        </p>
+        <div style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 12, padding: "40px 36px", backdropFilter: "blur(12px)" }}>
+          {error && (
+            <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "10px 14px", marginBottom: 20, color: "var(--red)", fontSize: 13 }}>
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,.5)", marginBottom: 7, textTransform: "uppercase", letterSpacing: ".08em" }}>Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                style={{ width: "100%", padding: "11px 14px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", fontSize: 14, color: "#fff", outline: "none", boxSizing: "border-box" }}
+                placeholder="you@company.com" />
+            </div>
+            <div style={{ marginBottom: 28 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,.5)", marginBottom: 7, textTransform: "uppercase", letterSpacing: ".08em" }}>Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
+                style={{ width: "100%", padding: "11px 14px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", fontSize: 14, color: "#fff", outline: "none", boxSizing: "border-box" }}
+                placeholder="........" />
+            </div>
+            <button type="submit" disabled={loading}
+              style={{ width: "100%", padding: "13px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 15, fontWeight: 500, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 4px 24px rgba(200,155,60,.4)", transition: "all .2s" }}>
+              {loading ? "Signing in..." : "Sign In →"}
+            </button>
+          </form>
+          <p style={{ textAlign: "center", marginTop: 24, fontSize: 13, color: "rgba(255,255,255,.35)" }}>
+            No account?{" "}
+            <a href="/register" style={{ color: "var(--gold2)", textDecoration: "none", fontWeight: 500 }}>Register here</a>
+          </p>
+        </div>
       </div>
     </div>
   );

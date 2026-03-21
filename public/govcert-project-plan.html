@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GovCert — 3-Week Build Plan · www.govcert.com</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0B1929;--navy2:#112238;--navy3:#1A3357;
+  --gold:#C89B3C;--gold2:#E8B84B;--gold-lt:#F5D680;
+  --cream:#F5F1E8;--cream2:#EDE8DB;--cream3:#E0D9C8;
+  --ink:#0B1929;--ink2:#2D4A6B;--ink3:#5A7A96;--ink4:#8BA0B4;
+  --border:rgba(11,25,41,.09);--border2:rgba(11,25,41,.16);
+  --green:#1A6644;--green-bg:#E6F4EE;--green-b:rgba(26,102,68,.2);
+  --amber:#8A5E10;--amber-bg:#FBF0DC;--amber-b:rgba(138,94,16,.2);
+  --red:#8B1D1D;--red-bg:#FAE8E8;--red-b:rgba(139,29,29,.2);
+  --blue:#1A3F7A;--blue-bg:#E8EEF8;--blue-b:rgba(26,63,122,.2);
+  --purple:#4A1A7A;--purple-bg:#F0E8F8;--purple-b:rgba(74,26,122,.2);
+  --teal:#1A6A6A;--teal-bg:#E6F4F4;--teal-b:rgba(26,106,106,.2);
+  --r:6px;--rl:10px;
+  --shadow:0 1px 3px rgba(11,25,41,.06),0 4px 12px rgba(11,25,41,.05);
+  --shadow-lg:0 8px 32px rgba(11,25,41,.12);
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);font-size:13.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+/* ── LAYOUT ── */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:280px;background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 1px 0 var(--border)}
+.body{flex:1;overflow-y:auto;padding:22px 24px}
+.view{display:none}.view.on{display:block;animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ── SIDEBAR ── */
+.sb-header{padding:18px 16px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-brand{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.sb-icon{width:28px;height:28px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.sb-icon svg{width:14px;height:14px;fill:#fff}
+.sb-name{font-family:'Cormorant Garamond',serif;font-size:19px;color:#fff;font-weight:400}
+.sb-name em{color:var(--gold2);font-style:normal}
+.sb-sub{font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.09em}
+.sb-progress{margin:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:10px 12px}
+.sb-p-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.sb-p-label{font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em}
+.sb-p-val{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold2);font-weight:400}
+.sb-pbar{height:3px;background:rgba(255,255,255,.08);border-radius:100px;overflow:hidden}
+.sb-pfill{height:100%;background:var(--gold);border-radius:100px;transition:width .5s}
+.sb-nav{padding:10px 8px;flex:1}
+.sb-section{margin-bottom:16px}
+.sb-sec-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.25);padding:0 9px;margin-bottom:4px;font-weight:600}
+.sb-item{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:var(--r);cursor:pointer;color:rgba(255,255,255,.42);font-size:12.5px;transition:all .12s;margin-bottom:1px}
+.sb-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.78)}
+.sb-item.on{background:rgba(200,155,60,.15);color:var(--gold2);font-weight:500}
+.sb-item-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sb-item-dot.done{background:var(--green)}
+.sb-item-dot.active{background:var(--gold)}
+.sb-item-dot.planned{background:rgba(255,255,255,.2)}
+.sb-item-pct{margin-left:auto;font-size:10px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-item.on .sb-item-pct{color:var(--gold2);opacity:.7}
+.sb-footer{padding:10px 12px;border-top:1px solid rgba(255,255,255,.06)}
+.sb-footer-text{font-size:10.5px;color:rgba(255,255,255,.28);line-height:1.5}
+
+/* ── TOPBAR ── */
+.tb-left .tb-title{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--navy);font-weight:400}
+.tb-left .tb-sub{font-size:11.5px;color:var(--ink3)}
+.tb-right{display:flex;gap:7px;align-items:center}
+
+/* ── BUTTONS ── */
+.btn{padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-family:'DM Sans',sans-serif;cursor:pointer;border:1px solid var(--border2);background:#fff;color:var(--ink);font-weight:500;transition:all .12s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn:hover{background:var(--cream2)}
+.btn-gold{background:var(--gold);border-color:var(--gold);color:#fff}
+.btn-gold:hover{background:var(--gold2);border-color:var(--gold2)}
+.btn-navy{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn-navy:hover{background:var(--navy2)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px;border-radius:4px}
+
+/* ── OVERVIEW ── */
+.ov-header{background:linear-gradient(135deg,var(--navy2) 0%,var(--navy) 100%);border-radius:var(--rl);padding:22px 26px;margin-bottom:18px;color:#fff}
+.ov-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;margin-bottom:3px}
+.ov-sub{font-size:12px;color:rgba(255,255,255,.42);margin-bottom:18px;line-height:1.6}
+.ov-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.ov-stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:10px 14px}
+.ov-sv{font-family:'Cormorant Garamond',serif;font-size:26px;color:#fff;line-height:1}
+.ov-sl{font-size:9.5px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+
+/* ── ARCHITECTURE BOX ── */
+.arch-box{background:var(--navy);border-radius:var(--rl);padding:18px 20px;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:11.5px;color:rgba(255,255,255,.7);line-height:1.8;position:relative;overflow:hidden}
+.arch-box::before{content:'SYSTEM ARCHITECTURE';position:absolute;top:12px;right:16px;font-size:9px;letter-spacing:.1em;color:rgba(255,255,255,.18);font-weight:500}
+.arch-layer{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.arch-layer:last-child{border-bottom:none}
+.arch-layer-label{width:120px;flex-shrink:0;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding-top:2px}
+.arch-items{display:flex;flex-wrap:wrap;gap:6px;flex:1}
+.arch-chip{padding:3px 9px;border-radius:4px;font-size:10.5px;border:1px solid}
+
+/* ── GANTT ── */
+.gantt-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.gantt-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.gantt-row:last-child{margin-bottom:0}
+.gantt-label{width:170px;font-size:11.5px;color:var(--ink2);flex-shrink:0;line-height:1.3}
+.gantt-label span{font-size:10px;color:var(--ink4);display:block;margin-top:1px}
+.gantt-track{flex:1;background:var(--cream2);border-radius:3px;height:22px;position:relative;overflow:hidden}
+.gantt-fill{position:absolute;top:0;bottom:0;border-radius:3px;display:flex;align-items:center;overflow:hidden}
+.gantt-fill-bg{position:absolute;inset:0;opacity:.18}
+.gantt-fill-progress{position:absolute;top:0;bottom:0;left:0}
+.gantt-fill-label{position:relative;z-index:1;padding-left:7px;font-size:10px;font-weight:500;color:#fff;white-space:nowrap}
+.gantt-milestone{position:absolute;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;background:var(--gold);border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px var(--gold);z-index:2;cursor:pointer}
+.gantt-wk-labels{display:flex;padding-left:178px;margin-bottom:4px}
+.gantt-wk-label{flex:1;font-size:9.5px;color:var(--ink4);font-family:'DM Mono',monospace}
+
+/* ── PHASE CARDS ── */
+.phase-card{background:#fff;border:1px solid var(--border);border-radius:var(--rl);margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .15s}
+.phase-card:hover{box-shadow:var(--shadow-lg)}
+.phase-header{padding:12px 16px;display:flex;align-items:center;gap:11px;cursor:pointer;user-select:none;transition:background .12s}
+.phase-header:hover{background:var(--cream)}
+.phase-status-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;font-weight:700}
+.psi-done{background:var(--green-bg);color:var(--green)}
+.psi-active{background:var(--amber-bg);color:var(--amber)}
+.psi-planned{background:var(--cream2);color:var(--ink4)}
+.phase-info{flex:1}
+.phase-name-row{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.phase-name{font-size:13.5px;font-weight:500;color:var(--navy)}
+.phase-meta{font-size:11.5px;color:var(--ink3)}
+.phase-right{text-align:right;flex-shrink:0;min-width:90px}
+.phase-pct{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--navy);line-height:1}
+.phase-pct-label{font-size:9.5px;color:var(--ink4);text-transform:uppercase;letter-spacing:.06em}
+.phase-pct-bar{height:3px;background:var(--cream2);border-radius:100px;margin-top:5px;overflow:hidden}
+.phase-pct-fill{height:100%;border-radius:100px;transition:width .6s}
+
+/* ── TASK SECTIONS ── */
+.phase-body{display:none;border-top:1px solid var(--border);padding:0}
+.phase-body.open{display:block}
+.task-section{padding:12px 16px;border-bottom:1px solid var(--border)}
+.task-section:last-child{border-bottom:none}
+.task-sec-header{font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.task-list{display:flex;flex-direction:column;gap:4px}
+.task{display:flex;align-items:flex-start;gap:9px;padding:7px 10px;border-radius:var(--r);cursor:pointer;transition:background .1s}
+.task:hover{background:var(--cream)}
+.task-checkbox{width:15px;height:15px;border-radius:3px;border:1.5px solid var(--border2);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s}
+.task.done .task-checkbox{background:var(--green);border-color:var(--green)}
+.task.done .task-checkbox::after{content:'✓';font-size:8px;color:#fff;font-weight:800}
+.task.active .task-checkbox{border-color:var(--amber);background:var(--amber-bg)}
+.task.active .task-checkbox::after{content:'→';font-size:8px;color:var(--amber);font-weight:700}
+.task.blocked .task-checkbox{border-color:var(--red);background:var(--red-bg)}
+.task.blocked .task-checkbox::after{content:'✕';font-size:8px;color:var(--red);font-weight:800}
+.task-content{flex:1;min-width:0}
+.task-title{font-size:12.5px;color:var(--ink);line-height:1.4}
+.task.done .task-title{text-decoration:line-through;color:var(--ink3)}
+.task-detail{font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.45}
+.task-tags{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap}
+.tag{padding:1px 6px;border-radius:3px;font-size:10px;font-weight:500}
+.tag-fe{background:var(--blue-bg);color:var(--blue)}
+.tag-be{background:var(--purple-bg);color:var(--purple)}
+.tag-db{background:var(--teal-bg);color:var(--teal)}
+.tag-infra{background:var(--red-bg);color:var(--red)}
+.tag-api{background:var(--amber-bg);color:var(--amber)}
+.tag-ai{background:var(--gold-bg,rgba(200,155,60,.12));color:var(--gold)}
+.tag-security{background:#f0e8ff;color:#5a1a8a}
+.task-meta{flex-shrink:0;text-align:right;min-width:80px}
+.task-when{font-size:10px;color:var(--ink4);font-family:'DM Mono',monospace;white-space:nowrap}
+.task-effort{font-size:10px;color:var(--ink4);margin-top:1px;white-space:nowrap}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:100px;font-size:10px;font-weight:500}
+.bg-green{background:var(--green-bg);color:var(--green)}
+.bg-amber{background:var(--amber-bg);color:var(--amber)}
+.bg-red{background:var(--red-bg);color:var(--red)}
+.bg-blue{background:var(--blue-bg);color:var(--blue)}
+.bg-gray{background:var(--cream2);color:var(--ink3)}
+.bg-purple{background:var(--purple-bg);color:var(--purple)}
+.bg-teal{background:var(--teal-bg);color:var(--teal)}
+.bg-navy{background:var(--navy);color:rgba(255,255,255,.75)}
+
+/* ── BACKEND DETAIL VIEW ── */
+.be-section{background:#fff;border:1px solid var(--border);border-radius:var(--rl);margin-bottom:14px;overflow:hidden;box-shadow:var(--shadow)}
+.be-header{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.be-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.be-name{font-size:13.5px;font-weight:500;color:var(--navy)}
+.be-desc{font-size:11.5px;color:var(--ink3);margin-top:1px}
+.be-body{padding:14px 16px}
+.endpoint-list{display:flex;flex-direction:column;gap:5px}
+.endpoint{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;background:var(--cream);border-radius:var(--r);border:1px solid var(--border)}
+.method{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;padding:2px 6px;border-radius:3px;flex-shrink:0;min-width:38px;text-align:center}
+.method.get{background:#E3F2FD;color:#1565C0}
+.method.post{background:#E8F5E9;color:#2E7D32}
+.method.put{background:#FFF8E1;color:#E65100}
+.method.del{background:#FDECEA;color:#C62828}
+.ep-path{font-family:'DM Mono',monospace;font-size:11.5px;color:var(--navy);flex-shrink:0}
+.ep-desc{font-size:11.5px;color:var(--ink3);margin-left:auto;text-align:right}
+.db-schema{font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,.7);background:var(--navy);border-radius:var(--r);padding:12px 14px;line-height:1.9;margin-top:8px}
+.db-schema .field{color:var(--gold2)}.db-schema .type{color:rgba(255,255,255,.45)}.db-schema .comment{color:rgba(255,255,255,.25)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ── INTEGRATION MAP ── */
+.int-map{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.int-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.int-row:last-child{border-bottom:none}
+.int-icon{font-size:18px;flex-shrink:0;width:28px;text-align:center}
+.int-name{font-weight:500;font-size:13px;color:var(--navy);width:160px;flex-shrink:0}
+.int-auth{font-size:11px;font-family:'DM Mono',monospace;color:var(--ink3);width:140px;flex-shrink:0}
+.int-scope{font-size:11.5px;color:var(--ink2);flex:1}
+.int-be{font-size:11px;color:var(--purple);font-family:'DM Mono',monospace;text-align:right;flex-shrink:0}
+.int-status{flex-shrink:0}
+
+/* ── DECISION TABLE ── */
+.decision-table{background:#fff;border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;box-shadow:var(--shadow);margin-bottom:14px}
+table{width:100%;border-collapse:collapse}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);font-weight:500;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);background:var(--cream)}
+td{padding:8px 12px;border-bottom:1px solid var(--border);font-size:12.5px;vertical-align:top}
+tr:last-child td{border-bottom:none}
+
+/* ── TIMELINE VIEW ── */
+.timeline{position:relative;padding-left:28px}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:1px;background:var(--cream3)}
+.tl-item{position:relative;margin-bottom:20px}
+.tl-dot{position:absolute;left:-24px;top:3px;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--border2)}
+.tl-dot.done{background:var(--green)}
+.tl-dot.active{background:var(--gold);box-shadow:0 0 0 3px rgba(200,155,60,.2)}
+.tl-dot.planned{background:var(--cream3)}
+.tl-date{font-size:10.5px;color:var(--ink4);font-family:'DM Mono',monospace;margin-bottom:3px}
+.tl-title{font-size:13px;font-weight:500;color:var(--navy);margin-bottom:3px}
+.tl-body{font-size:12px;color:var(--ink3);line-height:1.55}
+.tl-tags{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:9px 14px;border-radius:var(--r);font-size:12.5px;display:flex;align-items:center;gap:7px;box-shadow:var(--shadow-lg);transform:translateY(80px);opacity:0;transition:all .28s cubic-bezier(.34,1.56,.64,1);z-index:9999;max-width:340px}
+.toast.show{transform:none;opacity:1}
+
+/* ── MISC ── */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;box-shadow:var(--shadow)}
+.card-title{font-size:13px;font-weight:500;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.row-btwn{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.txt-sm{font-size:12px}.txt-xs{font-size:11px}.txt-muted{color:var(--ink3)}
+.mono{font-family:'DM Mono',monospace}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+<aside class="sidebar">
+  <div class="sb-header">
+    <div class="sb-brand">
+      <div class="sb-icon"><svg viewBox="0 0 16 16"><path d="M8 1L1 4.5v4C1 12 4.5 14.5 8 15c3.5-.5 7-3 7-6.5v-4L8 1z"/></svg></div>
+      <span class="sb-name">Gov<em>Cert</em></span>
+    </div>
+    <div class="sb-sub">Comprehensive Development Plan · v3</div>
+  </div>
+  <div class="sb-progress">
+    <div class="sb-p-row"><span class="sb-p-label">Overall Progress</span><span class="sb-p-val" id="sb-pct">0%</span></div>
+    <div class="sb-pbar"><div class="sb-pfill" id="sb-pfill" style="width:0%"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      <span style="font-size:10px;color:rgba(255,255,255,.28)" id="sb-done-tasks">0 tasks done</span>
+      <span style="font-size:10px;color:rgba(255,255,255,.28)" id="sb-total-tasks">0 total</span>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section">
+      <div class="sb-sec-label">Views</div>
+      <div class="sb-item on" onclick="switchView('overview',this)">📊 Overview & Architecture</div>
+      <div class="sb-item" onclick="switchView('gantt',this)">📅 Full Timeline / Gantt</div>
+      <div class="sb-item" onclick="switchView('backend',this)">⚙️ Backend Deep Dive</div>
+      <div class="sb-item" onclick="switchView('integrations',this)">🔗 Integration Map</div>
+      <div class="sb-item" onclick="switchView('decisions',this)">🧭 Tech Decisions</div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-sec-label">Phases</div>
+      <div id="sb-phases"></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-sec-label">Filter Tasks</div>
+      <div class="sb-item" onclick="filterTag('fe')"><span style="width:8px;height:8px;background:#1A3F7A;border-radius:2px;display:inline-block"></span> Frontend</div>
+      <div class="sb-item" onclick="filterTag('be')"><span style="width:8px;height:8px;background:#4A1A7A;border-radius:2px;display:inline-block"></span> Backend</div>
+      <div class="sb-item" onclick="filterTag('db')"><span style="width:8px;height:8px;background:#1A6A6A;border-radius:2px;display:inline-block"></span> Database</div>
+      <div class="sb-item" onclick="filterTag('infra')"><span style="width:8px;height:8px;background:#8B1D1D;border-radius:2px;display:inline-block"></span> Infrastructure</div>
+      <div class="sb-item" onclick="filterTag('api')"><span style="width:8px;height:8px;background:#8A5E10;border-radius:2px;display:inline-block"></span> APIs / OAuth</div>
+      <div class="sb-item" onclick="filterTag('security')"><span style="width:8px;height:8px;background:#5a1a8a;border-radius:2px;display:inline-block"></span> Security</div>
+      <div class="sb-item" onclick="filterTag(null)">✕ Clear filter</div>
+    </div>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-footer-text">www.govcert.com<br>3-Week Build · Self-built with Claude 🚀<br>Start API keys: Week 1 Day 1</div>
+  </div>
+</aside>
+
+<!-- ══════════════════════ MAIN ══════════════════════ -->
+<div class="main">
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-title" id="view-title">Overview & System Architecture</div>
+      <div class="tb-sub" id="view-sub">GovCert · Full-stack development plan · Click tasks to update status</div>
+    </div>
+    <div class="tb-right">
+      <span style="font-size:11px;color:var(--ink3)">Legend:</span>
+      <span class="badge bg-green">✓ Done</span>
+      <span class="badge bg-amber">→ Active</span>
+      <span class="badge bg-gray">◦ Planned</span>
+      <span class="badge bg-red">✕ Blocked</span>
+      <button class="btn btn-sm" onclick="exportStatus()">Export Status</button>
+      <button class="btn btn-gold btn-sm" onclick="toast('✦ Syncing project plan to platform…')">Sync to Platform</button>
+    </div>
+  </div>
+  <div class="body">
+
+    <!-- ── OVERVIEW ── -->
+    <div class="view on" id="view-overview">
+      <div class="ov-header">
+        <div class="ov-title">GovCert — Comprehensive Development Plan</div>
+        <div class="ov-sub">3-week build to www.govcert.com — self-built with Claude, step by step. Working tirelessly = fully achievable. Frontend prototype is complete. The entire remaining scope is backend: auth, OAuth proxy, database, AI service, document storage, and deployment. This plan tracks every task. <strong style="color:var(--gold2)">Start all API key registrations on Week 1 Day 1 — QuickBooks and Gusto provider reviews take 1–5 days and are the only real external blocker.</strong></div>
+        <div class="ov-stats">
+          <div class="ov-stat"><div class="ov-sv" id="ov-overall">0%</div><div class="ov-sl">Overall</div></div>
+          <div class="ov-stat"><div class="ov-sv" id="ov-done">0</div><div class="ov-sl">Tasks Done</div></div>
+          <div class="ov-stat"><div class="ov-sv" id="ov-total">0</div><div class="ov-sl">Total Tasks</div></div>
+          <div class="ov-stat"><div class="ov-sv">21 days</div><div class="ov-sl">Timeline</div></div>
+          <div class="ov-stat"><div class="ov-sv" id="ov-phase">P2</div><div class="ov-sl">Current Phase</div></div>
+        </div>
+      </div>
+
+      <!-- System architecture -->
+      <div class="arch-box">
+        <div class="arch-layer">
+          <div class="arch-layer-label" style="color:rgba(255,255,255,.35);font-size:9.5px">👥 USERS</div>
+          <div class="arch-items">
+            <div class="arch-chip" style="background:rgba(26,63,122,.3);border-color:rgba(26,63,122,.5);color:#9ab4e8">Admin (Advisors / HSG staff)</div>
+            <div class="arch-chip" style="background:rgba(26,63,122,.3);border-color:rgba(26,63,122,.5);color:#9ab4e8">Customer (Business Owners)</div>
+          </div>
+        </div>
+        <div class="arch-layer">
+          <div class="arch-layer-label" style="color:rgba(255,255,255,.35);font-size:9.5px">🌐 FRONTEND</div>
+          <div class="arch-items">
+            <div class="arch-chip" style="background:rgba(26,63,122,.2);border-color:rgba(26,63,122,.4);color:#9ab4e8">Landing Page (HTML/CSS/JS)</div>
+            <div class="arch-chip" style="background:rgba(26,63,122,.2);border-color:rgba(26,63,122,.4);color:#9ab4e8">Admin Panel (React or Vanilla)</div>
+            <div class="arch-chip" style="background:rgba(26,63,122,.2);border-color:rgba(26,63,122,.4);color:#9ab4e8">Customer Portal (React or Vanilla)</div>
+            <div class="arch-chip" style="background:rgba(26,63,122,.2);border-color:rgba(26,63,122,.4);color:#9ab4e8">Hosted: www.govcert.com</div>
+          </div>
+        </div>
+        <div class="arch-layer">
+          <div class="arch-layer-label" style="color:rgba(255,255,255,.35);font-size:9.5px">⚙️ BACKEND API</div>
+          <div class="arch-items">
+            <div class="arch-chip" style="background:rgba(74,26,122,.25);border-color:rgba(74,26,122,.5);color:#c89be8">Auth Service (JWT + sessions)</div>
+            <div class="arch-chip" style="background:rgba(74,26,122,.25);border-color:rgba(74,26,122,.5);color:#c89be8">OAuth Proxy (token exchange + refresh)</div>
+            <div class="arch-chip" style="background:rgba(74,26,122,.25);border-color:rgba(74,26,122,.5);color:#c89be8">Data Sync Service (normalize + cache)</div>
+            <div class="arch-chip" style="background:rgba(74,26,122,.25);border-color:rgba(74,26,122,.5);color:#c89be8">AI Service (Claude API calls)</div>
+            <div class="arch-chip" style="background:rgba(74,26,122,.25);border-color:rgba(74,26,122,.5);color:#c89be8">Notification Service (email + reminders)</div>
+            <div class="arch-chip" style="background:rgba(74,26,122,.25);border-color:rgba(74,26,122,.5);color:#c89be8">Document Service (PDF gen + storage)</div>
+            <div class="arch-chip" style="background:rgba(74,26,122,.25);border-color:rgba(74,26,122,.5);color:#c89be8">Scheduler (cron jobs + compliance alerts)</div>
+          </div>
+        </div>
+        <div class="arch-layer">
+          <div class="arch-layer-label" style="color:rgba(255,255,255,.35);font-size:9.5px">🗄️ DATABASE</div>
+          <div class="arch-items">
+            <div class="arch-chip" style="background:rgba(26,106,106,.25);border-color:rgba(26,106,106,.5);color:#7ad4d4">PostgreSQL (primary — users, clients, certs)</div>
+            <div class="arch-chip" style="background:rgba(26,106,106,.25);border-color:rgba(26,106,106,.5);color:#7ad4d4">Redis (session cache + token store)</div>
+            <div class="arch-chip" style="background:rgba(26,106,106,.25);border-color:rgba(26,106,106,.5);color:#7ad4d4">S3-compatible storage (documents)</div>
+          </div>
+        </div>
+        <div class="arch-layer">
+          <div class="arch-layer-label" style="color:rgba(255,255,255,.35);font-size:9.5px">🔗 EXTERNAL APIs</div>
+          <div class="arch-items">
+            <div class="arch-chip" style="background:rgba(138,94,16,.2);border-color:rgba(138,94,16,.4);color:#e8b84b">QuickBooks OAuth 2.0</div>
+            <div class="arch-chip" style="background:rgba(138,94,16,.2);border-color:rgba(138,94,16,.4);color:#e8b84b">Gusto OAuth 2.0</div>
+            <div class="arch-chip" style="background:rgba(138,94,16,.2);border-color:rgba(138,94,16,.4);color:#e8b84b">SAM.gov REST API</div>
+            <div class="arch-chip" style="background:rgba(138,94,16,.2);border-color:rgba(138,94,16,.4);color:#e8b84b">IRS 4506-C (form submission)</div>
+            <div class="arch-chip" style="background:rgba(138,94,16,.2);border-color:rgba(138,94,16,.4);color:#e8b84b">Plaid Link API</div>
+            <div class="arch-chip" style="background:rgba(138,94,16,.2);border-color:rgba(138,94,16,.4);color:#e8b84b">Anthropic Claude API</div>
+            <div class="arch-chip" style="background:rgba(138,94,16,.2);border-color:rgba(138,94,16,.4);color:#e8b84b">SendGrid (email)</div>
+            <div class="arch-chip" style="background:rgba(138,94,16,.2);border-color:rgba(138,94,16,.4);color:#e8b84b">Stripe (billing)</div>
+          </div>
+        </div>
+        <div class="arch-layer">
+          <div class="arch-layer-label" style="color:rgba(255,255,255,.35);font-size:9.5px">🔒 SECURITY</div>
+          <div class="arch-items">
+            <div class="arch-chip" style="background:rgba(139,29,29,.2);border-color:rgba(139,29,29,.4);color:#e88a8a">HTTPS/TLS everywhere</div>
+            <div class="arch-chip" style="background:rgba(139,29,29,.2);border-color:rgba(139,29,29,.4);color:#e88a8a">OAuth tokens: server-side only (never in browser)</div>
+            <div class="arch-chip" style="background:rgba(139,29,29,.2);border-color:rgba(139,29,29,.4);color:#e88a8a">JWT with short expiry + refresh tokens</div>
+            <div class="arch-chip" style="background:rgba(139,29,29,.2);border-color:rgba(139,29,29,.4);color:#e88a8a">AES-256 encryption at rest</div>
+            <div class="arch-chip" style="background:rgba(139,29,29,.2);border-color:rgba(139,29,29,.4);color:#e88a8a">OWASP Top 10 review</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- What's real vs simulated callout -->
+      <div class="two-col mb16">
+        <div class="card">
+          <div class="card-title" style="color:var(--green)">✓ Currently Built (Frontend)</div>
+          <div style="display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink2)">
+            <div>✓ Landing page with all sections</div>
+            <div>✓ Admin Panel (all screens)</div>
+            <div>✓ Customer Portal (all screens)</div>
+            <div>✓ 8(a) and GSA MAS wizards</div>
+            <div>✓ Submission packages with field mapping</div>
+            <div>✓ OAuth flow UI (simulated)</div>
+            <div>✓ Compliance calendar</div>
+            <div>✓ Interactive project tracker (this)</div>
+            <div>✓ AI narrative drafting UI</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--amber)">⚠ Currently Simulated (Needs Backend)</div>
+          <div style="display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink2)">
+            <div>⚠ OAuth token exchange (animations only)</div>
+            <div>⚠ QuickBooks/Gusto data (hardcoded)</div>
+            <div>⚠ User authentication (no real login)</div>
+            <div>⚠ Data persistence (resets on refresh)</div>
+            <div>⚠ AI narrative generation (no real API call)</div>
+            <div>⚠ Email notifications (not wired)</div>
+            <div>⚠ Document generation/storage (mock)</div>
+            <div>⚠ SAM.gov API (static data)</div>
+            <div>⚠ Multi-tenancy (single client only)</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="overview-phase-cards"></div>
+    </div>
+
+    <!-- ── GANTT ── -->
+    <div class="view" id="view-gantt">
+      <div class="gantt-wrap">
+        <div class="row-btwn mb12">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--navy)">7-Day Sprint Full Timeline</div>
+          <div style="display:flex;gap:10px;font-size:10.5px;color:var(--ink3);align-items:center">
+            <span>D1 = Today</span>
+            <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;background:var(--green);border-radius:2px;display:inline-block"></span>Complete</span>
+            <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;background:var(--gold);border-radius:2px;display:inline-block"></span>Active</span>
+            <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;background:var(--cream3);border:1px solid var(--border2);border-radius:2px;display:inline-block"></span>Planned</span>
+            <span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;background:var(--gold);border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px var(--gold);display:inline-block"></span>Milestone</span>
+          </div>
+        </div>
+        <div class="gantt-wk-labels" id="gantt-wk-labels"></div>
+        <div id="gantt-rows"></div>
+      </div>
+
+      <!-- Milestone list -->
+      <div class="card mb16">
+        <div class="card-title">Key Milestones</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="milestone-list"></div>
+      </div>
+
+      <!-- Timeline narrative -->
+      <div class="card">
+        <div class="card-title">Development Narrative</div>
+        <div class="timeline" id="tl-narrative"></div>
+      </div>
+    </div>
+
+    <!-- ── BACKEND DEEP DIVE ── -->
+    <div class="view" id="view-backend">
+      <div style="background:var(--purple-bg);border:1px solid var(--purple-b);border-radius:var(--rl);padding:14px 16px;margin-bottom:16px">
+        <div style="font-weight:500;color:var(--purple);font-size:13.5px;margin-bottom:4px">⚙️ Backend is Phase 2–3 Priority</div>
+        <div style="font-size:12.5px;color:var(--ink2);line-height:1.6">Every "connected" integration in the frontend is currently a UI simulation. The backend translates those into real OAuth flows, database records, and data pipelines. This section documents every service, endpoint, and schema needed.</div>
+      </div>
+
+      <!-- AUTH SERVICE -->
+      <div class="be-section">
+        <div class="be-header"><div class="be-icon" style="background:var(--purple-bg)">🔐</div><div><div class="be-name">Authentication Service</div><div class="be-desc">User identity, sessions, multi-tenancy, role-based access control</div></div><span class="badge bg-purple" style="margin-left:auto">Phase 2 · Week 1–2</span></div>
+        <div class="be-body">
+          <div style="font-size:11.5px;color:var(--ink3);margin-bottom:10px">Handles login for both Admin and Customer roles. Admins (advisors) can see all their clients. Customers can only see their own workspace. OAuth tokens are NEVER sent to the browser — they live server-side only.</div>
+          <div class="endpoint-list">
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/auth/login</span><span class="ep-desc">Email/password → JWT + refresh token</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/auth/logout</span><span class="ep-desc">Invalidate session, clear refresh token</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/auth/refresh</span><span class="ep-desc">Exchange refresh token for new JWT</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/auth/sso/google</span><span class="ep-desc">Google OAuth SSO flow</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/auth/sso/microsoft</span><span class="ep-desc">Microsoft OAuth SSO flow</span></div>
+            <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/auth/me</span><span class="ep-desc">Current user + role + permissions</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/auth/invite</span><span class="ep-desc">Admin sends customer invite link</span></div>
+          </div>
+          <div class="db-schema mt8">
+            <div><span class="field">users</span> {</div>
+            <div>&nbsp;&nbsp;<span class="field">id</span> <span class="type">UUID PRIMARY KEY,</span></div>
+            <div>&nbsp;&nbsp;<span class="field">email</span> <span class="type">TEXT UNIQUE NOT NULL,</span></div>
+            <div>&nbsp;&nbsp;<span class="field">role</span> <span class="type">ENUM('admin','customer'),</span></div>
+            <div>&nbsp;&nbsp;<span class="field">workspace_id</span> <span class="type">UUID REFERENCES workspaces(id),</span></div>
+            <div>&nbsp;&nbsp;<span class="field">hashed_password</span> <span class="type">TEXT, <span class="comment">-- bcrypt, null if SSO-only</span></span></div>
+            <div>&nbsp;&nbsp;<span class="field">refresh_token_hash</span> <span class="type">TEXT, <span class="comment">-- stored hashed</span></span></div>
+            <div>&nbsp;&nbsp;<span class="field">last_login</span> <span class="type">TIMESTAMP</span></div>
+            <div>}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OAUTH PROXY -->
+      <div class="be-section">
+        <div class="be-header"><div class="be-icon" style="background:var(--amber-bg)">🔗</div><div><div class="be-name">OAuth Proxy Service</div><div class="be-desc">Handles all third-party OAuth token exchange — tokens NEVER reach the browser</div></div><span class="badge bg-amber" style="margin-left:auto">Phase 2 · Week 2–4</span></div>
+        <div class="be-body">
+          <div style="font-size:11.5px;color:var(--ink3);margin-bottom:10px">The browser never sees access tokens. The frontend redirects to the backend's /oauth/start, which redirects to the provider, receives the code, exchanges it for tokens server-side, encrypts and stores them, then redirects back to the frontend with a session cookie only.</div>
+          <div class="two-col mb12">
+            <div>
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:7px">OAuth Endpoints</div>
+              <div class="endpoint-list">
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/oauth/start/:provider</span><span class="ep-desc">Redirect to provider auth</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/oauth/callback/:provider</span><span class="ep-desc">Receive code, exchange for token</span></div>
+                <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/oauth/refresh/:provider</span><span class="ep-desc">Server-side token refresh</span></div>
+                <div class="endpoint"><span class="method del">DEL</span><span class="ep-path">/api/oauth/revoke/:provider</span><span class="ep-desc">Disconnect + delete stored tokens</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/oauth/status</span><span class="ep-desc">Which providers are connected</span></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:7px">Supported Providers</div>
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink2)">
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r);display:flex;justify-content:space-between"><span>📗 QuickBooks</span><span class="badge bg-amber" style="font-size:9px">OAuth 2.0</span></div>
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r);display:flex;justify-content:space-between"><span>🟡 Gusto</span><span class="badge bg-amber" style="font-size:9px">OAuth 2.0</span></div>
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r);display:flex;justify-content:space-between"><span>📒 FreshBooks</span><span class="badge bg-amber" style="font-size:9px">OAuth 2.0</span></div>
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r);display:flex;justify-content:space-between"><span>🔵 Xero</span><span class="badge bg-amber" style="font-size:9px">OAuth 2.0</span></div>
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r);display:flex;justify-content:space-between"><span>🏦 Plaid</span><span class="badge bg-blue" style="font-size:9px">Plaid Link</span></div>
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r);display:flex;justify-content:space-between"><span>🔴 ADP</span><span class="badge bg-amber" style="font-size:9px">OAuth 2.0</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="db-schema">
+            <div><span class="field">oauth_tokens</span> {</div>
+            <div>&nbsp;&nbsp;<span class="field">id</span> <span class="type">UUID PRIMARY KEY,</span></div>
+            <div>&nbsp;&nbsp;<span class="field">client_id</span> <span class="type">UUID REFERENCES clients(id),</span></div>
+            <div>&nbsp;&nbsp;<span class="field">provider</span> <span class="type">TEXT, <span class="comment">-- 'quickbooks' | 'gusto' | etc</span></span></div>
+            <div>&nbsp;&nbsp;<span class="field">access_token_enc</span> <span class="type">TEXT, <span class="comment">-- AES-256 encrypted</span></span></div>
+            <div>&nbsp;&nbsp;<span class="field">refresh_token_enc</span> <span class="type">TEXT, <span class="comment">-- AES-256 encrypted</span></span></div>
+            <div>&nbsp;&nbsp;<span class="field">expires_at</span> <span class="type">TIMESTAMP,</span></div>
+            <div>&nbsp;&nbsp;<span class="field">provider_entity_id</span> <span class="type">TEXT, <span class="comment">-- e.g. QuickBooks realm ID</span></span></div>
+            <div>&nbsp;&nbsp;<span class="field">scopes</span> <span class="type">TEXT[] <span class="comment">-- granted scopes</span></span></div>
+            <div>}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DATA SYNC SERVICE -->
+      <div class="be-section">
+        <div class="be-header"><div class="be-icon" style="background:var(--teal-bg)">📊</div><div><div class="be-name">Data Sync Service</div><div class="be-desc">Pulls, normalizes, and caches data from all connected providers into a unified schema</div></div><span class="badge bg-teal" style="margin-left:auto">Phase 2–3</span></div>
+        <div class="be-body">
+          <div style="font-size:11.5px;color:var(--ink3);margin-bottom:10px">Each provider returns data in a different format. This service translates all of them into GovCert's internal schema, so the frontend always works with consistent data regardless of the source. Data is cached in Redis to avoid repeated API calls.</div>
+          <div class="three-col mb12">
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px">Financial Sync</div>
+              <div class="endpoint-list">
+                <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/sync/financials</span><span class="ep-desc">Trigger QB/FreshBooks/Xero pull</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/data/revenue</span><span class="ep-desc">3yr revenue normalized</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/data/balance-sheet</span><span class="ep-desc">Assets, liabilities, net worth</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/data/financials/verify</span><span class="ep-desc">Cross-check QB vs IRS data</span></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px">Payroll Sync</div>
+              <div class="endpoint-list">
+                <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/sync/payroll</span><span class="ep-desc">Trigger Gusto/ADP/Paychex pull</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/data/employees</span><span class="ep-desc">Employee roster + classifications</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/data/payroll-summary</span><span class="ep-desc">Annual payroll totals</span></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px">Gov Data Sync</div>
+              <div class="endpoint-list">
+                <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/sync/sam</span><span class="ep-desc">Pull SAM.gov entity by UEI</span></div>
+                <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/sync/fpds</span><span class="ep-desc">Pull contract history from FPDS</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/data/entity</span><span class="ep-desc">Normalized entity record</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="db-schema">
+            <div><span class="field">financial_snapshots</span> { client_id, fiscal_year, revenue, net_income, total_assets, liabilities, net_worth, source, synced_at }</div>
+            <div><span class="field">employee_records</span> { client_id, count_ft, count_pt, count_1099, annual_payroll, source, synced_at }</div>
+            <div><span class="field">entity_records</span> { client_id, uei, cage, ein, naics_codes[], sam_expiry, registration_status, synced_at }</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI SERVICE -->
+      <div class="be-section">
+        <div class="be-header"><div class="be-icon" style="background:rgba(200,155,60,.12)">✦</div><div><div class="be-name">AI Service (Claude API)</div><div class="be-desc">Server-side Claude API calls — never expose the API key to the browser</div></div><span class="badge bg-amber" style="margin-left:auto">Phase 3</span></div>
+        <div class="be-body">
+          <div style="font-size:11.5px;color:var(--ink3);margin-bottom:10px">All Claude API calls go through the backend. The frontend sends a "draft narrative" request with the client_id; the backend fetches the client's data, constructs the prompt, calls Claude, and returns the draft. API key never leaves the server.</div>
+          <div class="endpoint-list mb12">
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/ai/draft/business-description</span><span class="ep-desc">Draft 8(a) Section II-A narrative</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/ai/draft/social-disadvantage</span><span class="ep-desc">Draft social disadvantage narrative framework</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/ai/draft/quality-control-plan</span><span class="ep-desc">Draft GSA MAS QCP section</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/ai/draft/relevant-experience</span><span class="ep-desc">Draft past performance narrative</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/ai/score-application</span><span class="ep-desc">Score application 0–100 with suggestions</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/ai/chat</span><span class="ep-desc">In-app advisor chat (streaming)</span></div>
+          </div>
+          <div style="background:var(--cream);border-radius:var(--r);padding:11px 13px;font-size:12px;color:var(--ink2)">
+            <strong>Prompt architecture:</strong> Each AI endpoint assembles a structured prompt from the client's live data — revenue figures from the financial snapshot, employee data from the payroll sync, entity data from SAM.gov. This ensures narratives are always factually grounded in verified data, not hallucinated.
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATION + SCHEDULER -->
+      <div class="be-section">
+        <div class="be-header"><div class="be-icon" style="background:var(--green-bg)">📬</div><div><div class="be-name">Notification & Scheduler Service</div><div class="be-desc">Compliance reminders, automated alerts, scheduled data refreshes</div></div><span class="badge bg-green" style="margin-left:auto">Phase 5</span></div>
+        <div class="be-body">
+          <div class="two-col">
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px">Scheduled Jobs (Cron)</div>
+              <div class="endpoint-list">
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">Daily: check-sam-expiry</span><span class="ep-desc">Alert at 90/60/30/14/7 days</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">Daily: refresh-oauth-tokens</span><span class="ep-desc">Proactively refresh expiring tokens</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">Weekly: sync-all-clients</span><span class="ep-desc">Refresh financial + payroll data</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="ep-path">Monthly: compliance-sweep</span><span class="ep-desc">Check all renewal windows</span></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px">Email Triggers (SendGrid)</div>
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink2)">
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r)">🔴 SAM.gov expiration warnings</div>
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r)">⚠ Certification deadline alerts</div>
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r)">📋 Action item requests to customer</div>
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r)">✓ Submission confirmation receipts</div>
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r)">👋 Customer onboarding invites</div>
+                <div style="padding:5px 9px;background:var(--cream);border-radius:var(--r)">📄 Weekly status digests to admin</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOCUMENT SERVICE -->
+      <div class="be-section">
+        <div class="be-header"><div class="be-icon" style="background:var(--blue-bg)">📄</div><div><div class="be-name">Document Service</div><div class="be-desc">PDF generation, secure document storage, upload handling</div></div><span class="badge bg-blue" style="margin-left:auto">Phase 3</span></div>
+        <div class="be-body">
+          <div class="endpoint-list">
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/docs/upload</span><span class="ep-desc">Secure upload to S3 with virus scan</span></div>
+            <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/docs/:docId/download</span><span class="ep-desc">Pre-signed URL (expires 15 min)</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/docs/generate/financial-statements</span><span class="ep-desc">PDF from QB data</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/docs/generate/submission-package</span><span class="ep-desc">ZIP of all cert docs</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/docs/generate/csp1-excel</span><span class="ep-desc">GSA CSP-1 LCAT price list</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/docs/extract-text</span><span class="ep-desc">OCR / PDF text extraction for indexing</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── INTEGRATION MAP ── -->
+    <div class="view" id="view-integrations">
+      <div style="background:var(--amber-bg);border:1px solid var(--amber-b);border-radius:var(--rl);padding:13px 16px;margin-bottom:14px;font-size:12.5px;color:var(--ink2)">
+        <strong style="color:var(--amber)">Key insight:</strong> Every integration needs a backend route. The frontend never touches third-party APIs directly — it calls GovCert's own API, which proxies to the provider. This keeps tokens secure and lets us normalize, cache, and rate-limit.
+      </div>
+      <div class="int-map">
+        <div style="display:flex;gap:0;padding:7px 0;border-bottom:1px solid var(--border);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3)">
+          <div style="width:28px"></div>
+          <div style="width:162px">Provider</div>
+          <div style="width:142px">Auth Method</div>
+          <div style="flex:1">Data Pulled for GovCert</div>
+          <div style="width:170px;text-align:right">Backend Service</div>
+          <div style="width:90px;text-align:right">Status</div>
+        </div>
+        <div id="integration-rows"></div>
+      </div>
+    </div>
+
+    <!-- ── TECH DECISIONS ── -->
+    <div class="view" id="view-decisions">
+      <div class="card mb16">
+        <div class="card-title" style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400">Technology Decisions</div>
+        <div style="font-size:12.5px;color:var(--ink3);margin-bottom:14px">Recommended stack for GovCert backend. These are starting points — all choices are open for discussion.</div>
+        <div class="decision-table">
+          <table>
+            <thead><tr><th>Layer</th><th>Recommended</th><th>Why</th><th>Alternative</th></tr></thead>
+            <tbody>
+              <tr><td><span class="tag tag-be">Backend Language</span></td><td><strong>Node.js (TypeScript)</strong></td><td>Same ecosystem as frontend; huge library support for OAuth + APIs; fast I/O for data sync</td><td>Python/FastAPI (good for AI-heavy), Go (better performance)</td></tr>
+              <tr><td><span class="tag tag-be">API Framework</span></td><td><strong>Express.js</strong></td><td>Most familiar, massive ecosystem, plenty of OAuth middleware</td><td>Fastify (faster), Hono (edge-compatible)</td></tr>
+              <tr><td><span class="tag tag-db">Primary DB</span></td><td><strong>PostgreSQL</strong></td><td>Relational data fits perfectly; row-level security for multi-tenancy; great JSON support</td><td>MySQL, SQLite (simpler but less powerful)</td></tr>
+              <tr><td><span class="tag tag-db">ORM</span></td><td><strong>Prisma</strong></td><td>TypeScript-native, auto-generates types, easy migrations</td><td>Drizzle (lighter), Sequelize (older)</td></tr>
+              <tr><td><span class="tag tag-db">Cache / Sessions</span></td><td><strong>Redis</strong></td><td>Session storage, API response caching, token expiry TTLs</td><td>Memcached, in-memory (not production-safe)</td></tr>
+              <tr><td><span class="tag tag-infra">Hosting (Backend)</span></td><td><strong>Railway or Render</strong></td><td>Simple Node.js deployment, managed Postgres + Redis, free tier, no DevOps overhead</td><td>AWS (more powerful, more complex), Vercel (serverless, limitations with long-running jobs)</td></tr>
+              <tr><td><span class="tag tag-infra">Hosting (Frontend)</span></td><td><strong>Netlify or Vercel</strong></td><td>Static hosting, CDN, easy custom domains</td><td>AWS S3 + CloudFront, Railway</td></tr>
+              <tr><td><span class="tag tag-infra">Document Storage</span></td><td><strong>Cloudflare R2</strong></td><td>S3-compatible, no egress fees, cheaper than AWS S3</td><td>AWS S3, Supabase Storage</td></tr>
+              <tr><td><span class="tag tag-api">Email</span></td><td><strong>SendGrid</strong></td><td>Reliable deliverability, templates, tracking, free tier</td><td>Resend (simpler API), Postmark</td></tr>
+              <tr><td><span class="tag tag-security">Auth Strategy</span></td><td><strong>JWT + Refresh Tokens</strong></td><td>Stateless, scalable; refresh tokens allow long sessions without sacrificing security</td><td>Sessions only (simpler, less scalable)</td></tr>
+              <tr><td><span class="tag tag-infra">Billing</span></td><td><strong>Stripe</strong></td><td>Industry standard, handles subscriptions, invoicing, metered billing</td><td>PayPal, manual invoicing</td></tr>
+              <tr><td><span class="tag tag-infra">Scheduler</span></td><td><strong>node-cron + Bull queue</strong></td><td>Cron for scheduled jobs; Bull for reliable job queues with retry logic</td><td>AWS EventBridge, Temporal</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MVP scope recommendation -->
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title" style="color:var(--green)">✓ Phase 1 Backend MVP (HSG Testing)</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink2)">
+            <div style="padding:6px 9px;background:var(--green-bg);border-radius:var(--r)">✓ User auth (email/password + JWT)</div>
+            <div style="padding:6px 9px;background:var(--green-bg);border-radius:var(--r)">✓ QuickBooks OAuth (real token exchange)</div>
+            <div style="padding:6px 9px;background:var(--green-bg);border-radius:var(--r)">✓ Gusto OAuth (real payroll data)</div>
+            <div style="padding:6px 9px;background:var(--green-bg);border-radius:var(--r)">✓ SAM.gov API (entity lookup by UEI)</div>
+            <div style="padding:6px 9px;background:var(--green-bg);border-radius:var(--r)">✓ PostgreSQL (clients, users, certs)</div>
+            <div style="padding:6px 9px;background:var(--green-bg);border-radius:var(--r)">✓ Claude API narrative drafting</div>
+            <div style="padding:6px 9px;background:var(--green-bg);border-radius:var(--r)">✓ Basic email alerts (SendGrid)</div>
+            <div style="padding:6px 9px;background:var(--green-bg);border-radius:var(--r)">✓ Document upload + S3 storage</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--amber)">◦ Phase 2 Backend (Production Launch)</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink2)">
+            <div style="padding:6px 9px;background:var(--amber-bg);border-radius:var(--r)">◦ IRS 4506-C personal auth</div>
+            <div style="padding:6px 9px;background:var(--amber-bg);border-radius:var(--r)">◦ Plaid banking verification</div>
+            <div style="padding:6px 9px;background:var(--amber-bg);border-radius:var(--r)">◦ FreshBooks / Xero / ADP / Paychex</div>
+            <div style="padding:6px 9px;background:var(--amber-bg);border-radius:var(--r)">◦ FPDS contract history pull</div>
+            <div style="padding:6px 9px;background:var(--amber-bg);border-radius:var(--r)">◦ Full cron scheduler + Bull queues</div>
+            <div style="padding:6px 9px;background:var(--amber-bg);border-radius:var(--r)">◦ Stripe subscription billing</div>
+            <div style="padding:6px 9px;background:var(--amber-bg);border-radius:var(--r)">◦ Google/Microsoft SSO</div>
+            <div style="padding:6px 9px;background:var(--amber-bg);border-radius:var(--r)">◦ White-label multi-tenant support</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PHASES VIEW ── -->
+    <div class="view" id="view-phases">
+      <div id="detail-phase-cards"></div>
+    </div>
+
+  </div><!-- /body -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<div class="toast" id="toast-el"><span style="color:var(--gold2)">✦</span><span id="toast-msg"></span></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA — source of truth, updated each session
+// ═══════════════════════════════════════════════
+// DOMAIN: www.govcert.com
+// TIMELINE: 7-day sprint (days used as fractional units of 7)
+// days[] = [start_day, end_day] out of 7
+// DOMAIN: www.govcert.com
+// TIMELINE: 3 weeks (21 days), working tirelessly
+// weeks[] = [start, end] out of 21 days total
+const PHASES = [
+  {
+    id:1, title:'Foundation & Prototype', subtitle:'Frontend — ALL SCREENS COMPLETE ✓',
+    weeks:[0,2], status:'done', color:'var(--green)',
+    sections:[
+      {
+        label:'Frontend — Complete', labelColor:'var(--green)',
+        tasks:[
+          {title:'Landing page — hero, features, certs, integrations, pricing, footer',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+          {title:'Admin Panel — full sidebar, all page routing, topbar',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+          {title:'Customer Portal — role-gated self-service view',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+          {title:'8(a) Wizard — 5 steps, field pre-fill UI, AI narrative panel',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+          {title:'GSA MAS Wizard — 6 steps, SIN selector, LCAT/CSP-1 pricing',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+          {title:'8(a) Submission Package — field mapping, copy buttons, SBA guide',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+          {title:'GSA eOffer Submission Package — step-by-step guide',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+          {title:'Compliance calendar — month grid, sidebar, iCal export UI',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+          {title:'OAuth connection UI — all 14 integrations, status badges, connect flows',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+          {title:'Document vault — table view, status badges, upload UI',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+          {title:'Customer onboarding — 5-step checklist wizard',status:'done',tags:['fe'],when:'Session 2',effort:'done'},
+          {title:'Interactive project tracker (this plan)',status:'done',tags:['fe'],when:'Session 3',effort:'done'},
+          {title:'Multi-client portal with workspace switching',status:'done',tags:['fe'],when:'Session 1',effort:'done'},
+        ]
+      }
+    ]
+  },
+  {
+    id:2, title:'Local Setup & Environment', subtitle:'VS Code · Node.js · Git · Railway · GitHub — Week 1 Day 1',
+    weeks:[2,4], status:'active', color:'var(--gold)',
+    sections:[
+      {
+        label:'Install & Configure (Windows)', labelColor:'var(--red)',
+        tasks:[
+          {title:'Install VS Code — code.visualstudio.com',detail:'Download Windows installer. Accept all defaults. This is your code editor.',status:'active',tags:['infra'],when:'Day 1 — Now',effort:'5 min'},
+          {title:'Install Node.js LTS — nodejs.org',detail:'Click the LTS button. Run installer. Accept all defaults. This lets your computer run JavaScript backend code.',status:'active',tags:['infra'],when:'Day 1 — Now',effort:'5 min'},
+          {title:'Install Git — git-scm.com/download/win',detail:'Run installer. When asked about default editor, choose VS Code. Accept everything else.',status:'active',tags:['infra'],when:'Day 1 — Now',effort:'5 min'},
+          {title:'Create GitHub account — github.com',detail:'Free account. Use your real email. This is where your code lives in the cloud.',status:'active',tags:['infra'],when:'Day 1 — Now',effort:'3 min'},
+          {title:'Create Railway account — railway.app',detail:'Sign up with GitHub (click "Login with GitHub"). This is your hosting platform — it runs your backend and database.',status:'active',tags:['infra'],when:'Day 1 — Now',effort:'3 min'},
+          {title:'Verify installs — open PowerShell and run 3 commands',detail:'node --version (should say v20+), npm --version (should say 10+), git --version (should say 2+). Paste results back to Claude if anything fails.',status:'planned',tags:['infra'],when:'Day 1',effort:'5 min'},
+        ]
+      },
+      {
+        label:'API Keys — Register All Today', labelColor:'var(--amber)',
+        tasks:[
+          {title:'Get Anthropic API key — platform.anthropic.com',detail:'Sign up → API Keys → Create Key. Copy it somewhere safe. This powers the AI narrative drafting.',status:'planned',tags:['api'],when:'Day 1',effort:'5 min'},
+          {title:'Get SAM.gov API key — sam.gov/api',detail:'Register for free public key. No review needed — instant access.',status:'planned',tags:['api'],when:'Day 1',effort:'10 min'},
+          {title:'Register QuickBooks Developer App — developer.intuit.com',detail:'Create account → My Apps → Create New App → QuickBooks Online. Set redirect URI to http://localhost:3001/oauth/callback/quickbooks. Sandbox credentials are immediate. Production review: 1–5 days — register TODAY so approval comes in during Week 1.',status:'planned',tags:['api'],when:'Day 1 — URGENT',effort:'20 min'},
+          {title:'Register Gusto Developer App — dev.gusto.com',detail:'Create account → Applications → Create. Set redirect URI to http://localhost:3001/oauth/callback/gusto. Sandbox immediate. Production review: 1–7 days — register TODAY.',status:'planned',tags:['api'],when:'Day 1 — URGENT',effort:'20 min'},
+          {title:'Create SendGrid account — sendgrid.com',detail:'Free tier: 100 emails/day. Sign up → Settings → API Keys → Create. Used for customer invite emails and compliance alerts.',status:'planned',tags:['api'],when:'Day 1',effort:'10 min'},
+          {title:'Buy www.govcert.com domain — namecheap.com',detail:'Search govcert.com. If taken, try govcertify.com or getgovcert.com. ~$12/year. You'll connect it to Railway in Week 2.',status:'planned',tags:['infra'],when:'Day 1',effort:'10 min'},
+        ]
+      },
+      {
+        label:'Project Scaffold', labelColor:'var(--purple)',
+        tasks:[
+          {title:'Create project folder and open in VS Code',detail:'Claude will give you the exact PowerShell commands to run.',status:'planned',tags:['be'],when:'Day 1',effort:'5 min'},
+          {title:'Initialize Node.js project (npm init)',detail:'Claude provides exact commands.',status:'planned',tags:['be'],when:'Day 1',effort:'5 min'},
+          {title:'Install core dependencies — Express, Prisma, JWT, bcrypt, cors',detail:'One npm install command. Claude provides it.',status:'planned',tags:['be'],when:'Day 1',effort:'10 min'},
+          {title:'Create project folder structure — routes/, services/, middleware/',detail:'Claude provides the exact file structure to create.',status:'planned',tags:['be'],when:'Day 1',effort:'10 min'},
+          {title:'Create .env file with all API keys',detail:'Template provided by Claude. Never commit this file to GitHub.',status:'planned',tags:['be','security'],when:'Day 1',effort:'10 min'},
+          {title:'Push project to GitHub — first commit',detail:'Claude walks through git init, git add, git commit, git push.',status:'planned',tags:['infra'],when:'Day 1',effort:'15 min'},
+          {title:'Connect GitHub repo to Railway — auto-deploy configured',detail:'Railway → New Project → Deploy from GitHub → select your repo. Every future git push auto-deploys.',status:'planned',tags:['infra'],when:'Day 1',effort:'10 min'},
+        ]
+      }
+    ]
+  },
+  {
+    id:3, title:'Database & Authentication', subtitle:'Postgres schema · Real login · JWT · User roles — Week 1 Days 2–4',
+    weeks:[4,7], status:'planned', color:'var(--ink4)',
+    sections:[
+      {
+        label:'Postgres Database (Prisma)', labelColor:'var(--teal)',
+        tasks:[
+          {title:'Add Postgres database to Railway project',detail:'Railway dashboard → your project → + New → Database → Add PostgreSQL. Railway gives you a DATABASE_URL automatically.',status:'planned',tags:['db','infra'],when:'Day 2',effort:'5 min'},
+          {title:'Write Prisma schema — all 8 data models',detail:'Claude writes the entire schema.prisma file. Models: User, Workspace, Client, Certification, Document, OAuthToken, FinancialSnapshot, ComplianceEvent.',status:'planned',tags:['db'],when:'Day 2',effort:'30 min'},
+          {title:'Run first Prisma migration — creates all tables in Postgres',detail:'npx prisma migrate dev --name init. Claude walks you through it.',status:'planned',tags:['db'],when:'Day 2',effort:'10 min'},
+          {title:'Seed database with Meridian Solutions demo data',detail:'Claude writes seed.js file. Run with: node seed.js. Gives you test data to work with immediately.',status:'planned',tags:['db'],when:'Day 2',effort:'20 min'},
+          {title:'Verify tables in Railway — Postgres explorer',detail:'Railway → your DB → Data tab. Confirm all 8 tables created correctly.',status:'planned',tags:['db'],when:'Day 2',effort:'5 min'},
+        ]
+      },
+      {
+        label:'Authentication Service', labelColor:'var(--purple)',
+        tasks:[
+          {title:'Build POST /api/auth/register — create new user account',detail:'Claude writes the entire route file. Takes email, password, role. Hashes password with bcrypt. Returns JWT.',status:'planned',tags:['be','security'],when:'Day 2',effort:'30 min'},
+          {title:'Build POST /api/auth/login — email + password → JWT',detail:'Validates password with bcrypt. Returns access token (15 min) + sets httpOnly refresh token cookie (30 days).',status:'planned',tags:['be','security'],when:'Day 2',effort:'30 min'},
+          {title:'Build POST /api/auth/refresh — get new JWT from refresh token',detail:'Called automatically when access token expires. User never has to re-login.',status:'planned',tags:['be','security'],when:'Day 3',effort:'20 min'},
+          {title:'Build POST /api/auth/logout — clear refresh token cookie',status:'planned',tags:['be'],when:'Day 3',effort:'15 min'},
+          {title:'Build GET /api/auth/me — return current user + role',status:'planned',tags:['be'],when:'Day 3',effort:'15 min'},
+          {title:'Build JWT middleware — protect all API routes',detail:'Validates token on every request. Attaches user to req.user. Claude writes this as reusable middleware.',status:'planned',tags:['be','security'],when:'Day 3',effort:'20 min'},
+          {title:'Test auth with Postman or Thunder Client',detail:'Claude walks you through installing Thunder Client (VS Code extension) and testing every auth endpoint.',status:'planned',tags:['be'],when:'Day 3',effort:'30 min'},
+          {title:'Connect frontend login form to real /api/auth/login',detail:'Replace the simulated login in the HTML with a real fetch() call to the backend.',status:'planned',tags:['fe','be'],when:'Day 4',effort:'45 min'},
+          {title:'Build POST /api/auth/invite — admin sends customer magic link',detail:'Generates signed token, sends email via SendGrid with link to set password.',status:'done',tags:['be'],when:'Day 4',effort:'45 min'},
+          {title:'Add rate limiting to auth routes — brute force protection',detail:'npm install express-rate-limit. Claude provides config.',status:'planned',tags:['be','security'],when:'Day 4',effort:'15 min'},
+        ]
+      },
+      {
+        label:'Core API Routes', labelColor:'var(--purple)',
+        tasks:[
+          {title:'Build /api/clients — CRUD for client management',detail:'GET all clients (admin only), POST create, PUT update, DELETE. All scoped to the admin workspace.',status:'planned',tags:['be'],when:'Day 4',effort:'45 min'},
+          {title:'Build /api/workspaces — workspace settings',status:'planned',tags:['be'],when:'Day 4',effort:'30 min'},
+          {title:'Build /api/certifications — track certification status per client',status:'planned',tags:['be'],when:'Day 5',effort:'45 min'},
+          {title:'Connect frontend client grid to real API data',detail:'Replace hardcoded Meridian/Apex/Vanguard cards with real database fetch.',status:'planned',tags:['fe','be'],when:'Day 5',effort:'1 hr'},
+        ]
+      }
+    ]
+  },
+  {
+    id:4, title:'OAuth & Real Data Integrations', subtitle:'QuickBooks · Gusto · SAM.gov — Week 1–2 Days 5–10',
+    weeks:[7,12], status:'active', color:'var(--gold)',
+    sections:[
+      {
+        label:'OAuth Proxy Architecture', labelColor:'var(--purple)',
+        tasks:[
+          {title:'Build OAuth proxy — /api/oauth/start/:provider route',detail:'Claude writes the entire OAuth proxy. When frontend clicks Connect QuickBooks, it hits this route, which redirects to Intuit auth server. Token NEVER touches the browser.',status:'planned',tags:['be','security','api'],when:'Day 5',effort:'1 hr'},
+          {title:'Build OAuth proxy — /api/oauth/callback/:provider route',detail:'Receives code from provider, exchanges for tokens, encrypts with AES-256, stores in oauth_tokens table.',status:'planned',tags:['be','security','api'],when:'Day 5',effort:'1 hr'},
+          {title:'Build token auto-refresh logic',detail:'Before every API call, checks if access_token expires in <5 min. If so, refreshes automatically. Claude writes this as a reusable helper.',status:'planned',tags:['be','api'],when:'Day 6',effort:'45 min'},
+          {title:'Build GET /api/oauth/status — which providers are connected',detail:'Frontend calls this on load to show green/grey status badges for each integration.',status:'planned',tags:['be'],when:'Day 6',effort:'20 min'},
+          {title:'Build DELETE /api/oauth/revoke/:provider — disconnect integration',status:'planned',tags:['be'],when:'Day 6',effort:'20 min'},
+        ]
+      },
+      {
+        label:'QuickBooks Online', labelColor:'var(--amber)',
+        tasks:[
+          {title:'Configure QuickBooks sandbox credentials in .env',detail:'From your developer.intuit.com app: copy Client ID and Client Secret into .env file.',status:'planned',tags:['api'],when:'Day 6',effort:'5 min'},
+          {title:'Test QuickBooks OAuth flow end-to-end in sandbox',detail:'Click Connect QuickBooks in the UI → authorize in sandbox → tokens stored in DB. Claude helps debug any issues.',status:'planned',tags:['be','api'],when:'Day 6',effort:'1 hr'},
+          {title:'Build QB data fetcher — P&L Report (3 fiscal years)',detail:'Claude writes the fetcher. Hits QBO /reports/ProfitAndLoss API. Maps revenue, expenses, net income to GovCert schema.',status:'planned',tags:['be','api'],when:'Day 7',effort:'1 hr'},
+          {title:'Build QB data fetcher — Balance Sheet',detail:'Maps total assets, liabilities, owner equity. Used for 8(a) net worth calculation.',status:'planned',tags:['be','api'],when:'Day 7',effort:'45 min'},
+          {title:'Build QB data fetcher — Employee list (FT/PT count)',status:'planned',tags:['be','api'],when:'Day 7',effort:'30 min'},
+          {title:'Store QB data in financial_snapshots table',status:'planned',tags:['be','db'],when:'Day 7',effort:'30 min'},
+          {title:'Wire QB data to 8(a) wizard fields — replace hardcoded numbers',detail:'Revenue fields, net worth, employee count all pre-fill from real QB data.',status:'planned',tags:['fe','be'],when:'Day 8',effort:'1 hr'},
+        ]
+      },
+      {
+        label:'Gusto Payroll', labelColor:'var(--amber)',
+        tasks:[
+          {title:'Configure Gusto sandbox credentials in .env',status:'planned',tags:['api'],when:'Day 8',effort:'5 min'},
+          {title:'Test Gusto OAuth flow end-to-end in sandbox',status:'planned',tags:['be','api'],when:'Day 8',effort:'1 hr'},
+          {title:'Build Gusto data fetcher — employee roster + payroll totals',detail:'GET /v1/companies/{id}/employees + /payrolls. Maps to employee_records table.',status:'planned',tags:['be','api'],when:'Day 8',effort:'1 hr'},
+          {title:'Wire Gusto employee count and payroll to wizard fields',status:'planned',tags:['fe','be'],when:'Day 9',effort:'45 min'},
+        ]
+      },
+      {
+        label:'SAM.gov Entity Lookup', labelColor:'var(--amber)',
+        tasks:[
+          {title:'Build GET /api/sam/entity?uei= — lookup by UEI',detail:'Claude writes the fetcher. Hits api.sam.gov/entity-information/v3/entities. Returns CAGE, NAICS, expiry, registration status.',status:'planned',tags:['be','api'],when:'Day 9',effort:'45 min'},
+          {title:'Wire SAM.gov to Add New Client — auto-fill from UEI',detail:'Admin enters UEI, clicks Lookup — company name, address, NAICS, CAGE auto-fill.',status:'planned',tags:['fe','be'],when:'Day 9',effort:'45 min'},
+          {title:'Wire SAM.gov expiry to compliance calendar',detail:'SAM expiry date stored in entity_records, surfaces as urgent alert in compliance calendar.',status:'planned',tags:['fe','be'],when:'Day 10',effort:'45 min'},
+        ]
+      }
+    ]
+  },
+  {
+    id:5, title:'Claude AI — Real Narrative Drafting', subtitle:'Server-side AI calls with live client data — Week 2 Days 10–12',
+    weeks:[12,14], status:'active', color:'var(--gold)',
+    sections:[
+      {
+        label:'AI Narrative Engine (Complete)', labelColor:'var(--green)',
+        tasks:[
+          {title:'Certification detail page — progress dashboard with section cards',status:'done',tags:['fe'],when:'Session 4',effort:'done'},
+          {title:'Corporate Experience page — gather/refine flow with AI generation',status:'done',tags:['fe','ai'],when:'Session 4',effort:'done'},
+          {title:'File upload + text extraction (PDF, DOCX, TXT)',status:'done',tags:['be'],when:'Session 4',effort:'done'},
+          {title:'AI generate-all route — all 8 corp experience sections at once',status:'done',tags:['be','ai'],when:'Session 4',effort:'done'},
+          {title:'Voice input (Web Speech API) for all narrative sections',status:'done',tags:['fe'],when:'Session 4',effort:'done'},
+          {title:'Paste-from-proposal extraction via AI',status:'done',tags:['fe','ai'],when:'Session 4',effort:'done'},
+          {title:'Quality Control Plan page — two-column layout with attribute checklist',status:'done',tags:['fe','ai'],when:'Session 4',effort:'done'},
+          {title:'QC attributes checklist with 22 attributes across 4 categories',status:'done',tags:['fe'],when:'Session 4',effort:'done'},
+          {title:'Inline optional clarifications per QC attribute',status:'done',tags:['fe'],when:'Session 4',effort:'done'},
+          {title:'QCP generation uses corporate experience + uploaded doc + attributes',status:'done',tags:['be','ai'],when:'Session 4',effort:'done'},
+          {title:'User instructions panel on QCP page',status:'done',tags:['fe'],when:'Session 4',effort:'done'},
+          {title:'Past Performance page — add contracts, CPARS vs PPQ flow',status:'active',tags:['fe','be'],when:'Next',effort:'next'},
+          {title:'Project Experience per SIN narrative',status:'planned',tags:['fe','ai'],when:'Soon',effort:'TBD'},
+          {title:'Financials page — upload or QB pull',status:'planned',tags:['fe','be'],when:'Soon',effort:'TBD'},
+          {title:'Pricing CSP-1 page',status:'planned',tags:['fe','be'],when:'Soon',effort:'TBD'},
+          {title:'eOffer submission package with copy buttons + step-by-step instructions',status:'planned',tags:['fe'],when:'Soon',effort:'TBD'},
+        ]
+      }
+    ]
+  },
+    sections:[
+      {
+        label:'AI Service (Server-Side)', labelColor:'var(--purple)',
+        tasks:[
+          {title:'Build POST /api/ai/draft/business-description',detail:'Fetches client real financial data + entity info from DB. Constructs structured prompt. Calls Claude API. Returns draft. API key stays server-side — never in browser.',status:'planned',tags:['be','ai'],when:'Day 10',effort:'1.5 hr'},
+          {title:'Build POST /api/ai/draft/quality-control-plan (GSA QCP)',detail:'Generates QCP section using company profile, employee count, service type.',status:'planned',tags:['be','ai'],when:'Day 11',effort:'1 hr'},
+          {title:'Build POST /api/ai/draft/relevant-experience narrative',detail:'Generates past performance narrative from any uploaded contract SOW text + FPDS data.',status:'planned',tags:['be','ai'],when:'Day 11',effort:'1 hr'},
+          {title:'Build POST /api/ai/score-application — 0–100 gap analysis',detail:'Analyzes completeness of all application sections. Returns score + specific improvement suggestions.',status:'planned',tags:['be','ai'],when:'Day 12',effort:'1.5 hr'},
+          {title:'Replace simulated AI calls in frontend with real endpoints',detail:'The "Draft with AI" buttons now hit real backend. Loading state → real streaming response.',status:'planned',tags:['fe','be'],when:'Day 12',effort:'1 hr'},
+          {title:'Store AI drafts in DB — clients can revisit and edit',detail:'Each draft saved to ai_drafts table with version history.',status:'planned',tags:['be','db'],when:'Day 12',effort:'45 min'},
+        ]
+      }
+    ]
+  },
+  {
+    id:6, title:'Document Service', subtitle:'Upload · Storage · PDF Generation · Submission Packages — Week 2 Days 12–14',
+    weeks:[14,16], status:'planned', color:'var(--ink4)',
+    sections:[
+      {
+        label:'File Storage', labelColor:'var(--teal)',
+        tasks:[
+          {title:'Set up Cloudflare R2 bucket — free S3-compatible storage',detail:'cloudflare.com → R2 → Create bucket named govcert-documents. Free for first 10GB.',status:'planned',tags:['infra'],when:'Day 12',effort:'20 min'},
+          {title:'Build POST /api/docs/upload — secure file upload',detail:'Validates file type (PDF, DOCX, XLSX only). Generates UUID filename. Uploads to R2. Stores metadata in documents table.',status:'planned',tags:['be'],when:'Day 13',effort:'1.5 hr'},
+          {title:'Build GET /api/docs/:id/download — pre-signed URL (15 min expiry)',detail:'Never expose direct R2 URLs. Always generate short-lived signed URLs. Claude writes this.',status:'planned',tags:['be','security'],when:'Day 13',effort:'45 min'},
+          {title:'Wire upload button in Document Vault to real endpoint',detail:'Drag-and-drop or click to upload. Progress bar. Status updates in real time.',status:'planned',tags:['fe','be'],when:'Day 13',effort:'1 hr'},
+        ]
+      },
+      {
+        label:'PDF & Export Generation', labelColor:'var(--blue)',
+        tasks:[
+          {title:'Build PDF generator — Financial Statements from QB data',detail:'npm install puppeteer. Claude writes the PDF template. Generates professionally formatted P&L and Balance Sheet.',status:'planned',tags:['be'],when:'Day 14',effort:'1.5 hr'},
+          {title:'Build Excel generator — GSA CSP-1 price list',detail:'npm install exceljs. Claude writes LCAT sheet in the GSA required CSP-1 format.',status:'planned',tags:['be'],when:'Day 14',effort:'1 hr'},
+          {title:'Build ZIP submission package — all docs bundled',detail:'npm install archiver. Bundles all cert documents into named ZIP with SBA/GSA folder structure.',status:'planned',tags:['be'],when:'Day 14',effort:'1 hr'},
+          {title:'Wire Download All button to real ZIP endpoint',status:'planned',tags:['fe','be'],when:'Day 14',effort:'30 min'},
+        ]
+      }
+    ]
+  },
+  {
+    id:7, title:'Customer Portal & Email', subtitle:'Real invite flow · Customer login · Approval workflow — Week 2 Days 14–16',
+    weeks:[16,18], status:'planned', color:'var(--ink4)',
+    sections:[
+      {
+        label:'Customer Invite & Onboarding', labelColor:'var(--purple)',
+        tasks:[
+          {title:'Build customer invite email via SendGrid',detail:'Admin clicks Send Invite → backend generates signed token → SendGrid sends email with magic link → customer sets password → auto-linked to workspace.',status:'planned',tags:['be'],when:'Day 14',effort:'1.5 hr'},
+          {title:'Build customer password setup page',detail:'Customer clicks email link → lands on /set-password page → enters password → logged in automatically.',status:'planned',tags:['fe','be'],when:'Day 15',effort:'1 hr'},
+          {title:'Build onboarding progress persistence',detail:'Each completed step saved to DB. Customer can close browser and resume exactly where they left off.',status:'planned',tags:['be','db'],when:'Day 15',effort:'45 min'},
+          {title:'Build narrative approval workflow',detail:'Customer reviews AI draft → approves or requests changes → status stored in DB → admin notified.',status:'planned',tags:['be','fe'],when:'Day 15',effort:'1 hr'},
+          {title:'Build action item system — admin assigns, customer completes',detail:'Admin creates action item (e.g. Upload Form 413) → customer sees it in portal → marks complete → admin notified.',status:'planned',tags:['be','fe'],when:'Day 16',effort:'1 hr'},
+        ]
+      }
+    ]
+  },
+  {
+    id:8, title:'Compliance Engine', subtitle:'SAM.gov alerts · Cron jobs · Email reminders — Week 3 Days 16–18',
+    weeks:[18,19], status:'planned', color:'var(--ink4)',
+    sections:[
+      {
+        label:'Compliance Tracking & Alerts', labelColor:'var(--teal)',
+        tasks:[
+          {title:'Build compliance_events table population',detail:'On client creation, auto-generate compliance events from SAM expiry + cert type timelines.',status:'planned',tags:['db','be'],when:'Day 16',effort:'1 hr'},
+          {title:'Build daily SAM.gov expiry check cron job',detail:'npm install node-cron. Runs 6am daily. Finds clients expiring in 90/60/30/14/7 days. Fires SendGrid email to admin.',status:'planned',tags:['be'],when:'Day 17',effort:'1.5 hr'},
+          {title:'Build SendGrid email templates — 4 compliance alert types',detail:'SAM expiry warning, cert deadline, action item request, weekly digest. Claude writes all templates.',status:'planned',tags:['be'],when:'Day 17',effort:'1 hr'},
+          {title:'Wire compliance calendar UI to real database events',detail:'Replace hardcoded calendar events with real data from compliance_events table.',status:'planned',tags:['fe','be'],when:'Day 18',effort:'1 hr'},
+          {title:'Build Send Reminders button — manual alert trigger',status:'planned',tags:['fe','be'],when:'Day 18',effort:'30 min'},
+        ]
+      }
+    ]
+  },
+  {
+    id:9, title:'QA, Security & Hardening', subtitle:'Remove all hardcoded data · Security basics · Bug fixes — Week 3 Days 18–20',
+    weeks:[19,20], status:'planned', color:'var(--ink4)',
+    sections:[
+      {
+        label:'Security Basics', labelColor:'var(--red)',
+        tasks:[
+          {title:'Add input validation to all API endpoints',detail:'npm install express-validator. Validate every field on every route. Claude provides the schemas.',status:'planned',tags:['be','security'],when:'Day 18',effort:'2 hr'},
+          {title:'Configure CORS — allow only govcert.com domain',detail:'npm install cors. Restrict to https://www.govcert.com in production.',status:'planned',tags:['be','security'],when:'Day 18',effort:'20 min'},
+          {title:'Add helmet.js — security response headers',detail:'npm install helmet. One line of code. Prevents XSS, clickjacking, and other common attacks.',status:'planned',tags:['be','security'],when:'Day 18',effort:'10 min'},
+          {title:'Verify all OAuth tokens encrypted in DB (AES-256)',status:'planned',tags:['be','security','db'],when:'Day 19',effort:'30 min'},
+          {title:'Remove ALL hardcoded data from frontend',detail:'Every field that shows demo data must now come from the database. Audit every page.',status:'planned',tags:['fe','be'],when:'Day 19',effort:'2 hr'},
+          {title:'Add environment variable validation on startup',detail:'App refuses to start if any required API key is missing. Prevents silent failures.',status:'planned',tags:['be'],when:'Day 19',effort:'20 min'},
+        ]
+      },
+      {
+        label:'Testing & Bug Fixes', labelColor:'var(--blue)',
+        tasks:[
+          {title:'Full end-to-end flow test — Admin path',detail:'Create workspace → add client → connect QuickBooks → draft 8(a) → generate submission package → download ZIP.',status:'planned',tags:['fe','be'],when:'Day 19',effort:'2 hr'},
+          {title:'Full end-to-end flow test — Customer path',detail:'Receive invite email → set password → login → complete onboarding → upload document → approve narrative.',status:'planned',tags:['fe','be'],when:'Day 19',effort:'2 hr'},
+          {title:'Fix all critical bugs found in testing',status:'planned',tags:['fe','be'],when:'Day 20',effort:'4 hr'},
+          {title:'Test on mobile — responsive check',status:'planned',tags:['fe'],when:'Day 20',effort:'1 hr'},
+          {title:'Performance check — verify page load under 3 seconds',status:'planned',tags:['infra'],when:'Day 20',effort:'30 min'},
+        ]
+      }
+    ]
+  },
+  {
+    id:10, title:'Launch — www.govcert.com', subtitle:'Custom domain · Production deploy · First real client — Week 3 Day 21',
+    weeks:[20,21], status:'planned', color:'var(--ink4)',
+    sections:[
+      {
+        label:'Production Deployment', labelColor:'var(--green)',
+        tasks:[
+          {title:'Set production environment variables in Railway',detail:'All API keys, DATABASE_URL, JWT secrets configured in Railway dashboard (not in code).',status:'planned',tags:['infra'],when:'Day 20',effort:'20 min'},
+          {title:'Connect www.govcert.com to Railway',detail:'Railway → Settings → Domains → Add Custom Domain. Update Namecheap DNS to point to Railway. TLS auto-configured.',status:'planned',tags:['infra'],when:'Day 20',effort:'30 min'},
+          {title:'Update QuickBooks redirect URI to www.govcert.com',detail:'developer.intuit.com → your app → add https://www.govcert.com/oauth/callback/quickbooks as redirect URI.',status:'planned',tags:['api'],when:'Day 20',effort:'10 min'},
+          {title:'Update Gusto redirect URI to www.govcert.com',status:'planned',tags:['api'],when:'Day 20',effort:'10 min'},
+          {title:'Verify SSL certificate active — https://www.govcert.com',status:'planned',tags:['infra','security'],when:'Day 21',effort:'5 min'},
+          {title:'Set up Railway usage alerts — prevent surprise bills',status:'planned',tags:['infra'],when:'Day 21',effort:'10 min'},
+          {title:'Create first real Admin account (House Strategies Group)',status:'planned',tags:['be'],when:'Day 21',effort:'10 min'},
+          {title:'Onboard first real client end-to-end',detail:'Full flow: add client → connect their QuickBooks → draft narratives → invite them to portal. This is the real launch.',status:'planned',tags:['fe','be'],when:'Day 21',effort:'2 hr'},
+          {title:'🚀 www.govcert.com is live',detail:'Real users. Real data. Real certifications. You built this.',status:'planned',tags:['infra'],when:'Day 21',effort:'🎉'},
+        ]
+      }
+    ]
+  },
+];
+
+
+const INTEGRATIONS = [
+  {icon:'📗',name:'QuickBooks Online',auth:'OAuth 2.0',scope:'P&L, Balance Sheet, Employee list (3yr financial history)',be:'/api/oauth/qbo\n/api/sync/financials',status:'planned'},
+  {icon:'🟡',name:'Gusto',auth:'OAuth 2.0',scope:'Employee roster, payroll totals, W-2/1099 data',be:'/api/oauth/gusto\n/api/sync/payroll',status:'planned'},
+  {icon:'📒',name:'FreshBooks',auth:'OAuth 2.0',scope:'Invoice history, revenue, expenses (alternative to QB)',be:'/api/oauth/freshbooks',status:'planned'},
+  {icon:'🔵',name:'Xero',auth:'OAuth 2.0',scope:'Financial statements, bank reconciliation',be:'/api/oauth/xero',status:'planned'},
+  {icon:'🔴',name:'ADP Workforce Now',auth:'OAuth 2.0',scope:'Payroll register, employee demographics (enterprise)',be:'/api/oauth/adp',status:'planned'},
+  {icon:'🟠',name:'Paychex Flex',auth:'OAuth 2.0',scope:'Payroll summaries, employee data',be:'/api/oauth/paychex',status:'planned'},
+  {icon:'🏛️',name:'SAM.gov',auth:'API Key',scope:'Entity registration, UEI, CAGE, NAICS, expiry date',be:'/api/sync/sam',status:'planned'},
+  {icon:'📑',name:'IRS 4506-C',auth:'IVES/Third-party',scope:'Business + personal tax transcripts (3yr)',be:'/api/docs/4506c',status:'planned'},
+  {icon:'🏦',name:'Plaid',auth:'Plaid Link',scope:'Bank account verification, balances, 90-day deposits',be:'/api/oauth/plaid',status:'planned'},
+  {icon:'📋',name:'FPDS-NG',auth:'API Key (SAM)',scope:'Federal contract awards by UEI',be:'/api/sync/fpds',status:'planned'},
+  {icon:'✦',name:'Claude AI (Anthropic)',auth:'API Key',scope:'Narrative drafting, scoring, advisor chat',be:'/api/ai/*',status:'planned'},
+  {icon:'📧',name:'SendGrid',auth:'API Key',scope:'Transactional email — alerts, invites, digests',be:'Notification service',status:'planned'},
+  {icon:'💳',name:'Stripe',auth:'API Key + Webhooks',scope:'Subscription billing, plan management',be:'/api/billing/*',status:'planned'},
+  {icon:'🗂️',name:'Google Drive',auth:'OAuth 2.0',scope:'Document import from Drive folders',be:'/api/oauth/gdrive',status:'planned'},
+];
+
+const MILESTONES = [
+  {title:'Dev environment live',week:1,desc:'VS Code, Node.js, Git, Railway, GitHub all configured — Week 1 Day 1'},
+  {title:'Real login working',week:3,desc:'Auth service complete — real signup/login/JWT, Postgres schema live — Week 1 Day 3'},
+  {title:'QuickBooks OAuth live',week:7,desc:'Real financial data flowing from QB sandbox into wizard fields — Week 1 Day 7'},
+  {title:'Gusto + SAM.gov + AI live',week:10,desc:'Payroll data, entity lookup, and Claude narratives all real — Week 2 Day 3'},
+  {title:'Customer portal + docs',week:14,desc:'Invite emails, uploads, onboarding all functional — Week 2 Day 7'},
+  {title:'QA complete',week:19,desc:'All hardcoded data removed, security hardened, full E2E tested — Week 3 Day 5'},
+  {title:'🚀 www.govcert.com live',week:21,desc:'Production deploy, real client onboarded, platform launched — Week 3 Day 7'},
+];
+
+// ═══════════════════════════════════════════════
+// COMPUTE + RENDER
+// ═══════════════════════════════════════════════
+let activeFilter = null;
+let activePhaseView = null;
+
+function computeTotals(){
+  let total=0,done=0;
+  PHASES.forEach(p=>{
+    p.sections.forEach(s=>{
+      s.tasks.forEach(t=>{
+        total++;
+        if(t.status==='done')done++;
+      });
+    });
+  });
+  return{total,done,pct:total?Math.round(done/total*100):0};
+}
+
+function updateCounters(){
+  const {total,done,pct}=computeTotals();
+  const curPhase=PHASES.find(p=>p.status==='active')||PHASES[0];
+  document.getElementById('ov-overall').textContent=pct+'%';
+  document.getElementById('ov-done').textContent=done;
+  document.getElementById('ov-total').textContent=total;
+  document.getElementById('ov-phase').textContent='P'+curPhase.id;
+  document.getElementById('sb-pct').textContent=pct+'%';
+  document.getElementById('sb-pfill').style.width=pct+'%';
+  document.getElementById('sb-done-tasks').textContent=done+' tasks done';
+  document.getElementById('sb-total-tasks').textContent=total+' total';
+}
+
+function statusColor(s){
+  return s==='done'?'var(--green)':s==='active'?'var(--gold)':s==='blocked'?'var(--red)':'var(--ink4)';
+}
+function statusLabel(s){
+  return s==='done'?'✓ Complete':s==='active'?'→ In Progress':s==='blocked'?'✕ Blocked':'◦ Planned';
+}
+function statusClass(s){
+  return s==='done'?'bg-green':s==='active'?'bg-amber':s==='blocked'?'bg-red':'bg-gray';
+}
+
+function renderPhaseSidebar(){
+  const el=document.getElementById('sb-phases');
+  el.innerHTML=PHASES.map(p=>{
+    const allTasks=p.sections.flatMap(s=>s.tasks);
+    const done=allTasks.filter(t=>t.status==='done').length;
+    const pct=allTasks.length?Math.round(done/allTasks.length*100):0;
+    return `<div class="sb-item" onclick="showPhase(${p.id},this)">
+      <div class="sb-item-dot ${p.status}"></div>
+      <span>P${p.id}: ${p.title.split(' ').slice(0,3).join(' ')}</span>
+      <span class="sb-item-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+function renderPhaseCards(containerId, openFirst){
+  const el=document.getElementById(containerId);
+  el.innerHTML=PHASES.map((p,idx)=>{
+    const allTasks=p.sections.flatMap(s=>s.tasks);
+    const done=allTasks.filter(t=>t.status==='done').length;
+    const pct=allTasks.length?Math.round(done/allTasks.length*100):0;
+    const colLabel=p.status==='done'?'psi-done':p.status==='active'?'psi-active':'psi-planned';
+    const shouldOpen=p.status==='active'||(openFirst&&idx===0);
+    return `<div class="phase-card" id="phase-card-${p.id}">
+      <div class="phase-header" onclick="togglePhase(${p.id})">
+        <div class="phase-status-icon ${colLabel}">${p.status==='done'?'✓':p.status==='active'?'→':'◦'}</div>
+        <div class="phase-info">
+          <div class="phase-name-row">
+            <div class="phase-name">Phase ${p.id}: ${p.title}</div>
+            <span class="badge ${statusClass(p.status)}" style="font-size:9.5px">${statusLabel(p.status)}</span>
+          </div>
+          <div class="phase-meta">${p.subtitle} · Weeks ${p.weeks[0]+1}–${p.weeks[1]} · ${done}/${allTasks.length} tasks</div>
+        </div>
+        <div class="phase-right">
+          <div class="phase-pct" style="color:${p.color}">${pct}%</div>
+          <div class="phase-pct-label">${p.status==='done'?'complete':p.status==='active'?'in progress':'not started'}</div>
+          <div class="phase-pct-bar"><div class="phase-pct-fill" style="width:${pct}%;background:${p.color}"></div></div>
+        </div>
+      </div>
+      <div class="phase-body${shouldOpen?' open':''}" id="pb-${p.id}">
+        ${renderSections(p,containerId)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSections(phase, containerId){
+  return phase.sections.map(sec=>{
+    const tasks=activeFilter?sec.tasks.filter(t=>t.tags&&t.tags.includes(activeFilter)):sec.tasks;
+    if(tasks.length===0&&activeFilter)return'';
+    return `<div class="task-section">
+      <div class="task-sec-header" style="color:${sec.labelColor}">
+        <span style="width:8px;height:8px;background:${sec.labelColor};border-radius:2px;display:inline-block;flex-shrink:0"></span>
+        ${sec.label} (${tasks.length} tasks)
+      </div>
+      <div class="task-list">${tasks.map(t=>renderTask(t,phase.id)).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTask(t,phaseId){
+  const tags=(t.tags||[]).map(tag=>`<span class="tag tag-${tag}">${tag}</span>`).join('');
+  return `<div class="task ${t.status}" onclick="cycleTask(${phaseId},'${t.title.replace(/'/g,"\\'").substring(0,40)}')">
+    <div class="task-checkbox"></div>
+    <div class="task-content">
+      <div class="task-title">${t.title}</div>
+      ${t.detail?`<div class="task-detail">${t.detail}</div>`:''}
+      ${tags?`<div class="task-tags">${tags}</div>`:''}
+    </div>
+    <div class="task-meta">
+      <div class="task-when">${t.when||''}</div>
+      ${t.effort?`<div class="task-effort">${t.effort}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function togglePhase(id){
+  const el=document.getElementById('pb-'+id);
+  el.classList.toggle('open');
+}
+
+function cycleTask(phaseId,titleStart){
+  const phase=PHASES.find(p=>p.id===phaseId);
+  let task;
+  phase.sections.forEach(s=>{task=task||s.tasks.find(t=>t.title.startsWith(titleStart));});
+  if(!task)return;
+  const cycle=['planned','active','done','blocked'];
+  const idx=cycle.indexOf(task.status);
+  task.status=cycle[(idx+1)%cycle.length];
+  // Recompute phase status
+  const allT=phase.sections.flatMap(s=>s.tasks);
+  const doneCount=allT.filter(t=>t.status==='done').length;
+  const hasActive=allT.some(t=>t.status==='active'||t.status==='blocked');
+  if(doneCount===allT.length)phase.status='done';
+  else if(hasActive||doneCount>0)phase.status='active';
+  else phase.status='planned';
+  phase.color=statusColor(phase.status);
+  // Re-render phase cards in all containers
+  reRenderAllCards();
+  updateCounters();
+  renderPhaseSidebar();
+  toast(`Task → ${task.status}`);
+}
+
+function reRenderAllCards(){
+  const containers=['overview-phase-cards','detail-phase-cards'];
+  containers.forEach(c=>{
+    if(document.getElementById(c)&&document.getElementById(c).children.length>0)
+      renderPhaseCards(c,false);
+  });
+}
+
+function filterTag(tag){
+  activeFilter=tag;
+  reRenderAllCards();
+  toast(tag?`Showing ${tag} tasks only`:'Filter cleared');
+}
+
+function showPhase(id, navEl){
+  document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('on'));
+  if(navEl)navEl.classList.add('on');
+  switchView('phases');
+  if(!document.getElementById('detail-phase-cards').children.length){
+    renderPhaseCards('detail-phase-cards',false);
+  }
+  setTimeout(()=>{
+    const el=document.getElementById('phase-card-'+id);
+    if(el){el.scrollIntoView({behavior:'smooth',block:'start'});
+      document.getElementById('pb-'+id).classList.add('open');
+    }
+  },100);
+  document.getElementById('view-title').textContent='Phase '+id+': '+PHASES.find(p=>p.id===id)?.title;
+  document.getElementById('view-sub').textContent=PHASES.find(p=>p.id===id)?.subtitle;
+}
+
+// ─── VIEWS ────────────────────────────────────
+const viewMeta={
+  overview:['Overview & System Architecture','GovCert · Full-stack development plan · Click tasks to update status'],
+  gantt:['3-Week Build Timeline · www.govcert.com','www.govcert.com · All phases · Milestones'],
+  backend:['Backend Deep Dive','Services, endpoints, database schemas'],
+  integrations:['Integration Map','14 providers · Auth methods · Backend routes'],
+  decisions:['Technology Decisions','Stack recommendations with rationale'],
+  phases:['Phase Detail View','Click sidebar phases to jump to any phase'],
+};
+
+function switchView(id, navEl){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('view-'+id).classList.add('on');
+  document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('on'));
+  if(navEl)navEl.classList.add('on');
+  const m=viewMeta[id]||[id,''];
+  document.getElementById('view-title').textContent=m[0];
+  document.getElementById('view-sub').textContent=m[1];
+
+  if(id==='overview'&&!document.getElementById('overview-phase-cards').children.length){
+    renderPhaseCards('overview-phase-cards',false);
+  }
+  if(id==='phases'&&!document.getElementById('detail-phase-cards').children.length){
+    renderPhaseCards('detail-phase-cards',false);
+  }
+  if(id==='gantt')renderGantt();
+  if(id==='integrations')renderIntegrations();
+}
+
+// ─── GANTT ────────────────────────────────────
+function renderGantt(){
+  const weeks=21;
+  const wkLabels=document.getElementById('gantt-wk-labels');
+  wkLabels.innerHTML=Array.from({length:weeks},(_,i)=>`<div class="gantt-wk-label">D${i+1}</div>`).join('');
+
+  const rows=document.getElementById('gantt-rows');
+  rows.innerHTML=PHASES.map(p=>{
+    const allT=p.sections.flatMap(s=>s.tasks);
+    const done=allT.filter(t=>t.status==='done').length;
+    const pct=allT.length?Math.round(done/allT.length*100):0;
+    const left=(p.weeks[0]/weeks*100).toFixed(1);
+    const width=((p.weeks[1]-p.weeks[0])/weeks*100).toFixed(1);
+    const fillW=(pct/100)*parseFloat(width);
+    const col=p.status==='done'?'var(--green)':p.status==='active'?'var(--gold)':'var(--cream3)';
+    const borderCol=p.status==='done'?'var(--green-b)':p.status==='active'?'var(--amber-b)':'var(--border2)';
+    return `<div class="gantt-row">
+      <div class="gantt-label">P${p.id}: ${p.title.split(' ').slice(0,2).join(' ')}<span>${p.subtitle.split(' ').slice(0,4).join(' ')}…</span></div>
+      <div class="gantt-track">
+        <div class="gantt-fill" style="left:${left}%;width:${width}%;border:1px solid ${borderCol}">
+          <div class="gantt-fill-bg" style="background:${col}"></div>
+          ${p.status!=='planned'?`<div class="gantt-fill-progress" style="width:${pct}%;background:${col};opacity:.7"></div>`:''}
+          <span class="gantt-fill-label" style="color:${p.status==='planned'?'var(--ink4)':'rgba(0,0,0,.6)'}">${pct>8?pct+'%':''}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Milestones
+  const ml=document.getElementById('milestone-list');
+  ml.innerHTML=MILESTONES.map(m=>`
+    <div style="background:var(--cream);border-radius:var(--r);padding:10px 12px;border:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--ink4);font-family:'DM Mono',monospace;margin-bottom:2px">Day ${m.week}</div>
+      <div style="font-size:12.5px;font-weight:500;color:var(--navy);margin-bottom:3px">${m.title}</div>
+      <div style="font-size:11px;color:var(--ink3)">${m.desc}</div>
+    </div>`).join('');
+
+  // Timeline
+  const tl=document.getElementById('tl-narrative');
+  const narratives=[
+    {date:'Week 1 · Days 1–2',title:'Environment, Installs & First Commit',body:'VS Code, Node.js, Git installed. GitHub and Railway accounts created. All API keys registered (QuickBooks, Gusto, SAM.gov, Anthropic, SendGrid). www.govcert.com domain purchased. Node.js project scaffolded, pushed to GitHub, auto-deploying to Railway.',tags:['be','db','infra'],dot:'active'},
+    {date:'Week 1 · Days 2–5',title:'Database & Real Authentication',body:'Postgres live on Railway. All 8 database tables created with Prisma. Real login and signup working — bcrypt passwords, JWT access tokens, httpOnly refresh cookies. Frontend login form hitting real backend. Role-based access: Admin vs Customer.',tags:['be','db','security'],dot:'planned'},
+    {date:'Week 1 · Days 5–7',title:'QuickBooks OAuth — Real Data',body:'OAuth proxy built server-side — tokens never touch the browser. QuickBooks sandbox connected. Real 3-year P&L, Balance Sheet, and employee data flowing from QB into the 8(a) wizard fields. No more hardcoded Meridian numbers.',tags:['api','be'],dot:'planned'},
+    {date:'Week 2 · Days 1–3',title:'Gusto + SAM.gov + Claude AI',body:'Gusto payroll and employee roster live. SAM.gov entity lookup by UEI — CAGE, NAICS, expiry dates auto-fill. Claude API called server-side with verified client data — real narratives generated from real financials, not templates.',tags:['ai','be','api'],dot:'planned'},
+    {date:'Week 2 · Days 4–7',title:'Documents, Customer Portal & Email',body:'File upload to Cloudflare R2. Pre-signed download URLs. PDF financial statement generation. Admin sends real invite email via SendGrid. Customer clicks link, sets password, lands in portal. Onboarding progress persists across sessions.',tags:['be','fe'],dot:'planned'},
+    {date:'Week 3 · Days 1–3',title:'Compliance Engine',body:'SAM.gov expiry cron job runs daily at 6am. Compliance alerts fire automatically at 90/60/30/14/7 day intervals. Compliance calendar driven by real database events. Action item system: admin assigns, customer completes.',tags:['be','infra'],dot:'planned'},
+    {date:'Week 3 · Days 4–6',title:'QA, Security Hardening & Bug Fixes',body:'Every hardcoded value removed — all data comes from the database. Input validation on all endpoints. CORS, Helmet.js, rate limiting. Full Admin and Customer end-to-end flows tested. All critical bugs fixed.',tags:['security','be'],dot:'planned'},
+    {date:'Week 3 · Day 7 🚀',title:'www.govcert.com Goes Live',body:'Custom domain connected to Railway. SSL certificate active. Production environment variables set. QuickBooks and Gusto redirect URIs updated to production domain. First real client onboarded end-to-end. Platform is live.',tags:['infra','fe'],dot:'planned'},
+  ];
+    tl.innerHTML=narratives.map(n=>`
+    <div class="tl-item">
+      <div class="tl-dot ${n.dot}"></div>
+      <div class="tl-date">${n.date}</div>
+      <div class="tl-title">${n.title}</div>
+      <div class="tl-body">${n.body}</div>
+      <div class="tl-tags">${n.tags.map(t=>`<span class="tag tag-${t}">${t}</span>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ─── INTEGRATIONS ─────────────────────────────
+function renderIntegrations(){
+  document.getElementById('integration-rows').innerHTML=INTEGRATIONS.map(i=>`
+    <div class="int-row">
+      <div class="int-icon">${i.icon}</div>
+      <div class="int-name">${i.name}</div>
+      <div class="int-auth">${i.auth}</div>
+      <div class="int-scope">${i.scope}</div>
+      <div class="int-be mono" style="font-size:10px;white-space:pre-line">${i.be}</div>
+      <div class="int-status"><span class="badge ${i.status==='done'?'bg-green':i.status==='active'?'bg-amber':'bg-gray'}" style="font-size:9px">${i.status}</span></div>
+    </div>`).join('');
+}
+
+// ─── EXPORT ───────────────────────────────────
+function exportStatus(){
+  const {total,done,pct}=computeTotals();
+  const lines=[`GovCert Project Status Export — ${new Date().toLocaleDateString()}`,`Overall: ${pct}% (${done}/${total} tasks)`,''];
+  PHASES.forEach(p=>{
+    const allT=p.sections.flatMap(s=>s.tasks);
+    const d=allT.filter(t=>t.status==='done').length;
+    lines.push(`Phase ${p.id}: ${p.title} — ${d}/${allT.length} tasks done`);
+    p.sections.forEach(s=>{
+      s.tasks.forEach(t=>{
+        lines.push(`  [${t.status.toUpperCase()}] ${t.title}`);
+      });
+    });
+    lines.push('');
+  });
+  const blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`GovCert_Status_${new Date().toISOString().split('T')[0]}.txt`;
+  a.click();
+  toast('Status exported as .txt ✓');
+}
+
+// ─── TOAST ────────────────────────────────────
+let toastT;
+function toast(msg){
+  const el=document.getElementById('toast-el');
+  document.getElementById('toast-msg').textContent=msg;
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// ─── INIT ─────────────────────────────────────
+renderPhaseSidebar();
+updateCounters();
+renderPhaseCards('overview-phase-cards',false);
+</script>
+</body>
+</html>

@@ -38,7 +38,7 @@ const EMPTY_CONTRACT = {
 
 export default function PastPerformancePage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const certId = String(certID);
+  const certId = String(params.id);
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);

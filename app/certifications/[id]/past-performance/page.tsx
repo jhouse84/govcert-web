@@ -38,7 +38,7 @@ const EMPTY_CONTRACT = {
 
 export default function PastPerformancePage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const certId = String(params.id);
+  const certId = String(params.id); // single definition — used everywhere below
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +64,7 @@ export default function PastPerformancePage({ params }: { params: { id: string }
 
   async function fetchCert() {
     try {
-      const data = await apiRequest(`/api/certifications/${certID}`);
+      const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
       if (data.application?.pastPerformance?.length > 0) {
         const mapped = data.application.pastPerformance.map((pp: any) => ({
@@ -103,7 +103,7 @@ export default function PastPerformancePage({ params }: { params: { id: string }
       const app = await apiRequest("/api/applications", {
         method: "POST",
         body: JSON.stringify({
-          certificationId: certID,
+          certificationId: certId,
           clientId: cert.clientId,
           certType: cert.type,
           currentStep: 1,
@@ -131,7 +131,7 @@ export default function PastPerformancePage({ params }: { params: { id: string }
     setSaving(true);
     try {
       const appId = await ensureApplication();
-      const saved = await apiRequest(`/api/applications/${appId}/past-performance`, {
+      const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
         method: "POST",
         body: JSON.stringify({
           agencyName: newContract.agencyName,
@@ -151,7 +151,7 @@ export default function PastPerformancePage({ params }: { params: { id: string }
           narrative: newContract.narrative,
         })
       });
-      setContracts(prev => [...prev, { ...newContract, id: saved.id }]);
+      setContracts(prev => [...prev, { ...newContract, id: result.id }]);
       setNewContract({ ...EMPTY_CONTRACT });
       setAddingContract(false);
       setExpandedContract(contracts.length);
@@ -388,8 +388,8 @@ Scope of Work: ${contract.sowDescription}`,
       {/* Main */}
       <div style={{ flex: 1, overflow: "auto" }}>
         <div style={{ padding: "40px 48px", maxWidth: 900 }}>
-          <a href={`/certifications/${certID}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
-            Back to Application Dashboard
+          <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
+            ← Back to Application Dashboard
           </a>
 
           <div style={{ marginTop: 20, marginBottom: 24 }}>
@@ -590,7 +590,7 @@ Scope of Work: ${contract.sowDescription}`,
             const isComplete = contract.cparsUploaded || contract.ppqStatus === "COMPLETED";
 
             return (
-              <div key={index} style={{ background: "#fff", border: `1px solid ${isComplete ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", marginBottom: 12, boxShadow: "var(--shadow)", overflow: "hidden" }}>
+              <div key={contract.id || index} style={{ background: "#fff", border: `1px solid ${isComplete ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", marginBottom: 12, boxShadow: "var(--shadow)", overflow: "hidden" }}>
 
                 {/* Header */}
                 <div onClick={() => setExpandedContract(isExpanded ? null : index)}
@@ -818,8 +818,8 @@ Scope of Work: ${contract.sowDescription}`,
 
           {/* Bottom nav */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 32 }}>
-            <a href={`/certifications/${certID}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>Back to Dashboard</a>
-            <a href={`/certifications/${certID}`}
+            <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>← Back to Dashboard</a>
+            <a href={`/certifications/${certId}`}
               style={{ padding: "12px 28px", background: "var(--gold)", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, textDecoration: "none", boxShadow: "0 4px 16px rgba(200,155,60,.35)" }}>
               Save & Continue →
             </a>

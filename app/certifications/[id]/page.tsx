@@ -27,9 +27,8 @@ const SIN_LABELS: Record<string, string> = {
 };
 
 export default function CertificationDashboard({ params }: { params: { id: string } }) {
-  const certId = certID;
   const router = useRouter();
-  const certId = String(certID);
+  const certId = String(params.id);
   const [cert, setCert] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -145,7 +144,6 @@ export default function CertificationDashboard({ params }: { params: { id: strin
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
-      {/* Sidebar */}
       <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ padding: "24px 20px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
           <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
@@ -181,7 +179,6 @@ export default function CertificationDashboard({ params }: { params: { id: strin
         </div>
       </div>
 
-      {/* Main */}
       <div style={{ flex: 1, overflow: "auto" }}>
         <div style={{ padding: "40px 48px" }}>
           <a href="/certifications" style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>Back to Certifications</a>
@@ -196,7 +193,6 @@ export default function CertificationDashboard({ params }: { params: { id: strin
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Application Progress Dashboard</p>
           </div>
 
-          {/* Springboard alert */}
           {needsSpringboard && (
             <div style={{ background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--amber)", marginBottom: 6 }}>Startup Springboard Program Detected</div>
@@ -210,7 +206,6 @@ export default function CertificationDashboard({ params }: { params: { id: strin
             </div>
           )}
 
-          {/* Progress */}
           <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 28, color: "#fff" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <div>
@@ -229,7 +224,6 @@ export default function CertificationDashboard({ params }: { params: { id: strin
             </div>
           </div>
 
-          {/* Integrations */}
           <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Data Sources</div>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400, marginBottom: 16 }}>Connected Integrations</h2>
@@ -250,7 +244,6 @@ export default function CertificationDashboard({ params }: { params: { id: strin
             </div>
           </div>
 
-          {/* Section cards */}
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 12 }}>Application Sections</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {sections.map((section, i) => (
@@ -258,18 +251,14 @@ export default function CertificationDashboard({ params }: { params: { id: strin
                 <div style={{ background: "#fff", border: `1px solid ${section.complete ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", padding: "20px 24px", boxShadow: "var(--shadow)", display: "flex", alignItems: "center", gap: 16, transition: "all .15s" }}
                   onMouseEnter={e => (e.currentTarget.style.boxShadow = "var(--shadow-lg)")}
                   onMouseLeave={e => (e.currentTarget.style.boxShadow = "var(--shadow)")}>
-
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: section.complete ? "var(--green)" : "var(--cream2)", border: `2px solid ${section.complete ? "var(--green)" : "var(--border2)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13, color: section.complete ? "#fff" : "var(--ink3)", fontWeight: 600 }}>
                     {section.complete ? "✓" : i + 1}
                   </div>
-
                   <div style={{ fontSize: 24, flexShrink: 0 }}>{section.icon}</div>
-
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)", marginBottom: 3 }}>{section.label}</div>
                     <div style={{ fontSize: 12.5, color: "var(--ink3)" }}>{section.desc}</div>
                   </div>
-
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     {section.charLimit && section.chars !== null && (
                       <div style={{ fontSize: 11, color: "var(--ink4)", fontFamily: "monospace", marginBottom: 4 }}>
@@ -285,7 +274,6 @@ export default function CertificationDashboard({ params }: { params: { id: strin
                       {section.complete ? "Complete" : "Not Started"}
                     </span>
                   </div>
-
                   <div style={{ fontSize: 18, color: "var(--gold)", flexShrink: 0 }}>→</div>
                 </div>
               </a>

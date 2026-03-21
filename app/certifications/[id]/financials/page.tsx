@@ -32,7 +32,7 @@ type FinancialData = {
   year1Label: string;
   year2Label: string;
   source: "quickbooks" | "upload" | "manual" | null;
-  uploadedFileName?: string;
+  uploadedFileNames?: string;
   notes?: string;
 };
 
@@ -57,7 +57,7 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
   const [saved, setSaved] = useState(false);
   const [financials, setFinancials] = useState<FinancialData>({ ...EMPTY_FINANCIAL });
   const [mode, setMode] = useState<"choose" | "review">("choose");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [qbConnected, setQbConnected] = useState(false);
   const [qbSyncing, setQbSyncing] = useState(false);
@@ -76,10 +76,8 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
     try {
       const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
-      // Check if QB is connected
       const tokens = data.client?.oauthTokens || [];
       setQbConnected(tokens.some((t: any) => t.provider === "quickbooks"));
-      // Load existing financials if saved
       if (data.application?.financialData) {
         try {
           const parsed = JSON.parse(data.application.financialData);
@@ -95,33 +93,37 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
     }
   }
 
-  async function handleFileUpload(file: File) {
+  async function handleFileUpload(files: File[]) {
     setUploading(true);
-    setUploadedFile(file);
+    setUploadedFiles(files);
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/extract-text`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.text) {
-        // Use AI to extract financial figures from the text
-        await extractFinancialsFromText(data.text, file.name);
+      const allTexts: string[] = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/extract-text`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.text) allTexts.push(`--- ${file.name} ---\n${data.text}`);
+      }
+      const combinedText = allTexts.join("\n\n");
+      if (combinedText) {
+        await extractFinancialsFromText(combinedText, files.map(f => f.name).join(", "));
       }
     } catch (err) {
       console.error(err);
-      setError("Failed to process file. Please try again.");
+      setError("Failed to process files. Please try again.");
     } finally {
       setUploading(false);
     }
   }
 
-  async function extractFinancialsFromText(text: string, fileName: string) {
+  async function extractFinancialsFromText(text: string, fileNames: string) {
     try {
       const data = await apiRequest("/api/applications/ai/draft", {
         method: "POST",
@@ -147,7 +149,7 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
   },
   "year2": { same fields }
 }
-Use the most recent fiscal year as year1. Format numbers without commas or dollar signs (e.g. "450000"). If a value is not found, use empty string "".`,
+Use the most recent fiscal year as year1. Format numbers without commas or dollar signs (e.g. "450000"). If a value is not found use empty string "".`,
           context: {
             businessName: cert?.client?.businessName,
             otherSections: text.substring(0, 6000),
@@ -157,21 +159,16 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
       try {
         const clean = data.text.replace(/```json|```/g, "").trim();
         const parsed = JSON.parse(clean);
-        setFinancials({
-          ...parsed,
-          source: "upload",
-          uploadedFileName: fileName,
-        });
+        setFinancials({ ...parsed, source: "upload", uploadedFileNames: fileNames });
         setMode("review");
       } catch {
-        // AI couldn't parse — go to review mode with empty fields for manual entry
-        setFinancials(prev => ({ ...prev, source: "upload", uploadedFileName: fileName }));
+        setFinancials(prev => ({ ...prev, source: "upload", uploadedFileNames: fileNames }));
         setMode("review");
         setError("Could not auto-extract all figures — please fill in any missing fields manually.");
       }
     } catch (err) {
       console.error(err);
-      setFinancials(prev => ({ ...prev, source: "upload", uploadedFileName: fileName }));
+      setFinancials(prev => ({ ...prev, source: "upload", uploadedFileNames: fileNames }));
       setMode("review");
     }
   }
@@ -202,12 +199,6 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
       ...prev,
       [year]: { ...prev[year], [field]: value },
     }));
-  }
-
-  function formatCurrency(val: string) {
-    const num = parseFloat(val.replace(/[^0-9.-]/g, ""));
-    if (isNaN(num)) return val;
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(num);
   }
 
   async function saveFinancials() {
@@ -374,37 +365,56 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
                       QuickBooks not connected
                     </div>
                     <a href={`/clients/${cert?.clientId}`}
-                      style={{ display: "block", width: "100%", padding: "12px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 14, fontWeight: 500, cursor: "pointer", textAlign: "center", textDecoration: "none", boxSizing: "border-box" as const }}>
+                      style={{ display: "block", width: "100%", padding: "12px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 14, fontWeight: 500, cursor: "pointer", textAlign: "center" as const, textDecoration: "none", boxSizing: "border-box" as const }}>
                       Connect QuickBooks First →
                     </a>
                   </div>
                 )}
               </div>
 
-              {/* Upload */}
+              {/* Upload — multiple files */}
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)" }}>
                 <div style={{ fontSize: 28, marginBottom: 12 }}>📄</div>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>Upload Statements</h3>
-                <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.6 }}>
-                  Upload your financial statements as PDF or Excel. GovCert extracts the key figures automatically using AI — review and correct anything after.
+                <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 8, lineHeight: 1.6 }}>
+                  Upload your financial statements as PDF or Excel. You can select multiple files at once — for example, your P&L as one file and your Balance Sheet as another.
                 </p>
-                <input ref={fileInputRef} type="file" accept=".pdf,.xlsx,.xls,.csv" style={{ display: "none" }}
-                  onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
-                {!uploadedFile ? (
-                  <div onClick={() => fileInputRef.current?.click()}
-                    style={{ border: "2px dashed var(--border2)", borderRadius: "var(--r)", padding: "28px 16px", textAlign: "center", cursor: "pointer", transition: "border-color .15s" }}
+                <p style={{ fontSize: 12, color: "var(--ink4)", marginBottom: 20, lineHeight: 1.5 }}>
+                  GovCert extracts the key figures automatically using AI — review and correct anything after.
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.xlsx,.xls,.csv"
+                  multiple
+                  style={{ display: "none" }}
+                  onChange={e => { if (e.target.files && e.target.files.length > 0) handleFileUpload(Array.from(e.target.files)); }}
+                />
+                {uploadedFiles.length === 0 ? (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ border: "2px dashed var(--border2)", borderRadius: "var(--r)", padding: "28px 16px", textAlign: "center" as const, cursor: "pointer", transition: "border-color .15s" }}
                     onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--gold)")}
                     onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border2)")}>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>📤</div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Click to upload</div>
-                    <div style={{ fontSize: 11, color: "var(--ink4)" }}>PDF, Excel (.xlsx), or CSV</div>
+                    <div style={{ fontSize: 11, color: "var(--ink4)" }}>PDF, Excel (.xlsx), or CSV · Select multiple files</div>
                   </div>
                 ) : (
-                  <div style={{ padding: "14px", background: uploading ? "var(--amber-bg)" : "var(--green-bg)", border: `1px solid ${uploading ? "var(--amber-b)" : "var(--green-b)"}`, borderRadius: "var(--r)", textAlign: "center" }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: uploading ? "var(--amber)" : "var(--green)" }}>
+                  <div style={{ padding: "14px", background: uploading ? "var(--amber-bg)" : "var(--green-bg)", border: `1px solid ${uploading ? "var(--amber-b)" : "var(--green-b)"}`, borderRadius: "var(--r)" }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: uploading ? "var(--amber)" : "var(--green)", marginBottom: 8 }}>
                       {uploading ? "⏳ Extracting figures..." : "✓ Processed — review below"}
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--ink3)", marginTop: 4 }}>{uploadedFile.name}</div>
+                    {uploadedFiles.map((f, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--ink2)", marginBottom: 4 }}>
+                        <span>📄</span>{f.name}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => { setUploadedFiles([]); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                      style={{ marginTop: 8, padding: "3px 10px", background: "transparent", border: `1px solid ${uploading ? "var(--amber-b)" : "var(--green-b)"}`, borderRadius: "var(--r)", color: uploading ? "var(--amber)" : "var(--green)", fontSize: 11, cursor: "pointer" }}>
+                      Remove
+                    </button>
                   </div>
                 )}
                 <button onClick={() => setMode("review")}
@@ -422,7 +432,9 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
               {financials.source && (
                 <div style={{ background: financials.source === "quickbooks" ? "var(--green-bg)" : "var(--blue-bg)", border: `1px solid ${financials.source === "quickbooks" ? "var(--green-b)" : "var(--blue-b)"}`, borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 13, fontWeight: 500, color: financials.source === "quickbooks" ? "var(--green)" : "var(--blue)" }}>
-                    {financials.source === "quickbooks" ? "✓ Data synced from QuickBooks" : financials.source === "upload" ? `✓ Data extracted from ${financials.uploadedFileName}` : "Manual entry"}
+                    {financials.source === "quickbooks"
+                      ? "✓ Data synced from QuickBooks"
+                      : `✓ Data extracted from: ${financials.uploadedFileNames}`}
                   </span>
                   <button onClick={() => setMode("choose")}
                     style={{ fontSize: 12, color: "var(--ink3)", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", padding: "4px 10px", cursor: "pointer" }}>
@@ -436,7 +448,7 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
                 <div />
                 {YEARS.map(y => (
                   <div key={y.key}>
-                    <label style={{ display: "block", fontSize: 11, color: "var(--ink3)", marginBottom: 4, fontWeight: 500, textTransform: "uppercase", letterSpacing: ".06em" }}>
+                    <label style={{ display: "block", fontSize: 11, color: "var(--ink3)", marginBottom: 4, fontWeight: 500, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>
                       {y.label} — Fiscal Year
                     </label>
                     <input
@@ -450,7 +462,7 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
                 ))}
               </div>
 
-              {/* P&L Section */}
+              {/* P&L */}
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", marginBottom: 16, boxShadow: "var(--shadow)", overflow: "hidden" }}>
                 <div style={{ padding: "16px 20px", background: "var(--navy)", display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 16 }}>📈</span>
@@ -460,11 +472,10 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
                   </div>
                 </div>
                 <div style={{ padding: "20px" }}>
-                  {/* Header row */}
                   <div style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr", gap: 12, marginBottom: 8 }}>
                     <div />
                     {YEARS.map(y => (
-                      <div key={y.key} style={{ fontSize: 11, fontWeight: 600, color: "var(--ink3)", textTransform: "uppercase", letterSpacing: ".06em", textAlign: "right" as const }}>
+                      <div key={y.key} style={{ fontSize: 11, fontWeight: 600, color: "var(--ink3)", textTransform: "uppercase" as const, letterSpacing: ".06em", textAlign: "right" as const }}>
                         FY {y.key === "year1" ? financials.year1Label : financials.year2Label}
                       </div>
                     ))}
@@ -505,7 +516,7 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
                   <div style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr", gap: 12, marginBottom: 8 }}>
                     <div />
                     {YEARS.map(y => (
-                      <div key={y.key} style={{ fontSize: 11, fontWeight: 600, color: "var(--ink3)", textTransform: "uppercase", letterSpacing: ".06em", textAlign: "right" as const }}>
+                      <div key={y.key} style={{ fontSize: 11, fontWeight: 600, color: "var(--ink3)", textTransform: "uppercase" as const, letterSpacing: ".06em", textAlign: "right" as const }}>
                         FY {y.key === "year1" ? financials.year1Label : financials.year2Label}
                       </div>
                     ))}
@@ -537,7 +548,7 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "20px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 6 }}>Notes (optional)</label>
                 <p style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 10, lineHeight: 1.5 }}>
-                  Add any context about these financials — fiscal year end date, accounting method (cash vs accrual), or any significant one-time items.
+                  Add any context — fiscal year end date, accounting method (cash vs accrual), or significant one-time items.
                 </p>
                 <textarea
                   value={financials.notes || ""}

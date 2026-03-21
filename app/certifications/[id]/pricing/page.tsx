@@ -13,7 +13,7 @@ const EDUCATION_LEVELS = [
   "No Minimum Requirement",
 ];
 
-const IFF_RATE = 0.0075; // 0.75% Industrial Funding Fee
+const IFF_RATE = 0.0075;
 
 type LCAT = {
   id: string;
@@ -24,6 +24,8 @@ type LCAT = {
   baseRate: string;
   mfcRate: string;
   gsaRate: string;
+  rateStatus?: "competitive" | "check" | "low" | null;
+  rateNote?: string;
 };
 
 const EMPTY_LCAT: Omit<LCAT, "id"> = {
@@ -34,11 +36,16 @@ const EMPTY_LCAT: Omit<LCAT, "id"> = {
   baseRate: "",
   mfcRate: "",
   gsaRate: "",
+  rateStatus: null,
+  rateNote: "",
 };
 
-type PricingData = {
-  lcats: LCAT[];
-  notes: string;
+type GapAnalysis = {
+  score: number;
+  missingSINs: string[];
+  suggestedLcats: string[];
+  summary: string;
+  isComplete: boolean;
 };
 
 export default function PricingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -73,9 +80,13 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
   const [searchingLibrary, setSearchingLibrary] = useState(false);
   const [librarySearched, setLibrarySearched] = useState(false);
 
-  const invoiceInputRef = useRef<HTMLInputElement>(null);
+  // QC state
+  const [gapAnalysis, setGapAnalysis] = useState<GapAnalysis | null>(null);
+  const [runningGapAnalysis, setRunningGapAnalysis] = useState(false);
+  const [benchmarkingId, setBenchmarkingId] = useState<string | null>(null);
 
-  const IFF_DISPLAY = "0.75%";
+  const invoiceInputRef = useRef<HTMLInputElement>(null);
+  const MIN_LCATS = 5;
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -110,7 +121,7 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
     return (num * (1 - IFF_RATE)).toFixed(2);
   }
 
-  function handleMfcChange(val: string, isNew: boolean, field = "mfcRate") {
+  function handleMfcChange(val: string, isNew: boolean) {
     const gsa = calcGsaRate(val);
     if (isNew) {
       setNewLcat(prev => ({ ...prev, mfcRate: val, gsaRate: gsa }));
@@ -127,16 +138,106 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
 
   function removeLcat(id: string) {
     setLcats(prev => prev.filter(l => l.id !== id));
+    setGapAnalysis(null);
   }
 
   function startEdit(lcat: LCAT) {
     setEditingId(lcat.id);
-    setEditForm({ title: lcat.title, description: lcat.description, education: lcat.education, yearsExperience: lcat.yearsExperience, baseRate: lcat.baseRate, mfcRate: lcat.mfcRate, gsaRate: lcat.gsaRate });
+    setEditForm({ title: lcat.title, description: lcat.description, education: lcat.education, yearsExperience: lcat.yearsExperience, baseRate: lcat.baseRate, mfcRate: lcat.mfcRate, gsaRate: lcat.gsaRate, rateStatus: lcat.rateStatus, rateNote: lcat.rateNote });
   }
 
   function saveEdit() {
     setLcats(prev => prev.map(l => l.id === editingId ? { ...l, ...editForm } : l));
     setEditingId(null);
+    setGapAnalysis(null);
+  }
+
+  // ── GAP ANALYSIS ──
+  async function runGapAnalysis() {
+    if (lcats.length === 0) return;
+    setRunningGapAnalysis(true);
+    try {
+      const selectedSINs = cert?.application?.selectedSINs || "";
+      const lcatTitles = lcats.map(l => l.title).join(", ");
+      const data = await apiRequest("/api/applications/ai/draft", {
+        method: "POST",
+        body: JSON.stringify({
+          section: "LCAT Coverage Gap Analysis",
+          prompt: `Analyze this company's Labor Category list for GSA MAS completeness.
+
+Company: ${cert?.client?.businessName}
+Selected SINs: ${selectedSINs}
+Current LCATs: ${lcatTitles}
+Corporate Experience: ${cert?.application?.narrativeCorp ? cert.application.narrativeCorp.substring(0, 1000) : "Not provided"}
+
+Return ONLY a valid JSON object:
+{
+  "score": 0-100,
+  "isComplete": true/false,
+  "summary": "2-3 sentence plain English assessment of whether this LCAT list is comprehensive",
+  "missingSINs": ["SIN code that has no matching LCAT"],
+  "suggestedLcats": ["LCAT title that seems missing based on their SINs and experience"]
+}
+
+Be specific. If their Corporate Experience mentions services not covered by any LCAT, flag them. suggestedLcats should be max 5 items. Return ONLY valid JSON.`,
+          context: { businessName: cert?.client?.businessName, otherSections: "" },
+        }),
+      });
+      const clean = data.text.replace(/```json|```/g, "").trim();
+      setGapAnalysis(JSON.parse(clean));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRunningGapAnalysis(false);
+    }
+  }
+
+  // ── RATE BENCHMARK ──
+  async function benchmarkRate(lcat: LCAT) {
+    setBenchmarkingId(lcat.id);
+    try {
+      const data = await apiRequest("/api/applications/ai/draft", {
+        method: "POST",
+        body: JSON.stringify({
+          section: "GSA Rate Benchmark",
+          prompt: `Benchmark this GSA labor category rate against market data.
+
+LCAT: ${lcat.title}
+MFC Rate: $${lcat.mfcRate}/hr
+GSA Rate: $${lcat.gsaRate}/hr
+Education: ${lcat.education}
+Experience: ${lcat.yearsExperience} years
+Company SINs: ${cert?.application?.selectedSINs || ""}
+
+Based on your knowledge of GSA Schedule rates, government contracting markets, and BLS wage data for this type of role:
+
+Return ONLY a valid JSON object:
+{
+  "status": "competitive" | "check" | "low",
+  "typicalRange": "$X-$Y/hr",
+  "note": "one sentence plain-English assessment e.g. Your rate of $150/hr is within the typical GSA range of $125-$185/hr for this role."
+}
+
+status guide: competitive = within or above typical range, check = slightly below or worth reviewing, low = significantly below market and may raise questions during GSA review.
+Return ONLY valid JSON.`,
+          context: { businessName: cert?.client?.businessName, otherSections: "" },
+        }),
+      });
+      const clean = data.text.replace(/```json|```/g, "").trim();
+      const result = JSON.parse(clean);
+      setLcats(prev => prev.map(l => l.id === lcat.id ? { ...l, rateStatus: result.status, rateNote: result.note } : l));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBenchmarkingId(null);
+    }
+  }
+
+  async function benchmarkAllRates() {
+    const lcatsWithRates = lcats.filter(l => l.mfcRate && !l.rateStatus);
+    for (const lcat of lcatsWithRates) {
+      await benchmarkRate(lcat);
+    }
   }
 
   async function processInvoices(files: File[]) {
@@ -157,16 +258,15 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
         if (data.text) allTexts.push(`--- ${file.name} ---\n${data.text}`);
       }
       const combined = allTexts.join("\n\n");
-
       const selectedSINs = cert?.application?.selectedSINs || "";
       const data = await apiRequest("/api/applications/ai/draft", {
         method: "POST",
         body: JSON.stringify({
           section: "Invoice Analysis for GSA CSP-1 Pricing",
-          prompt: `Analyze these invoices/documents and extract all billable service line items. Group similar services together. For each group return a JSON array with this structure:
+          prompt: `Analyze these invoices/documents and extract all billable service line items. Group similar services together. Return a JSON array:
 [
   {
-    "serviceType": "plain English name of the service",
+    "serviceType": "plain English name",
     "description": "what work was performed",
     "invoiceCount": number,
     "rateRange": "e.g. $125-$175/hr",
@@ -177,26 +277,15 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
     "rationale": "one sentence explaining why this maps to this LCAT"
   }
 ]
-
-Selected SINs for this contract: ${selectedSINs}
+Selected SINs: ${selectedSINs}
 Company: ${cert?.client?.businessName}
-
-Return ONLY the JSON array, no other text.`,
-          context: {
-            businessName: cert?.client?.businessName,
-            otherSections: combined.substring(0, 8000),
-          },
+Return ONLY the JSON array.`,
+          context: { businessName: cert?.client?.businessName, otherSections: combined.substring(0, 8000) },
         }),
       });
-
-      try {
-        const clean = data.text.replace(/```json|```/g, "").trim();
-        const groups = JSON.parse(clean);
-        setInvoiceGroups(groups);
-        setInvoicesProcessed(true);
-      } catch {
-        setError("Could not parse invoice data. Try fewer files or cleaner documents.");
-      }
+      const clean = data.text.replace(/```json|```/g, "").trim();
+      setInvoiceGroups(JSON.parse(clean));
+      setInvoicesProcessed(true);
     } catch (err) {
       setError("Failed to process invoices. Please try again.");
     } finally {
@@ -213,7 +302,10 @@ Return ONLY the JSON array, no other text.`,
       baseRate: group.highestRate || "",
       mfcRate: group.highestRate || "",
       gsaRate: calcGsaRate(group.highestRate || ""),
+      rateStatus: null,
+      rateNote: "",
     });
+    setGapAnalysis(null);
   }
 
   async function searchLibrary() {
@@ -221,48 +313,32 @@ Return ONLY the JSON array, no other text.`,
     setSearchingLibrary(true);
     setLibrarySearched(false);
     try {
-      const selectedSINs = cert?.application?.selectedSINs || "";
       const data = await apiRequest("/api/applications/ai/draft", {
         method: "POST",
         body: JSON.stringify({
           section: "GSA LCAT Library Search",
-          prompt: `Generate 4 GSA MAS-compliant Labor Category (LCAT) definitions for: "${librarySearch}"
-
-Context:
-- Company: ${cert?.client?.businessName}
-- Selected SINs: ${selectedSINs}
-
+          prompt: `Generate 4 GSA MAS-compliant Labor Category definitions for: "${librarySearch}"
+Company: ${cert?.client?.businessName}
+Selected SINs: ${cert?.application?.selectedSINs || ""}
 Return ONLY a JSON array with exactly 4 options at different seniority levels:
-[
-  {
-    "title": "GSA-compliant LCAT title e.g. Junior Project Manager",
-    "description": "2-3 sentence GSA-compliant description of duties and responsibilities. Max 500 chars.",
-    "education": "Bachelor's Degree",
-    "yearsExperience": "2",
-    "level": "Junior",
-    "plainEnglish": "one sentence in plain English explaining what this person does day-to-day",
-    "whyGSAValues": "one sentence on why GSA values this role"
-  }
-]
-
-Levels should be: Junior, Mid-Level, Senior, Principal/Expert
-Return ONLY the JSON array.`,
-          context: {
-            businessName: cert?.client?.businessName,
-            otherSections: "",
-          },
+[{
+  "title": "GSA-compliant LCAT title",
+  "description": "2-3 sentence GSA-compliant description. Max 500 chars.",
+  "education": "Bachelor's Degree",
+  "yearsExperience": "2",
+  "level": "Junior",
+  "plainEnglish": "one sentence plain English explanation",
+  "whyGSAValues": "one sentence on why GSA values this role"
+}]
+Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.`,
+          context: { businessName: cert?.client?.businessName, otherSections: "" },
         }),
       });
-
-      try {
-        const clean = data.text.replace(/```json|```/g, "").trim();
-        setLibraryResults(JSON.parse(clean));
-        setLibrarySearched(true);
-      } catch {
-        setError("Could not generate LCAT suggestions. Try a different search term.");
-      }
+      const clean = data.text.replace(/```json|```/g, "").trim();
+      setLibraryResults(JSON.parse(clean));
+      setLibrarySearched(true);
     } catch (err) {
-      setError("Search failed. Please try again.");
+      setError("Could not generate LCAT suggestions. Try a different search term.");
     } finally {
       setSearchingLibrary(false);
     }
@@ -292,10 +368,9 @@ Return ONLY the JSON array.`,
   }
 
   async function exportCSP1() {
-    // Build CSV in GSA CSP-1 format
     const rows = [
-      ["Labor Category Title", "Description", "Minimum Education", "Minimum Years Experience", "Commercial Base Rate ($/hr)", "Most Favored Customer Rate ($/hr)", "GSA Rate w/ IFF ($/hr)"],
-      ...lcats.map(l => [l.title, l.description, l.education, l.yearsExperience, l.baseRate, l.mfcRate, l.gsaRate])
+      ["Labor Category Title", "Description", "Minimum Education", "Minimum Years Experience", "Most Favored Customer Rate ($/hr)", "GSA Rate w/ IFF ($/hr)"],
+      ...lcats.map(l => [l.title, l.description, l.education, l.yearsExperience, l.mfcRate, l.gsaRate])
     ];
     const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -319,6 +394,16 @@ Return ONLY the JSON array.`,
     { id: "commercial", icon: "💼", label: "Commercial price list", desc: "What you charge non-government clients. This becomes your Most Favored Customer (MFC) rate." },
     { id: "prevgsa", icon: "🏛️", label: "Previous GSA price lists", desc: "If you've applied before or have a GSA contract, bring that price list." },
   ];
+
+  const rateStatusConfig = {
+    competitive: { color: "var(--green)", bg: "var(--green-bg)", border: "var(--green-b)", label: "✓ Competitive" },
+    check: { color: "var(--amber)", bg: "var(--amber-bg)", border: "var(--amber-b)", label: "⚠ Review rate" },
+    low: { color: "var(--red)", bg: "var(--red-bg)", border: "var(--red-b)", label: "↓ Below market" },
+  };
+
+  const lcatsWithRates = lcats.filter(l => l.mfcRate);
+  const lcatsBelowMin = lcats.length < MIN_LCATS;
+  const lcatsNotBenchmarked = lcats.filter(l => l.mfcRate && !l.rateStatus).length;
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>
@@ -346,16 +431,18 @@ Return ONLY the JSON array.`,
           <div style={{ margin: "8px 9px 16px", padding: "12px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "var(--r)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <span style={{ fontSize: 11, color: "rgba(255,255,255,.35)", textTransform: "uppercase", letterSpacing: ".08em" }}>LCATs</span>
-              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: lcats.length >= 3 ? "var(--green)" : "var(--gold2)" }}>
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: lcats.length >= MIN_LCATS ? "var(--green)" : "var(--gold2)" }}>
                 {lcats.length}
               </span>
             </div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,.35)", marginTop: 4 }}>
-              {lcats.length === 0 ? "No LCATs added yet" : lcats.length === 1 ? "1 labor category" : `${lcats.length} labor categories`}
+            <div style={{ height: 3, background: "rgba(255,255,255,.08)", borderRadius: 100, overflow: "hidden", marginBottom: 6 }}>
+              <div style={{ height: "100%", width: `${Math.min(100, lcats.length / MIN_LCATS * 100)}%`, background: lcats.length >= MIN_LCATS ? "var(--green)" : "var(--gold)", borderRadius: 100 }} />
+            </div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)" }}>
+              {lcats.length < MIN_LCATS ? `${MIN_LCATS - lcats.length} more recommended` : "✓ Minimum met"}
             </div>
           </div>
 
-          {/* Nav tabs */}
           {[
             { id: "start", label: "📋 Getting Started" },
             { id: "invoices", label: "🧾 Upload Invoices" },
@@ -366,11 +453,10 @@ Return ONLY the JSON array.`,
               style={{ display: "flex", alignItems: "center", padding: "8px 9px", borderRadius: "var(--r)", marginBottom: 2, cursor: "pointer", background: activeTab === tab.id ? "rgba(200,155,60,.15)" : "transparent", color: activeTab === tab.id ? "var(--gold2)" : "rgba(255,255,255,.45)", fontSize: 12.5, fontWeight: activeTab === tab.id ? 500 : 400 }}>
               {tab.label}
               {tab.id === "csp1" && lcats.length > 0 && (
-                <span style={{ marginLeft: "auto", fontSize: 10, background: "rgba(200,155,60,.2)", color: "var(--gold2)", padding: "1px 6px", borderRadius: 10 }}>{lcats.length}</span>
+                <span style={{ marginLeft: "auto", fontSize: 10, background: lcats.length >= MIN_LCATS ? "rgba(26,102,68,.3)" : "rgba(200,155,60,.2)", color: lcats.length >= MIN_LCATS ? "var(--green)" : "var(--gold2)", padding: "1px 6px", borderRadius: 10 }}>{lcats.length}</span>
               )}
             </div>
           ))}
-
           <a href={`/certifications/${certId}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", borderRadius: "var(--r)", textDecoration: "none", color: "rgba(255,255,255,.4)", fontSize: 12, marginTop: 16 }}>
             ← Back to Dashboard
           </a>
@@ -392,11 +478,10 @@ Return ONLY the JSON array.`,
           <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
             ← Back to Application Dashboard
           </a>
-
           <div style={{ marginTop: 20, marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Section 6 of 6</div>
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Pricing (CSP-1)</h1>
-            <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Build your GSA Commercial Supplier Pricelist — labor categories, rates, and the IFF-adjusted GSA prices.</p>
+            <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Build your GSA Commercial Supplier Pricelist — labor categories, rates, and IFF-adjusted GSA prices.</p>
           </div>
 
           {error && (
@@ -409,36 +494,28 @@ Return ONLY the JSON array.`,
           {/* ── GETTING STARTED TAB ── */}
           {activeTab === "start" && (
             <div>
-              {/* Time estimate banner */}
               <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "20px 28px", marginBottom: 24, display: "flex", alignItems: "center", gap: 24 }}>
                 <div style={{ fontSize: 36 }}>⏱</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 16, fontWeight: 500, color: "#fff", marginBottom: 4 }}>Estimated time: 20–45 minutes</div>
                   <div style={{ fontSize: 13, color: "rgba(255,255,255,.5)", lineHeight: 1.6 }}>
-                    If you have invoices or a rate sheet ready to upload, this takes closer to 20 minutes — GovCert does the heavy lifting. Building from scratch with the LCAT library takes 30–45 minutes.
+                    If you have invoices or a rate sheet ready, closer to 20 minutes. Building from scratch with the LCAT library takes 30–45 minutes.
                   </div>
                 </div>
                 <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <button onClick={() => setActiveTab("invoices")}
-                    style={{ padding: "10px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" as const }}>
-                    I have invoices →
-                  </button>
-                  <button onClick={() => setActiveTab("library")}
-                    style={{ padding: "10px 20px", background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" as const }}>
-                    Browse LCAT library →
-                  </button>
+                  <button onClick={() => setActiveTab("invoices")} style={{ padding: "10px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" as const }}>I have invoices →</button>
+                  <button onClick={() => setActiveTab("library")} style={{ padding: "10px 20px", background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" as const }}>Browse LCAT library →</button>
                 </div>
               </div>
 
-              {/* What is CSP-1 */}
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 12 }}>What is a CSP-1?</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                   {[
-                    { icon: "📋", title: "Your price list for the government", body: "CSP-1 stands for Commercial Supplier Pricelist. It's the document that lists every service you offer on your GSA Schedule, with the price the government will pay." },
-                    { icon: "👤", title: "Organized by Labor Categories (LCATs)", body: "Each row in your CSP-1 is a Labor Category — a type of worker or role. For example: 'Senior Project Manager' or 'Junior Software Developer.'" },
-                    { icon: "💰", title: "GSA gets a discount from your best price", body: "You must give the government a price equal to or better than what you charge your best commercial customer. This is your Most Favored Customer (MFC) rate." },
-                    { icon: "📉", title: "The IFF is subtracted from your MFC rate", body: `GSA charges a 0.75% Industrial Funding Fee (IFF). Your GSA rate = your MFC rate minus ${IFF_DISPLAY}. GovCert calculates this automatically.` },
+                    { icon: "📋", title: "Your price list for the government", body: "CSP-1 stands for Commercial Supplier Pricelist. It lists every service you offer on your GSA Schedule with the price the government will pay." },
+                    { icon: "👤", title: "Organized by Labor Categories (LCATs)", body: "Each row is a Labor Category — a type of worker or role. For example: 'Senior Project Manager' or 'Junior Software Developer.'" },
+                    { icon: "💰", title: "GSA gets a discount from your best price", body: "You must give the government a price equal to or better than your best commercial customer. This is your Most Favored Customer (MFC) rate." },
+                    { icon: "📉", title: "The IFF is subtracted from your MFC rate", body: "GSA charges a 0.75% Industrial Funding Fee (IFF). GSA rate = MFC rate minus 0.75%. GovCert calculates this automatically." },
                   ].map((item, i) => (
                     <div key={i} style={{ display: "flex", gap: 12 }}>
                       <span style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</span>
@@ -451,18 +528,14 @@ Return ONLY the JSON array.`,
                 </div>
               </div>
 
-              {/* What to have ready */}
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>What to have ready</h3>
-                <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.6 }}>
-                  You don't need all of these — anything you have helps. Check off what you have available and GovCert will make the most of it.
-                </p>
+                <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.6 }}>Check off what you have — GovCert will make the most of it.</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {DOCS_CHECKLIST.map(item => {
                     const checked = checkedItems.includes(item.id);
                     return (
-                      <div key={item.id}
-                        onClick={() => setCheckedItems(prev => checked ? prev.filter(i => i !== item.id) : [...prev, item.id])}
+                      <div key={item.id} onClick={() => setCheckedItems(prev => checked ? prev.filter(i => i !== item.id) : [...prev, item.id])}
                         style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 16px", border: `1px solid ${checked ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--r)", cursor: "pointer", background: checked ? "var(--green-bg)" : "#fff", transition: "all .12s" }}>
                         <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${checked ? "var(--green)" : "var(--border2)"}`, background: checked ? "var(--green)" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                           {checked && <span style={{ fontSize: 11, color: "#fff", fontWeight: 800 }}>✓</span>}
@@ -476,17 +549,13 @@ Return ONLY the JSON array.`,
                     );
                   })}
                 </div>
-
                 {checkedItems.length > 0 && (
                   <div style={{ marginTop: 20, padding: "16px 20px", background: "var(--navy)", borderRadius: "var(--r)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)" }}>
                       You have <strong style={{ color: "var(--gold2)" }}>{checkedItems.length}</strong> item{checkedItems.length !== 1 ? "s" : ""} ready.
-                      {checkedItems.includes("invoices") || checkedItems.includes("ratelist") || checkedItems.includes("proposals")
-                        ? " Start by uploading them — GovCert will extract your rates automatically."
-                        : " Browse the LCAT library to build your price list."}
+                      {checkedItems.includes("invoices") || checkedItems.includes("ratelist") || checkedItems.includes("proposals") ? " Start by uploading them." : " Browse the LCAT library to build your price list."}
                     </div>
-                    <button
-                      onClick={() => setActiveTab(checkedItems.includes("invoices") || checkedItems.includes("ratelist") || checkedItems.includes("proposals") ? "invoices" : "library")}
+                    <button onClick={() => setActiveTab(checkedItems.includes("invoices") || checkedItems.includes("ratelist") || checkedItems.includes("proposals") ? "invoices" : "library")}
                       style={{ padding: "9px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", flexShrink: 0, marginLeft: 16 }}>
                       Let's go →
                     </button>
@@ -494,11 +563,10 @@ Return ONLY the JSON array.`,
                 )}
               </div>
 
-              {/* GSA tip */}
               <div style={{ background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: "var(--rl)", padding: "16px 20px", display: "flex", gap: 12 }}>
                 <span style={{ fontSize: 18, flexShrink: 0 }}>💡</span>
                 <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.6 }}>
-                  <strong style={{ color: "var(--amber)" }}>Pro tip:</strong> Don't overthink your LCATs. Most small businesses start with 3–8 labor categories. It's better to have fewer, well-defined categories than 30 vague ones. You can always add more later during negotiations with your GSA Contracting Officer.
+                  <strong style={{ color: "var(--amber)" }}>Pro tip:</strong> Most small businesses should have 5–15 labor categories. GovCert will check your coverage and flag any gaps after you've added your initial LCATs.
                 </div>
               </div>
             </div>
@@ -511,14 +579,12 @@ Return ONLY the JSON array.`,
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold2)", marginBottom: 8 }}>How this works</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
                   {[
-                    { step: "1", title: "Upload everything you have", body: "Invoices, rate sheets, proposals — any files with pricing. Mix of formats is fine." },
-                    { step: "2", title: "GovCert finds your rates", body: "AI reads every document and groups similar services together with the rates you charged." },
-                    { step: "3", title: "Map to GSA LCATs", body: "Review each group and confirm which become Labor Categories on your CSP-1." },
+                    { step: "1", title: "Upload everything you have", body: "Invoices, rate sheets, proposals — any files with pricing." },
+                    { step: "2", title: "GovCert finds your rates", body: "AI groups similar services and identifies your rate history." },
+                    { step: "3", title: "Map to GSA LCATs", body: "Confirm which groups become Labor Categories on your CSP-1." },
                   ].map(item => (
                     <div key={item.step} style={{ display: "flex", gap: 10 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(200,155,60,.25)", border: "1px solid rgba(200,155,60,.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: "var(--gold2)", fontWeight: 700 }}>
-                        {item.step}
-                      </div>
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(200,155,60,.25)", border: "1px solid rgba(200,155,60,.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: "var(--gold2)", fontWeight: 700 }}>{item.step}</div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 500, color: "#fff", marginBottom: 3 }}>{item.title}</div>
                         <div style={{ fontSize: 12, color: "rgba(255,255,255,.45)", lineHeight: 1.5 }}>{item.body}</div>
@@ -528,15 +594,11 @@ Return ONLY the JSON array.`,
                 </div>
               </div>
 
-              {/* Upload zone */}
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>Upload Your Documents</h3>
-                <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.6 }}>
-                  Select as many files as you have — invoices, rate sheets, proposals. PDF, Word, Excel, and CSV all work.
-                </p>
+                <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.6 }}>Select as many files as you have — invoices, rate sheets, proposals. PDF, Word, Excel, and CSV all work.</p>
                 <input ref={invoiceInputRef} type="file" multiple accept=".pdf,.docx,.xlsx,.xls,.csv,.txt" style={{ display: "none" }}
                   onChange={e => { if (e.target.files) setInvoiceFiles(Array.from(e.target.files)); }} />
-
                 {invoiceFiles.length === 0 ? (
                   <div onClick={() => invoiceInputRef.current?.click()}
                     style={{ border: "2px dashed var(--border2)", borderRadius: "var(--r)", padding: "48px 24px", textAlign: "center" as const, cursor: "pointer", transition: "border-color .15s" }}
@@ -554,16 +616,12 @@ Return ONLY the JSON array.`,
                           <span style={{ fontSize: 16 }}>📄</span>
                           <span style={{ fontSize: 13, color: "var(--navy)", flex: 1 }}>{f.name}</span>
                           <span style={{ fontSize: 11, color: "var(--ink4)" }}>{(f.size / 1024).toFixed(0)} KB</span>
-                          <button onClick={() => setInvoiceFiles(prev => prev.filter((_, j) => j !== i))}
-                            style={{ background: "none", border: "none", color: "var(--ink4)", cursor: "pointer", fontSize: 14 }}>✕</button>
+                          <button onClick={() => setInvoiceFiles(prev => prev.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--ink4)", cursor: "pointer", fontSize: 14 }}>✕</button>
                         </div>
                       ))}
                     </div>
                     <div style={{ display: "flex", gap: 10 }}>
-                      <button onClick={() => invoiceInputRef.current?.click()}
-                        style={{ padding: "9px 18px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, cursor: "pointer", color: "var(--ink3)" }}>
-                        + Add more files
-                      </button>
+                      <button onClick={() => invoiceInputRef.current?.click()} style={{ padding: "9px 18px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, cursor: "pointer", color: "var(--ink3)" }}>+ Add more</button>
                       <button onClick={() => processInvoices(invoiceFiles)} disabled={processingInvoices}
                         style={{ padding: "9px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: processingInvoices ? "not-allowed" : "pointer", opacity: processingInvoices ? 0.7 : 1 }}>
                         {processingInvoices ? "✦ Analyzing your pricing history..." : `✦ Analyze ${invoiceFiles.length} file${invoiceFiles.length !== 1 ? "s" : ""} →`}
@@ -573,7 +631,6 @@ Return ONLY the JSON array.`,
                 )}
               </div>
 
-              {/* Invoice groups results */}
               {invoicesProcessed && invoiceGroups.length > 0 && (
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 12 }}>
@@ -588,9 +645,7 @@ Return ONLY the JSON array.`,
                             <div style={{ flex: 1 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                                 <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)" }}>{group.serviceType}</div>
-                                <span style={{ padding: "2px 8px", borderRadius: 100, fontSize: 10, fontWeight: 500, background: "var(--blue-bg)", color: "var(--blue)" }}>
-                                  {group.invoiceCount || "?"} invoice{group.invoiceCount !== 1 ? "s" : ""}
-                                </span>
+                                <span style={{ padding: "2px 8px", borderRadius: 100, fontSize: 10, fontWeight: 500, background: "var(--blue-bg)", color: "var(--blue)" }}>{group.invoiceCount || "?"} invoice{group.invoiceCount !== 1 ? "s" : ""}</span>
                               </div>
                               <div style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 8, lineHeight: 1.5 }}>{group.description}</div>
                               <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--ink3)" }}>
@@ -600,20 +655,17 @@ Return ONLY the JSON array.`,
                               <div style={{ marginTop: 10, padding: "10px 14px", background: "var(--cream)", borderRadius: "var(--r)", border: "1px solid var(--border)" }}>
                                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 4 }}>Suggested GSA LCAT</div>
                                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 3 }}>{group.suggestedLcatTitle}</div>
-                                <div style={{ fontSize: 12, color: "var(--ink3)" }}>{group.rationale}</div>
-                                <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 12, color: "var(--ink3)" }}>
+                                <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 4 }}>{group.rationale}</div>
+                                <div style={{ display: "flex", gap: 12, fontSize: 12, color: "var(--ink3)" }}>
                                   <span>Education: {group.suggestedEducation}</span>
                                   <span>Experience: {group.suggestedYearsExp}+ years</span>
-                                  <span>MFC rate: ${group.highestRate}/hr</span>
                                   <span style={{ color: "var(--green)", fontWeight: 500 }}>GSA rate: ${calcGsaRate(group.highestRate || "")}/hr</span>
                                 </div>
                               </div>
                             </div>
                             <div style={{ flexShrink: 0 }}>
                               {alreadyAdded ? (
-                                <span style={{ padding: "8px 16px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--green)", fontWeight: 500 }}>
-                                  ✓ Added
-                                </span>
+                                <span style={{ padding: "8px 16px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--green)", fontWeight: 500 }}>✓ Added</span>
                               ) : (
                                 <button onClick={() => { addGroupAsLcat(group); }}
                                   style={{ padding: "9px 18px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
@@ -645,28 +697,22 @@ Return ONLY the JSON array.`,
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>LCAT Library</h3>
                 <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.6 }}>
-                  Search for any role or service type. GovCert generates 4 GSA-compliant LCAT options at different seniority levels — tailored to your selected SINs and company profile. Add as many as you need.
+                  Search for any role or service type. GovCert generates 4 GSA-compliant options at different seniority levels tailored to your SINs.
                 </p>
                 <div style={{ display: "flex", gap: 10 }}>
-                  <input
-                    type="text"
-                    value={librarySearch}
-                    onChange={e => setLibrarySearch(e.target.value)}
+                  <input type="text" value={librarySearch} onChange={e => setLibrarySearch(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && searchLibrary()}
-                    placeholder="e.g. project manager, software developer, training instructor, consultant..."
-                    style={{ flex: 1, padding: "12px 16px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 14, outline: "none", fontFamily: "'DM Sans', sans-serif" }}
-                  />
+                    placeholder="e.g. project manager, software developer, training instructor..."
+                    style={{ flex: 1, padding: "12px 16px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 14, outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
                   <button onClick={searchLibrary} disabled={searchingLibrary || !librarySearch.trim()}
                     style={{ padding: "12px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: searchingLibrary || !librarySearch.trim() ? "not-allowed" : "pointer", opacity: searchingLibrary || !librarySearch.trim() ? 0.6 : 1, whiteSpace: "nowrap" as const }}>
                     {searchingLibrary ? "Generating..." : "✦ Generate LCATs →"}
                   </button>
                 </div>
-
-                {/* Quick suggestions */}
                 <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" as const }}>
                   <span style={{ fontSize: 12, color: "var(--ink4)" }}>Try:</span>
                   {["project manager", "software developer", "business analyst", "management consultant", "data analyst", "training specialist", "cybersecurity analyst", "program manager"].map(s => (
-                    <button key={s} onClick={() => { setLibrarySearch(s); }}
+                    <button key={s} onClick={() => setLibrarySearch(s)}
                       style={{ padding: "4px 10px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: 100, fontSize: 12, color: "var(--ink3)", cursor: "pointer" }}>
                       {s}
                     </button>
@@ -674,7 +720,6 @@ Return ONLY the JSON array.`,
                 </div>
               </div>
 
-              {/* Library results */}
               {librarySearched && libraryResults.length > 0 && (
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 12 }}>
@@ -685,44 +730,23 @@ Return ONLY the JSON array.`,
                       const alreadyAdded = lcats.some(l => l.title === lcat.title);
                       return (
                         <div key={i} style={{ background: "#fff", border: `1px solid ${alreadyAdded ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", padding: "20px", boxShadow: "var(--shadow)" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                            <div>
-                              <span style={{ padding: "2px 8px", borderRadius: 100, fontSize: 10, fontWeight: 600, background: "var(--amber-bg)", color: "var(--amber)", textTransform: "uppercase", letterSpacing: ".06em" }}>
-                                {lcat.level}
-                              </span>
-                              <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginTop: 6 }}>{lcat.title}</div>
-                            </div>
+                          <div style={{ marginBottom: 10 }}>
+                            <span style={{ padding: "2px 8px", borderRadius: 100, fontSize: 10, fontWeight: 600, background: "var(--amber-bg)", color: "var(--amber)", textTransform: "uppercase", letterSpacing: ".06em" }}>{lcat.level}</span>
+                            <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginTop: 6 }}>{lcat.title}</div>
                           </div>
                           <div style={{ fontSize: 12.5, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 10 }}>{lcat.description}</div>
                           <div style={{ padding: "10px 12px", background: "var(--cream)", borderRadius: "var(--r)", marginBottom: 12 }}>
-                            <div style={{ fontSize: 12, color: "var(--ink2)", marginBottom: 4 }}>
-                              <strong>In plain English:</strong> {lcat.plainEnglish}
-                            </div>
-                            <div style={{ fontSize: 12, color: "var(--ink3)" }}>
-                              <strong>Why GSA values this:</strong> {lcat.whyGSAValues}
-                            </div>
+                            <div style={{ fontSize: 12, color: "var(--ink2)", marginBottom: 4 }}><strong>In plain English:</strong> {lcat.plainEnglish}</div>
+                            <div style={{ fontSize: 12, color: "var(--ink3)" }}><strong>Why GSA values this:</strong> {lcat.whyGSAValues}</div>
                           </div>
                           <div style={{ display: "flex", gap: 12, fontSize: 12, color: "var(--ink3)", marginBottom: 14 }}>
                             <span>📚 {lcat.education}</span>
-                            <span>⏱ {lcat.yearsExperience}+ years exp</span>
+                            <span>⏱ {lcat.yearsExperience}+ years</span>
                           </div>
                           {alreadyAdded ? (
-                            <div style={{ padding: "8px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--green)", textAlign: "center" as const }}>
-                              ✓ Added to CSP-1
-                            </div>
+                            <div style={{ padding: "8px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--green)", textAlign: "center" as const }}>✓ Added to CSP-1</div>
                           ) : (
-                            <button
-                              onClick={() => {
-                                addLcat({
-                                  title: lcat.title,
-                                  description: lcat.description,
-                                  education: lcat.education,
-                                  yearsExperience: lcat.yearsExperience,
-                                  baseRate: "",
-                                  mfcRate: "",
-                                  gsaRate: "",
-                                });
-                              }}
+                            <button onClick={() => { addLcat({ title: lcat.title, description: lcat.description, education: lcat.education, yearsExperience: lcat.yearsExperience, baseRate: "", mfcRate: "", gsaRate: "", rateStatus: null, rateNote: "" }); setGapAnalysis(null); }}
                               style={{ width: "100%", padding: "9px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
                               Add to CSP-1 →
                             </button>
@@ -747,11 +771,138 @@ Return ONLY the JSON array.`,
           {/* ── CSP-1 TABLE TAB ── */}
           {activeTab === "csp1" && (
             <div>
-              {/* IFF explainer */}
-              <div style={{ background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 20, display: "flex", gap: 10, alignItems: "flex-start" }}>
+              {/* ── QC: MINIMUM LCAT WARNING ── */}
+              {lcatsBelowMin && (
+                <div style={{ background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: "var(--rl)", padding: "16px 20px", marginBottom: 20, display: "flex", gap: 14, alignItems: "flex-start" }}>
+                  <span style={{ fontSize: 22, flexShrink: 0 }}>⚠️</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--amber)", marginBottom: 4 }}>
+                      You have {lcats.length} labor categor{lcats.length !== 1 ? "ies" : "y"} — most GSA Schedule holders have {MIN_LCATS}–15
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.6, marginBottom: 10 }}>
+                      A thin LCAT list may not cover the full range of work you plan to perform under your Schedule. GSA reviewers expect your CSP-1 to comprehensively reflect your service offerings. You need at least {MIN_LCATS - lcats.length} more labor categor{MIN_LCATS - lcats.length !== 1 ? "ies" : "y"} to reach the recommended minimum.
+                    </div>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button onClick={() => setActiveTab("invoices")}
+                        style={{ padding: "7px 14px", background: "var(--amber)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 12.5, fontWeight: 500, cursor: "pointer" }}>
+                        Upload more invoices
+                      </button>
+                      <button onClick={() => setActiveTab("library")}
+                        style={{ padding: "7px 14px", background: "transparent", border: "1px solid var(--amber-b)", borderRadius: "var(--r)", color: "var(--amber)", fontSize: 12.5, cursor: "pointer" }}>
+                        Browse LCAT library
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── QC: GAP ANALYSIS ── */}
+              {lcats.length > 0 && (
+                <div style={{ background: "#fff", border: `1px solid ${gapAnalysis ? (gapAnalysis.isComplete ? "var(--green-b)" : "var(--amber-b)") : "var(--border)"}`, borderRadius: "var(--rl)", padding: "18px 22px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 18 }}>🔍</span>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Coverage Gap Analysis</div>
+                        <div style={{ fontSize: 12, color: "var(--ink3)" }}>
+                          {gapAnalysis ? `Coverage score: ${gapAnalysis.score}/100` : "Check if your LCATs cover all your selected SINs and services"}
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={runGapAnalysis} disabled={runningGapAnalysis}
+                      style={{ padding: "8px 18px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: runningGapAnalysis ? "not-allowed" : "pointer", opacity: runningGapAnalysis ? 0.7 : 1, flexShrink: 0 }}>
+                      {runningGapAnalysis ? "Analyzing..." : gapAnalysis ? "Re-analyze" : "✦ Run Gap Analysis"}
+                    </button>
+                  </div>
+
+                  {gapAnalysis && (
+                    <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                        <div style={{ flex: 1, height: 8, background: "var(--cream2)", borderRadius: 100, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${gapAnalysis.score}%`, background: gapAnalysis.score >= 80 ? "var(--green)" : gapAnalysis.score >= 60 ? "var(--gold)" : "var(--red)", borderRadius: 100, transition: "width .5s" }} />
+                        </div>
+                        <span style={{ fontSize: 16, fontWeight: 600, color: gapAnalysis.score >= 80 ? "var(--green)" : gapAnalysis.score >= 60 ? "var(--amber)" : "var(--red)", fontFamily: "'Cormorant Garamond', serif", flexShrink: 0 }}>
+                          {gapAnalysis.score}/100
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.6, marginBottom: gapAnalysis.suggestedLcats.length > 0 ? 14 : 0 }}>
+                        {gapAnalysis.summary}
+                      </div>
+
+                      {gapAnalysis.suggestedLcats.length > 0 && (
+                        <div style={{ marginTop: 12 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--amber)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>
+                            Suggested additions:
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                            {gapAnalysis.suggestedLcats.map((lcat, i) => (
+                              <button key={i}
+                                onClick={() => { setLibrarySearch(lcat); setActiveTab("library"); }}
+                                style={{ padding: "5px 12px", background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: 100, fontSize: 12, color: "var(--amber)", cursor: "pointer", fontWeight: 500 }}>
+                                + {lcat}
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 6 }}>Click any suggestion to search the LCAT library for it</div>
+                        </div>
+                      )}
+
+                      {gapAnalysis.isComplete && (
+                        <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 13, color: "var(--green)", fontWeight: 500 }}>
+                          ✓ Your LCAT list appears comprehensive for your selected SINs and services.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── QC: RATE BENCHMARKING ── */}
+              {lcatsWithRates.length > 0 && (
+                <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "18px 22px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 18 }}>📊</span>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Rate Competitiveness Check</div>
+                        <div style={{ fontSize: 12, color: "var(--ink3)" }}>
+                          {lcatsNotBenchmarked > 0
+                            ? `${lcatsNotBenchmarked} LCAT${lcatsNotBenchmarked !== 1 ? "s" : ""} not yet benchmarked`
+                            : "All rates benchmarked against GSA market data"}
+                        </div>
+                      </div>
+                    </div>
+                    {lcatsNotBenchmarked > 0 && (
+                      <button onClick={benchmarkAllRates} disabled={!!benchmarkingId}
+                        style={{ padding: "8px 18px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: benchmarkingId ? "not-allowed" : "pointer", opacity: benchmarkingId ? 0.7 : 1, flexShrink: 0 }}>
+                        {benchmarkingId ? "Benchmarking..." : "✦ Benchmark All Rates"}
+                      </button>
+                    )}
+                  </div>
+
+                  {lcats.some(l => l.rateStatus) && (
+                    <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 14, display: "flex", gap: 16 }}>
+                      {(["competitive", "check", "low"] as const).map(status => {
+                        const count = lcats.filter(l => l.rateStatus === status).length;
+                        if (count === 0) return null;
+                        const cfg = rateStatusConfig[status];
+                        return (
+                          <div key={status} style={{ padding: "8px 14px", background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: "var(--r)", fontSize: 12, color: cfg.color, fontWeight: 500 }}>
+                            {cfg.label}: {count}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* IFF reminder */}
+              <div style={{ background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 20, display: "flex", gap: 10 }}>
                 <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
                 <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.6 }}>
-                  <strong style={{ color: "var(--amber)" }}>IFF reminder:</strong> Your GSA rate is automatically calculated as your MFC rate minus the {IFF_DISPLAY} Industrial Funding Fee. Your GSA rate must never be higher than the price you charge any commercial client for the same work.
+                  <strong style={{ color: "var(--amber)" }}>IFF reminder:</strong> Your GSA rate is your MFC rate minus 0.75%. Your GSA rate must never be higher than the price you charge any commercial client for the same work.
                 </div>
               </div>
 
@@ -759,21 +910,13 @@ Return ONLY the JSON array.`,
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "14px 20px", marginBottom: 20, boxShadow: "var(--shadow)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 13, color: "var(--ink3)" }}>
                   <strong style={{ color: "var(--navy)" }}>{lcats.length}</strong> labor categor{lcats.length !== 1 ? "ies" : "y"}
+                  {lcatsBelowMin && <span style={{ color: "var(--amber)", marginLeft: 8 }}>· {MIN_LCATS - lcats.length} more recommended</span>}
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   {saved && <span style={{ fontSize: 12, color: "var(--green)" }}>✓ Saved</span>}
-                  <button onClick={() => setActiveTab("invoices")}
-                    style={{ padding: "8px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12.5, cursor: "pointer", color: "var(--ink3)" }}>
-                    + From invoices
-                  </button>
-                  <button onClick={() => setActiveTab("library")}
-                    style={{ padding: "8px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12.5, cursor: "pointer", color: "var(--ink3)" }}>
-                    + From library
-                  </button>
-                  <button onClick={() => setAddingNew(true)}
-                    style={{ padding: "8px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12.5, cursor: "pointer", color: "var(--ink3)" }}>
-                    + Add manually
-                  </button>
+                  <button onClick={() => setActiveTab("invoices")} style={{ padding: "8px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12.5, cursor: "pointer", color: "var(--ink3)" }}>+ From invoices</button>
+                  <button onClick={() => setActiveTab("library")} style={{ padding: "8px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12.5, cursor: "pointer", color: "var(--ink3)" }}>+ From library</button>
+                  <button onClick={() => setAddingNew(true)} style={{ padding: "8px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12.5, cursor: "pointer", color: "var(--ink3)" }}>+ Add manually</button>
                   <button onClick={exportCSP1} disabled={lcats.length === 0}
                     style={{ padding: "8px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12.5, fontWeight: 500, cursor: lcats.length === 0 ? "not-allowed" : "pointer", opacity: lcats.length === 0 ? 0.5 : 1 }}>
                     ⬇ Export CSP-1
@@ -794,11 +937,8 @@ Return ONLY the JSON array.`,
                   </div>
                   <LcatForm lcat={newLcat} onChange={setNewLcat} onMfcChange={val => handleMfcChange(val, true)} calcGsaRate={calcGsaRate} />
                   <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
-                    <button onClick={() => setAddingNew(false)}
-                      style={{ padding: "9px 18px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink3)", cursor: "pointer" }}>
-                      Cancel
-                    </button>
-                    <button onClick={() => { addLcat(newLcat); setNewLcat({ ...EMPTY_LCAT }); setAddingNew(false); }}
+                    <button onClick={() => setAddingNew(false)} style={{ padding: "9px 18px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink3)", cursor: "pointer" }}>Cancel</button>
+                    <button onClick={() => { addLcat(newLcat); setNewLcat({ ...EMPTY_LCAT }); setAddingNew(false); setGapAnalysis(null); }}
                       disabled={!newLcat.title.trim()}
                       style={{ padding: "9px 24px", background: newLcat.title.trim() ? "var(--gold)" : "var(--cream2)", border: "none", borderRadius: "var(--r)", color: newLcat.title.trim() ? "#fff" : "var(--ink4)", fontSize: 13, fontWeight: 500, cursor: newLcat.title.trim() ? "pointer" : "not-allowed" }}>
                       Add LCAT →
@@ -812,18 +952,10 @@ Return ONLY the JSON array.`,
                 <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "60px 40px", textAlign: "center" as const, boxShadow: "var(--shadow)" }}>
                   <div style={{ fontSize: 40, marginBottom: 16 }}>💰</div>
                   <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>No labor categories yet</h3>
-                  <p style={{ fontSize: 13.5, color: "var(--ink3)", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.6 }}>
-                    Upload your invoices to auto-extract rates, browse the LCAT library, or add manually.
-                  </p>
+                  <p style={{ fontSize: 13.5, color: "var(--ink3)", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.6 }}>Upload invoices to auto-extract rates, browse the LCAT library, or add manually.</p>
                   <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-                    <button onClick={() => setActiveTab("invoices")}
-                      style={{ padding: "11px 22px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-                      Upload Invoices
-                    </button>
-                    <button onClick={() => setActiveTab("library")}
-                      style={{ padding: "11px 22px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-                      Browse Library
-                    </button>
+                    <button onClick={() => setActiveTab("invoices")} style={{ padding: "11px 22px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Upload Invoices</button>
+                    <button onClick={() => setActiveTab("library")} style={{ padding: "11px 22px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Browse Library</button>
                   </div>
                 </div>
               )}
@@ -832,19 +964,13 @@ Return ONLY the JSON array.`,
               {lcats.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
                   {lcats.map((lcat, i) => (
-                    <div key={lcat.id} style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
+                    <div key={lcat.id} style={{ background: "#fff", border: `1px solid ${lcat.rateStatus === "low" ? "var(--red-b)" : lcat.rateStatus === "competitive" ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
                       {editingId === lcat.id ? (
                         <div style={{ padding: "24px" }}>
                           <LcatForm lcat={editForm} onChange={setEditForm} onMfcChange={val => handleMfcChange(val, false)} calcGsaRate={calcGsaRate} />
                           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
-                            <button onClick={() => setEditingId(null)}
-                              style={{ padding: "8px 16px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink3)", cursor: "pointer" }}>
-                              Cancel
-                            </button>
-                            <button onClick={saveEdit}
-                              style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-                              Save Changes
-                            </button>
+                            <button onClick={() => setEditingId(null)} style={{ padding: "8px 16px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink3)", cursor: "pointer" }}>Cancel</button>
+                            <button onClick={saveEdit} style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Save Changes</button>
                           </div>
                         </div>
                       ) : (
@@ -855,10 +981,8 @@ Return ONLY the JSON array.`,
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>{lcat.title}</div>
-                              {lcat.description && (
-                                <div style={{ fontSize: 12.5, color: "var(--ink3)", marginBottom: 8, lineHeight: 1.5, maxWidth: 600 }}>{lcat.description}</div>
-                              )}
-                              <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--ink3)", flexWrap: "wrap" as const }}>
+                              {lcat.description && <div style={{ fontSize: 12.5, color: "var(--ink3)", marginBottom: 8, lineHeight: 1.5, maxWidth: 600 }}>{lcat.description}</div>}
+                              <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--ink3)", flexWrap: "wrap" as const, alignItems: "center" }}>
                                 {lcat.education && <span>📚 {lcat.education}</span>}
                                 {lcat.yearsExperience && <span>⏱ {lcat.yearsExperience}+ years</span>}
                                 {lcat.mfcRate ? (
@@ -867,19 +991,31 @@ Return ONLY the JSON array.`,
                                     <span style={{ color: "var(--green)", fontWeight: 500 }}>GSA: ${lcat.gsaRate}/hr</span>
                                   </>
                                 ) : (
-                                  <span style={{ color: "var(--amber)", fontWeight: 500 }}>⚠ Rate not set</span>
+                                  <span style={{ color: "var(--amber)", fontWeight: 500 }}>⚠ Rate not set — click Edit to add</span>
+                                )}
+                                {/* Rate benchmark badge */}
+                                {lcat.rateStatus && (
+                                  <span style={{ padding: "2px 8px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: rateStatusConfig[lcat.rateStatus].bg, color: rateStatusConfig[lcat.rateStatus].color, border: `1px solid ${rateStatusConfig[lcat.rateStatus].border}` }}>
+                                    {rateStatusConfig[lcat.rateStatus].label}
+                                  </span>
                                 )}
                               </div>
+                              {/* Rate note */}
+                              {lcat.rateNote && (
+                                <div style={{ marginTop: 6, fontSize: 12, color: lcat.rateStatus === "competitive" ? "var(--green)" : lcat.rateStatus === "low" ? "var(--red)" : "var(--amber)", fontStyle: "italic" }}>
+                                  {lcat.rateNote}
+                                </div>
+                              )}
                             </div>
-                            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                              <button onClick={() => startEdit(lcat)}
-                                style={{ padding: "6px 12px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, cursor: "pointer", color: "var(--ink3)" }}>
-                                Edit
-                              </button>
-                              <button onClick={() => removeLcat(lcat.id)}
-                                style={{ padding: "6px 12px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 12, cursor: "pointer", color: "var(--red)" }}>
-                                Remove
-                              </button>
+                            <div style={{ display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
+                              {lcat.mfcRate && !lcat.rateStatus && (
+                                <button onClick={() => benchmarkRate(lcat)} disabled={benchmarkingId === lcat.id}
+                                  style={{ padding: "6px 10px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 11, cursor: "pointer", color: "var(--ink3)" }}>
+                                  {benchmarkingId === lcat.id ? "..." : "📊 Benchmark"}
+                                </button>
+                              )}
+                              <button onClick={() => startEdit(lcat)} style={{ padding: "6px 12px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, cursor: "pointer", color: "var(--ink3)" }}>Edit</button>
+                              <button onClick={() => removeLcat(lcat.id)} style={{ padding: "6px 12px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 12, cursor: "pointer", color: "var(--red)" }}>Remove</button>
                             </div>
                           </div>
                         </div>
@@ -904,8 +1040,7 @@ Return ONLY the JSON array.`,
                 <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>← Back to Dashboard</a>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   {lcats.length > 0 && (
-                    <button onClick={exportCSP1}
-                      style={{ padding: "12px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+                    <button onClick={exportCSP1} style={{ padding: "12px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
                       ⬇ Export CSP-1 CSV
                     </button>
                   )}
@@ -924,7 +1059,6 @@ Return ONLY the JSON array.`,
   );
 }
 
-// ── LCAT FORM COMPONENT ──
 function LcatForm({ lcat, onChange, onMfcChange, calcGsaRate }: {
   lcat: Omit<LCAT, "id">;
   onChange: (l: Omit<LCAT, "id">) => void;

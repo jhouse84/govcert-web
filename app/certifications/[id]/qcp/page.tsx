@@ -4,47 +4,60 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
 const PROMPTS = [
+  { id: "overview", label: "Quality Control Overview", question: "Describe your overall approach to quality control and why it matters to your clients.", hint: "Explain your QC philosophy, how long it has been in place, and the overall framework you use.", maxChars: 2000 },
+  { id: "supervision", label: "Direct Supervision of Projects", question: "How do you directly supervise projects to ensure quality deliverables?", hint: "Describe your project oversight process — who reviews work, how often, what checkpoints exist, and how you catch issues early.", maxChars: 2000 },
+  { id: "personnel", label: "Quality Control Personnel", question: "Who is responsible for quality control at your company, and what are their qualifications?", hint: "Name the QC lead or role, their relevant certifications, years of experience, and specific responsibilities.", maxChars: 1500 },
+  { id: "subcontractors", label: "Subcontractor Quality Management", question: "How do you ensure subcontractors meet your quality standards?", hint: "Describe your subcontractor vetting process, performance monitoring, and corrective actions. If no subs, state that.", maxChars: 1500 },
+  { id: "corrective", label: "Problem Areas & Corrective Action", question: "How do you identify potential problems and implement corrective actions?", hint: "Describe your process for catching issues before they escalate, documenting problems, and corrective action procedures.", maxChars: 1500 },
+  { id: "urgent", label: "Urgent Requirements & Simultaneous Projects", question: "How do you maintain quality when handling urgent requirements or multiple simultaneous projects?", hint: "Describe your capacity management, surge staffing approach, and how quality is maintained under pressure.", maxChars: 1000 },
+];
+
+const QC_ATTRIBUTES = [
   {
-    id: "overview",
-    label: "Quality Control Overview",
-    question: "Describe your overall approach to quality control and why it matters to your clients.",
-    hint: "Explain your QC philosophy, how long it has been in place, and the overall framework you use.",
-    maxChars: 2000,
+    category: "Certifications & Standards",
+    items: [
+      { id: "iso9001", label: "ISO 9001 Certified", desc: "Quality Management System certification" },
+      { id: "iso27001", label: "ISO 27001 Certified", desc: "Information Security Management" },
+      { id: "cmmi3", label: "CMMI Level 3", desc: "Capability Maturity Model Integration" },
+      { id: "cmmi5", label: "CMMI Level 5", desc: "Optimizing level process maturity" },
+      { id: "six_sigma", label: "Six Sigma (Black/Green Belt)", desc: "Data-driven quality methodology" },
+      { id: "as9100", label: "AS9100 Certified", desc: "Aerospace quality management" },
+      { id: "fedramp", label: "FedRAMP Authorized", desc: "Federal cloud security authorization" },
+      { id: "sox", label: "SOX Compliant", desc: "Sarbanes-Oxley financial controls" },
+    ]
   },
   {
-    id: "supervision",
-    label: "Direct Supervision of Projects",
-    question: "How do you directly supervise projects to ensure quality deliverables?",
-    hint: "Describe your project oversight process — who reviews work, how often, what checkpoints exist, and how you catch issues early.",
-    maxChars: 2000,
+    category: "Project Management & Oversight",
+    items: [
+      { id: "pmp", label: "PMP-Certified Project Managers", desc: "Project Management Professional certification" },
+      { id: "agile", label: "Agile / Scrum Methodology", desc: "Iterative project management approach" },
+      { id: "pmbok", label: "PMBOK Framework", desc: "PMI's project management body of knowledge" },
+      { id: "weekly_review", label: "Weekly Quality Reviews", desc: "Formal scheduled QC review meetings" },
+      { id: "peer_review", label: "Peer Review Process", desc: "All deliverables reviewed before submission" },
+      { id: "independent_qa", label: "Independent QA Team", desc: "Separate team dedicated to quality assurance" },
+      { id: "milestone_gates", label: "Milestone Quality Gates", desc: "Formal approval checkpoints at project milestones" },
+    ]
   },
   {
-    id: "personnel",
-    label: "Quality Control Personnel",
-    question: "Who is responsible for quality control at your company, and what are their qualifications?",
-    hint: "Name the QC lead or role, their relevant certifications (PMP, ISO, Six Sigma, etc.), years of experience, and their specific responsibilities.",
-    maxChars: 1500,
+    category: "Tools & Technology",
+    items: [
+      { id: "jira", label: "Jira / Azure DevOps", desc: "Issue tracking and project management tools" },
+      { id: "sharepoint", label: "SharePoint / Confluence", desc: "Document management and collaboration" },
+      { id: "automated_testing", label: "Automated Testing", desc: "Automated QA and regression testing tools" },
+      { id: "version_control", label: "Version Control (Git)", desc: "Code and document version management" },
+      { id: "dashboards", label: "Real-Time KPI Dashboards", desc: "Live performance monitoring dashboards" },
+    ]
   },
   {
-    id: "subcontractors",
-    label: "Subcontractor Quality Management",
-    question: "How do you ensure subcontractors meet your quality standards?",
-    hint: "Describe your subcontractor vetting process, performance monitoring, and what happens when a sub underperforms. If no subs, state that.",
-    maxChars: 1500,
-  },
-  {
-    id: "corrective",
-    label: "Problem Areas & Corrective Action",
-    question: "How do you identify potential problems and implement corrective actions?",
-    hint: "Describe your process for catching issues before they escalate, how you document problems, and your corrective action procedures.",
-    maxChars: 1500,
-  },
-  {
-    id: "urgent",
-    label: "Urgent Requirements & Simultaneous Projects",
-    question: "How do you maintain quality when handling urgent requirements or multiple simultaneous projects?",
-    hint: "Describe your capacity management, surge staffing approach, and how quality is maintained under pressure or with multiple clients.",
-    maxChars: 1000,
+    category: "Compliance & Documentation",
+    items: [
+      { id: "far_compliant", label: "FAR/DFARS Compliant Processes", desc: "Federal Acquisition Regulation compliance" },
+      { id: "section508", label: "Section 508 Compliance", desc: "Accessibility standards for federal deliverables" },
+      { id: "nist", label: "NIST Framework", desc: "National Institute of Standards and Technology" },
+      { id: "documented_procedures", label: "Documented SOPs", desc: "Written Standard Operating Procedures for all key processes" },
+      { id: "lessons_learned", label: "Lessons Learned Database", desc: "Formal capture and reuse of project lessons" },
+      { id: "after_action", label: "After Action Reviews", desc: "Post-project reviews to improve future performance" },
+    ]
   },
 ];
 
@@ -61,6 +74,7 @@ export default function QCPPage({ params }: { params: { id: string } }) {
   const [listening, setListening] = useState<string | null>(null);
   const [mode, setMode] = useState<"gather" | "refine">("gather");
   const [userDescription, setUserDescription] = useState("");
+  const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -78,7 +92,12 @@ export default function QCPPage({ params }: { params: { id: string } }) {
       if (data.application?.narrativeQCP) {
         try {
           const parsed = JSON.parse(data.application.narrativeQCP);
-          setAnswers(parsed);
+          if (parsed.answers) {
+            setAnswers(parsed.answers);
+            setSelectedAttributes(parsed.attributes || []);
+          } else {
+            setAnswers(parsed);
+          }
           setMode("refine");
         } catch {
           setAnswers({ overview: data.application.narrativeQCP });
@@ -92,6 +111,12 @@ export default function QCPPage({ params }: { params: { id: string } }) {
   const totalChars = Object.values(answers).join("").length;
   const charLimit = 10000;
 
+  function toggleAttribute(id: string) {
+    setSelectedAttributes(prev =>
+      prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
+    );
+  }
+
   async function saveAnswersData(data: Record<string, string>) {
     if (!cert) return;
     await apiRequest("/api/applications", {
@@ -101,7 +126,7 @@ export default function QCPPage({ params }: { params: { id: string } }) {
         clientId: cert.clientId,
         certType: cert.type,
         currentStep: cert.application?.currentStep || 1,
-        narrativeQCP: JSON.stringify(data),
+        narrativeQCP: JSON.stringify({ answers: data, attributes: selectedAttributes }),
       })
     });
   }
@@ -116,6 +141,13 @@ export default function QCPPage({ params }: { params: { id: string } }) {
     finally { setSaving(false); }
   }
 
+  function getSelectedLabels() {
+    return QC_ATTRIBUTES.flatMap(cat =>
+      cat.items.filter(item => selectedAttributes.includes(item.id))
+        .map(item => `${item.label} (${item.desc})`)
+    );
+  }
+
   async function generateAll() {
     setGeneratingAll(true);
     try {
@@ -128,6 +160,7 @@ export default function QCPPage({ params }: { params: { id: string } }) {
           naicsCode: cert?.application?.naicsCode,
           yearsInBusiness: cert?.application?.yearsInBusiness,
           userDescription,
+          selectedAttributes: getSelectedLabels(),
           corporateExperience: cert?.application?.narrativeCorp,
         })
       });
@@ -174,14 +207,15 @@ export default function QCPPage({ params }: { params: { id: string } }) {
     recognition.lang = "en-US";
     recognitionRef.current = recognition;
     setListening(promptId);
-    let final = answers[promptId] || "";
+    let final = promptId === "description" ? userDescription : (answers[promptId] || "");
     recognition.onresult = (event: any) => {
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) final += " " + event.results[i][0].transcript;
         else interim = event.results[i][0].transcript;
       }
-      setAnswers(prev => ({ ...prev, [promptId]: (final + " " + interim).trim() }));
+      if (promptId === "description") setUserDescription((final + " " + interim).trim());
+      else setAnswers(prev => ({ ...prev, [promptId]: (final + " " + interim).trim() }));
     };
     recognition.onend = () => setListening(null);
     recognition.start();
@@ -220,6 +254,15 @@ export default function QCPPage({ params }: { params: { id: string } }) {
               {p.label}
             </a>
           ))}
+          {selectedAttributes.length > 0 && (
+            <div style={{ margin: "12px 9px 0", padding: "8px 10px", background: "rgba(200,155,60,.12)", borderRadius: "var(--r)", border: "1px solid rgba(200,155,60,.2)" }}>
+              <div style={{ fontSize: 10, color: "var(--gold2)", fontWeight: 600, marginBottom: 4 }}>{selectedAttributes.length} QC ATTRIBUTES</div>
+              <div style={{ fontSize: 10.5, color: "rgba(255,255,255,.4)", lineHeight: 1.5 }}>
+                {getSelectedLabels().slice(0, 3).map(l => l.split(" (")[0]).join(", ")}
+                {selectedAttributes.length > 3 ? ` +${selectedAttributes.length - 3} more` : ""}
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ padding: "10px 12px", marginBottom: 8 }}>
@@ -239,39 +282,65 @@ export default function QCPPage({ params }: { params: { id: string } }) {
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Quality Control Plan</h1>
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>
               {mode === "gather"
-                ? "Describe how your company ensures quality. GovCert will use your Corporate Experience narrative and any additional details to draft all 6 sections."
+                ? "Select your QC attributes and describe your approach. GovCert will draft all 6 sections automatically."
                 : "Review and refine your Quality Control Plan. Each section is fully editable."}
             </p>
           </div>
 
           {mode === "gather" && (
             <div>
+              {/* QC Attributes Checklist */}
+              {QC_ATTRIBUTES.map(category => (
+                <div key={category.category} style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 16, boxShadow: "var(--shadow)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>{category.category}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+                    {category.items.map(item => (
+                      <div key={item.id} onClick={() => toggleAttribute(item.id)}
+                        style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", border: `1px solid ${selectedAttributes.includes(item.id) ? "var(--gold)" : "var(--border)"}`, borderRadius: "var(--r)", cursor: "pointer", background: selectedAttributes.includes(item.id) ? "rgba(200,155,60,.06)" : "#fff", transition: "all .12s" }}>
+                        <div style={{ width: 16, height: 16, borderRadius: 3, border: `1.5px solid ${selectedAttributes.includes(item.id) ? "var(--gold)" : "var(--border2)"}`, background: selectedAttributes.includes(item.id) ? "var(--gold)" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                          {selectedAttributes.includes(item.id) && <span style={{ fontSize: 9, color: "#fff", fontWeight: 800 }}>✓</span>}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>{item.label}</div>
+                          <div style={{ fontSize: 11, color: "var(--ink4)" }}>{item.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {/* Additional Description */}
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Optional</div>
-                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>Add Quality Control Details</h3>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>Additional QC Details</h3>
                 <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 16, lineHeight: 1.6 }}>
-                  GovCert will use your Corporate Experience narrative to draft a strong QCP. Optionally, describe any specific QC processes, certifications (ISO 9001, CMMI, etc.), or tools your team uses.
+                  Describe any specific QC processes, tools, or approaches not covered above. Even a sentence or two helps the AI produce a more specific narrative.
                 </p>
                 <textarea
                   value={userDescription}
                   onChange={e => setUserDescription(e.target.value)}
-                  placeholder="Example: We use ISO 9001-certified processes. Our QC lead has a PMP and 15 years of experience. We use Jira for project tracking and conduct weekly quality reviews..."
-                  style={{ width: "100%", minHeight: 120, padding: "12px 14px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }}
+                  placeholder="Example: Our QC lead has 15 years of federal contracting experience. We conduct bi-weekly internal audits and use a lessons-learned database from 50+ completed projects..."
+                  style={{ width: "100%", minHeight: 100, padding: "12px 14px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }}
                 />
                 <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                  <button
-                    onClick={() => listening === "description" ? stopVoice() : startVoice("description")}
+                  <button onClick={() => listening === "description" ? stopVoice() : startVoice("description")}
                     style={{ padding: "7px 16px", background: listening === "description" ? "var(--red-bg)" : "var(--cream)", border: `1px solid ${listening === "description" ? "var(--red-b)" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 13, cursor: "pointer", color: listening === "description" ? "var(--red)" : "var(--ink3)" }}>
                     {listening === "description" ? "Stop Recording" : "🎤 Speak Instead"}
                   </button>
                 </div>
               </div>
 
+              {/* Generate */}
               <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "28px 32px", textAlign: "center" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold2)", marginBottom: 8 }}>Ready to Draft</div>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold2)", marginBottom: 8 }}>
+                  {selectedAttributes.length > 0 ? `${selectedAttributes.length} attributes selected` : "Ready to Draft"}
+                </div>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#fff", fontWeight: 400, marginBottom: 8 }}>Generate Quality Control Plan</h3>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,.5)", marginBottom: 24, maxWidth: 500, margin: "0 auto 24px" }}>
-                  GovCert will use your company profile and Corporate Experience to generate a complete, GSA-compliant Quality Control Plan.
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,.5)", marginBottom: 24, maxWidth: 520, margin: "0 auto 24px", lineHeight: 1.6 }}>
+                  {selectedAttributes.length > 0
+                    ? `GovCert will incorporate your ${selectedAttributes.length} selected QC attributes into a tailored, GSA-compliant Quality Control Plan.`
+                    : "Select QC attributes above, or generate a general QCP based on your company profile."}
                 </p>
                 <button onClick={generateAll} disabled={generatingAll}
                   style={{ padding: "14px 40px", background: generatingAll ? "rgba(200,155,60,.5)" : "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 16, fontWeight: 500, cursor: generatingAll ? "not-allowed" : "pointer", boxShadow: "0 4px 24px rgba(200,155,60,.4)" }}>
@@ -288,6 +357,22 @@ export default function QCPPage({ params }: { params: { id: string } }) {
 
           {mode === "refine" && (
             <div>
+              {/* Selected attributes summary */}
+              {selectedAttributes.length > 0 && (
+                <div style={{ background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: "var(--rl)", padding: "14px 20px", marginBottom: 20, display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>✅</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--amber)", marginBottom: 4 }}>QC Attributes Incorporated</div>
+                    <div style={{ fontSize: 12, color: "var(--ink2)", lineHeight: 1.6 }}>
+                      {getSelectedLabels().map(l => l.split(" (")[0]).join(" · ")}
+                    </div>
+                  </div>
+                  <button onClick={() => setMode("gather")} style={{ marginLeft: "auto", padding: "5px 12px", background: "transparent", border: "1px solid var(--amber-b)", borderRadius: "var(--r)", color: "var(--amber)", fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+                    Edit
+                  </button>
+                </div>
+              )}
+
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "16px 20px", marginBottom: 24, boxShadow: "var(--shadow)", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                   <div>
@@ -300,7 +385,7 @@ export default function QCPPage({ params }: { params: { id: string } }) {
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   {saved && <span style={{ fontSize: 12, color: "var(--green)" }}>✓ Saved</span>}
-                  <button onClick={() => setMode("gather")} style={{ padding: "8px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, cursor: "pointer", color: "var(--ink3)" }}>Regenerate All</button>
+                  <button onClick={() => setMode("gather")} style={{ padding: "8px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, cursor: "pointer", color: "var(--ink3)" }}>Regenerate</button>
                   <button onClick={saveAnswers} disabled={saving} style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
                     {saving ? "Saving..." : "Save Progress"}
                   </button>

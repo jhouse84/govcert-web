@@ -38,6 +38,7 @@ const EMPTY_CONTRACT = {
 
 export default function PastPerformancePage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const certId = String(certID);
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +64,7 @@ export default function PastPerformancePage({ params }: { params: { id: string }
 
   async function fetchCert() {
     try {
-      const data = await apiRequest(`/api/certifications/${params.id}`);
+      const data = await apiRequest(`/api/certifications/${certID}`);
       setCert(data);
       if (data.application?.pastPerformance?.length > 0) {
         const mapped = data.application.pastPerformance.map((pp: any) => ({
@@ -102,7 +103,7 @@ export default function PastPerformancePage({ params }: { params: { id: string }
       const app = await apiRequest("/api/applications", {
         method: "POST",
         body: JSON.stringify({
-          certificationId: params.id,
+          certificationId: certID,
           clientId: cert.clientId,
           certType: cert.type,
           currentStep: 1,
@@ -387,7 +388,7 @@ Scope of Work: ${contract.sowDescription}`,
       {/* Main */}
       <div style={{ flex: 1, overflow: "auto" }}>
         <div style={{ padding: "40px 48px", maxWidth: 900 }}>
-          <a href={`/certifications/${params.id}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
+          <a href={`/certifications/${certID}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
             Back to Application Dashboard
           </a>
 
@@ -817,8 +818,8 @@ Scope of Work: ${contract.sowDescription}`,
 
           {/* Bottom nav */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 32 }}>
-            <a href={`/certifications/${params.id}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>Back to Dashboard</a>
-            <a href={`/certifications/${params.id}`}
+            <a href={`/certifications/${certID}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>Back to Dashboard</a>
+            <a href={`/certifications/${certID}`}
               style={{ padding: "12px 28px", background: "var(--gold)", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, textDecoration: "none", boxShadow: "0 4px 16px rgba(200,155,60,.35)" }}>
               Save & Continue →
             </a>

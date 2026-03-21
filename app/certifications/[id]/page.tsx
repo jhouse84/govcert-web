@@ -27,8 +27,9 @@ const SIN_LABELS: Record<string, string> = {
 };
 
 export default function CertificationDashboard({ params }: { params: { id: string } }) {
-  const certId = params.id;
+  const certId = certID;
   const router = useRouter();
+  const certId = String(certID);
   const [cert, setCert] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);

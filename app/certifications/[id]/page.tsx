@@ -27,6 +27,7 @@ const SIN_LABELS: Record<string, string> = {
 };
 
 export default function CertificationDashboard({ params }: { params: { id: string } }) {
+  const certId = params.id;
   const router = useRouter();
   const [cert, setCert] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +43,7 @@ export default function CertificationDashboard({ params }: { params: { id: strin
 
   async function fetchCert() {
     try {
-      const data = await apiRequest(`/api/certifications/${params.id}`);
+      const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -75,35 +76,66 @@ export default function CertificationDashboard({ params }: { params: { id: strin
 
   const sections = [
     {
-      id: "corporate", label: "Corporate Experience", desc: "Company overview, capabilities, federal marketing plan",
-      icon: "🏢", href: `/certifications/${params.id}/corporate`,
-      complete: !!app?.narrativeCorp, chars: app?.narrativeCorp?.length || 0, charLimit: 10000,
+      id: "corporate",
+      label: "Corporate Experience",
+      desc: "Company overview, capabilities, federal marketing plan",
+      icon: "🏢",
+      href: `/certifications/${certId}/corporate`,
+      complete: !!app?.narrativeCorp,
+      chars: (() => { try { const p = JSON.parse(app?.narrativeCorp || "{}"); return Object.values(p.answers || p).join("").length; } catch { return app?.narrativeCorp?.length || 0; } })(),
+      charLimit: 10000,
     },
     {
-      id: "qcp", label: "Quality Control Plan", desc: "Review procedures, QC personnel, corrective actions",
-      icon: "✅", href: `/certifications/${params.id}/qcp`,
-      complete: !!app?.narrativeQCP, chars: app?.narrativeQCP?.length || 0, charLimit: 10000,
+      id: "qcp",
+      label: "Quality Control Plan",
+      desc: "Review procedures, QC personnel, corrective actions",
+      icon: "✅",
+      href: `/certifications/${certId}/qcp`,
+      complete: !!app?.narrativeQCP,
+      chars: (() => { try { const p = JSON.parse(app?.narrativeQCP || "{}"); return Object.values(p.answers || p).join("").length; } catch { return app?.narrativeQCP?.length || 0; } })(),
+      charLimit: 10000,
     },
     ...selectedSINs.map((sin: string) => ({
-      id: `experience-${sin}`, label: `Project Experience — SIN ${sin}`, desc: SIN_LABELS[sin] || sin,
-      icon: "📋", href: `/certifications/${params.id}/experience/${sin}`,
-      complete: false, chars: 0, charLimit: 10000,
+      id: `experience-${sin}`,
+      label: `Project Experience — SIN ${sin}`,
+      desc: SIN_LABELS[sin] || sin,
+      icon: "📋",
+      href: `/certifications/${certId}/experience/${sin}`,
+      complete: false,
+      chars: 0,
+      charLimit: 10000,
     })),
     {
-      id: "past-performance", label: "Past Performance", desc: "3 references required — CPARS reports or PPQs",
-      icon: "⭐", href: `/certifications/${params.id}/past-performance`,
+      id: "past-performance",
+      label: "Past Performance",
+      desc: "3 references required — CPARS reports or PPQs",
+      icon: "⭐",
+      href: `/certifications/${certId}/past-performance`,
       complete: (app?.pastPerformance?.length || 0) >= 3,
-      count: app?.pastPerformance?.length || 0, needed: 3, chars: null, charLimit: null,
+      count: app?.pastPerformance?.length || 0,
+      needed: 3,
+      chars: null,
+      charLimit: null,
     },
     {
-      id: "financials", label: "Financial Statements", desc: "2 years P&L and Balance Sheet",
-      icon: "📊", href: `/certifications/${params.id}/financials`,
-      complete: false, chars: null, charLimit: null,
+      id: "financials",
+      label: "Financial Statements",
+      desc: "2 years P&L and Balance Sheet",
+      icon: "📊",
+      href: `/certifications/${certId}/financials`,
+      complete: false,
+      chars: null,
+      charLimit: null,
     },
     {
-      id: "pricing", label: "Pricing (CSP-1)", desc: "Labor categories, rates, Most Favored Customer pricing",
-      icon: "💰", href: `/certifications/${params.id}/pricing`,
-      complete: false, chars: null, charLimit: null,
+      id: "pricing",
+      label: "Pricing (CSP-1)",
+      desc: "Labor categories, rates, Most Favored Customer pricing",
+      icon: "💰",
+      href: `/certifications/${certId}/pricing`,
+      complete: false,
+      chars: null,
+      charLimit: null,
     },
   ];
 
@@ -112,6 +144,7 @@ export default function CertificationDashboard({ params }: { params: { id: strin
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
+      {/* Sidebar */}
       <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ padding: "24px 20px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
           <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
@@ -147,6 +180,7 @@ export default function CertificationDashboard({ params }: { params: { id: strin
         </div>
       </div>
 
+      {/* Main */}
       <div style={{ flex: 1, overflow: "auto" }}>
         <div style={{ padding: "40px 48px" }}>
           <a href="/certifications" style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>Back to Certifications</a>
@@ -161,25 +195,21 @@ export default function CertificationDashboard({ params }: { params: { id: strin
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Application Progress Dashboard</p>
           </div>
 
+          {/* Springboard alert */}
           {needsSpringboard && (
             <div style={{ background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--amber)", marginBottom: 6 }}>
-                Startup Springboard Program Detected
-              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--amber)", marginBottom: 6 }}>Startup Springboard Program Detected</div>
               <p style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.6, marginBottom: 12 }}>
-                This client has less than 2 years of corporate experience. They may qualify for the GSA Startup Springboard Program, which waives the 2-year requirement if they can demonstrate financial responsibility and relevant experience of key personnel.
+                This client has less than 2 years of corporate experience. They may qualify for the GSA Startup Springboard Program, which waives the 2-year requirement.
               </p>
               <div style={{ display: "flex", gap: 10 }}>
-                <button style={{ padding: "8px 18px", background: "var(--amber)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-                  Apply for Startup Springboard
-                </button>
-                <button style={{ padding: "8px 18px", background: "transparent", border: "1px solid var(--amber-b)", borderRadius: "var(--r)", color: "var(--amber)", fontSize: 13, cursor: "pointer" }}>
-                  Learn More
-                </button>
+                <button style={{ padding: "8px 18px", background: "var(--amber)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Apply for Startup Springboard</button>
+                <button style={{ padding: "8px 18px", background: "transparent", border: "1px solid var(--amber-b)", borderRadius: "var(--r)", color: "var(--amber)", fontSize: 13, cursor: "pointer" }}>Learn More</button>
               </div>
             </div>
           )}
 
+          {/* Progress */}
           <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 28, color: "#fff" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <div>
@@ -189,7 +219,7 @@ export default function CertificationDashboard({ params }: { params: { id: strin
                 </div>
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,.45)", marginTop: 4 }}>{completedCount} of {sections.length} sections complete</div>
               </div>
-              <a href={`/certifications/${params.id}/submit`} style={{ padding: "12px 24px", background: pct === 100 ? "var(--gold)" : "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
+              <a href={`/certifications/${certId}/submit`} style={{ padding: "12px 24px", background: pct === 100 ? "var(--gold)" : "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
                 {pct === 100 ? "Generate eOffer Package" : "View Submission Package"}
               </a>
             </div>
@@ -198,6 +228,7 @@ export default function CertificationDashboard({ params }: { params: { id: strin
             </div>
           </div>
 
+          {/* Integrations */}
           <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Data Sources</div>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400, marginBottom: 16 }}>Connected Integrations</h2>
@@ -212,12 +243,13 @@ export default function CertificationDashboard({ params }: { params: { id: strin
                   <div style={{ fontSize: 20, marginBottom: 6 }}>{int.icon}</div>
                   <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>{int.name}</div>
                   <div style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 8 }}>{int.desc}</div>
-                  <a href={`/clients/${cert?.clientId}`} style={{ fontSize: 11, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>Connect</a>
+                  <a href={`/clients/${cert?.client?.id}`} style={{ fontSize: 11, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>Connect</a>
                 </div>
               ))}
             </div>
           </div>
 
+          {/* Section cards */}
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 12 }}>Application Sections</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {sections.map((section, i) => (
@@ -225,18 +257,22 @@ export default function CertificationDashboard({ params }: { params: { id: strin
                 <div style={{ background: "#fff", border: `1px solid ${section.complete ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", padding: "20px 24px", boxShadow: "var(--shadow)", display: "flex", alignItems: "center", gap: 16, transition: "all .15s" }}
                   onMouseEnter={e => (e.currentTarget.style.boxShadow = "var(--shadow-lg)")}
                   onMouseLeave={e => (e.currentTarget.style.boxShadow = "var(--shadow)")}>
+
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: section.complete ? "var(--green)" : "var(--cream2)", border: `2px solid ${section.complete ? "var(--green)" : "var(--border2)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13, color: section.complete ? "#fff" : "var(--ink3)", fontWeight: 600 }}>
                     {section.complete ? "✓" : i + 1}
                   </div>
+
                   <div style={{ fontSize: 24, flexShrink: 0 }}>{section.icon}</div>
+
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)", marginBottom: 3 }}>{section.label}</div>
                     <div style={{ fontSize: 12.5, color: "var(--ink3)" }}>{section.desc}</div>
                   </div>
+
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    {section.charLimit && (
+                    {section.charLimit && section.chars !== null && (
                       <div style={{ fontSize: 11, color: "var(--ink4)", fontFamily: "monospace", marginBottom: 4 }}>
-                        {section.chars?.toLocaleString()} / {section.charLimit.toLocaleString()} chars
+                        {(section.chars as number).toLocaleString()} / {section.charLimit.toLocaleString()} chars
                       </div>
                     )}
                     {(section as any).count !== undefined && (
@@ -248,6 +284,7 @@ export default function CertificationDashboard({ params }: { params: { id: strin
                       {section.complete ? "Complete" : "Not Started"}
                     </span>
                   </div>
+
                   <div style={{ fontSize: 18, color: "var(--gold)", flexShrink: 0 }}>→</div>
                 </div>
               </a>

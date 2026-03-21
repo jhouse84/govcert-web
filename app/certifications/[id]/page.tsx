@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
@@ -26,9 +26,10 @@ const SIN_LABELS: Record<string, string> = {
   "611430": "Professional & Management Training",
 };
 
-export default function CertificationDashboard({ params }: { params: { id: string } }) {
+export default function CertificationDashboard({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const certId = String(params.id);
+  const { id } = React.use(params);
+  const certId = String(id);
   const [cert, setCert] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -181,7 +182,7 @@ export default function CertificationDashboard({ params }: { params: { id: strin
 
       <div style={{ flex: 1, overflow: "auto" }}>
         <div style={{ padding: "40px 48px" }}>
-          <a href="/certifications" style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>Back to Certifications</a>
+          <a href="/certifications" style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>← Back to Certifications</a>
 
           <div style={{ marginTop: 20, marginBottom: 32 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>

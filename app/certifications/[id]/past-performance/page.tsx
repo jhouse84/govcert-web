@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
@@ -36,9 +36,10 @@ const EMPTY_CONTRACT = {
   id: "",
 };
 
-export default function PastPerformancePage({ params }: { params: { id: string } }) {
+export default function PastPerformancePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const certId = String(params.id);
+  const { id } = React.use(params);
+  const certId = String(id);
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);

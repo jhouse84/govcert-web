@@ -121,7 +121,7 @@ export default function ClientsPage() {
                   onMouseEnter={e => (e.currentTarget.style.background = "var(--cream)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>{client.businessname}</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>{client.businessName}</div>
                     <div style={{ fontSize: 12, color: "var(--ink3)" }}>{client.email || "No email"}</div>
                   </div>
                   <div style={{ fontSize: 13, color: "var(--ink2)", fontFamily: "monospace" }}>{client.ein || "—"}</div>

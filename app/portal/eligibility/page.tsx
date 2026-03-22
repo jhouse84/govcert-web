@@ -197,7 +197,12 @@ function PortalEligibilityPageInner() {
           if (intake.yearEstablished) setYearEstablished(String(intake.yearEstablished));
           if (intake.firstRevenueDate) setFirstRevenueDate(intake.firstRevenueDate);
           if (intake.naicsCodes) setNaicsCodes(intake.naicsCodes);
-          if (intake.owners?.length) setOwners(intake.owners);
+          if (intake.owners) {
+            try {
+              const parsed = typeof intake.owners === "string" ? JSON.parse(intake.owners) : intake.owners;
+              if (Array.isArray(parsed) && parsed.length > 0) setOwners(parsed);
+            } catch {}
+          }
           if (intake.revenueYear1) setRevenueYear1(String(intake.revenueYear1));
           if (intake.revenueYear2) setRevenueYear2(String(intake.revenueYear2));
           if (intake.revenueYear3) setRevenueYear3(String(intake.revenueYear3));
@@ -212,7 +217,12 @@ function PortalEligibilityPageInner() {
           if (intake.completedContracts) setCompletedContracts(String(intake.completedContracts));
           if (intake.cparsAvailable) setCparsAvailable(intake.cparsAvailable);
           if (intake.pastPerfRefs) setPastPerfRefs(intake.pastPerfRefs);
-          if (intake.existingCerts) setExistingCerts(intake.existingCerts);
+          if (intake.existingCerts) {
+            try {
+              const parsed = typeof intake.existingCerts === "string" ? JSON.parse(intake.existingCerts) : intake.existingCerts;
+              if (Array.isArray(parsed)) setExistingCerts(parsed);
+            } catch {}
+          }
           if (intake.currentStep) setStep(intake.currentStep);
         }
       } catch { /* no existing intake */ }

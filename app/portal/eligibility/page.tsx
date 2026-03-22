@@ -1,6 +1,6 @@
 "use client";
-import React, { useEffect, useState, useRef, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import React, { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
 const US_STATES = [
@@ -56,9 +56,11 @@ const emptyOwner = () => ({
 
 function PortalEligibilityPageInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  const [showWelcome, setShowWelcome] = useState(() => searchParams.get("welcome") === "true");
+  const [showWelcome, setShowWelcome] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("welcome") === "true";
+  });
 
   function dismissWelcome() {
     localStorage.setItem("govcert_onboarded", "true");
@@ -1061,13 +1063,5 @@ function PortalEligibilityPageInner() {
 }
 
 export default function PortalEligibilityPage() {
-  return (
-    <Suspense fallback={
-      <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>
-        Loading eligibility wizard...
-      </div>
-    }>
-      <PortalEligibilityPageInner />
-    </Suspense>
-  );
+  return <PortalEligibilityPageInner />;
 }

@@ -108,7 +108,7 @@ export default function AdminEligibilityPage({ params }: { params: Promise<{ id:
   // Step 6
   const [uploadedDocs, setUploadedDocs] = useState<any[]>([]);
   const [uploadCategory, setUploadCategory] = useState("FINANCIAL_STATEMENT");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -235,25 +235,29 @@ export default function AdminEligibilityPage({ params }: { params: Promise<{ id:
   }
 
   async function handleUpload() {
-    if (!uploadFile) return;
+    if (uploadFiles.length === 0) return;
     setUploading(true);
     setUploadError("");
     try {
-      const formData = new FormData();
-      formData.append("file", uploadFile);
-      formData.append("clientId", clientId);
-      formData.append("category", uploadCategory);
-      formData.append("description", `Eligibility intake - ${uploadCategory}`);
       const token = localStorage.getItem("token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      setUploadedDocs(prev => [...prev, { ...data, category: uploadCategory }]);
-      setUploadFile(null);
+      const results: any[] = [];
+      for (const file of uploadFiles) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("clientId", clientId);
+        formData.append("category", uploadCategory);
+        formData.append("description", `Eligibility intake - ${uploadCategory}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Upload failed for ${file.name}`);
+        results.push({ ...data, category: uploadCategory });
+      }
+      setUploadedDocs(prev => [...prev, ...results]);
+      setUploadFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err: any) {
       setUploadError(err.message || "Upload failed");
@@ -759,14 +763,19 @@ export default function AdminEligibilityPage({ params }: { params: Promise<{ id:
                       <option value="OTHER">Other</option>
                     </select>
                   </div>
-                  <input type="file" ref={fileInputRef} onChange={e => setUploadFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
+                  <input type="file" ref={fileInputRef} multiple onChange={e => setUploadFiles(Array.from(e.target.files || []))} style={{ display: "none" }} />
                   <button onClick={() => fileInputRef.current?.click()} style={{ padding: "10px 24px", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                    {uploadFile ? uploadFile.name : "Choose File"}
+                    {uploadFiles.length > 0 ? `${uploadFiles.length} file${uploadFiles.length > 1 ? "s" : ""} selected` : "Choose Files"}
                   </button>
-                  {uploadFile && (
-                    <button onClick={handleUpload} disabled={uploading} style={{ marginLeft: 12, padding: "10px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: uploading ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                      {uploading ? "Uploading..." : "Upload"}
-                    </button>
+                  {uploadFiles.length > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 8 }}>
+                        {uploadFiles.map((f, i) => <div key={i} style={{ padding: "2px 0" }}>📎 {f.name} ({(f.size / 1024).toFixed(0)} KB)</div>)}
+                      </div>
+                      <button onClick={handleUpload} disabled={uploading} style={{ padding: "10px 20px", background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: uploading ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 4px 20px rgba(200,155,60,.35)" }}>
+                        {uploading ? "Uploading..." : `Upload ${uploadFiles.length} File${uploadFiles.length > 1 ? "s" : ""}`}
+                      </button>
+                    </div>
                   )}
                 </div>
                 {uploadError && <div style={{ fontSize: 13, color: "var(--red, #c0392b)", marginBottom: 12 }}>{uploadError}</div>}

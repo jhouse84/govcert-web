@@ -31,6 +31,13 @@ export default function PortalPage() {
         return;
       }
       setUser(parsed);
+
+      // First-time customer: redirect to eligibility wizard with welcome video
+      const onboarded = localStorage.getItem("govcert_onboarded");
+      if (!onboarded) {
+        router.push("/portal/eligibility?welcome=true");
+        return;
+      }
     }
     fetchMyCerts();
   }, []);

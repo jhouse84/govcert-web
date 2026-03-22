@@ -1,6 +1,6 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
 const US_STATES = [
@@ -54,8 +54,17 @@ const emptyOwner = () => ({
   veteranStatus: "Not a Veteran", disabilityStatus: false, usCitizen: true, managesDailyOps: false,
 });
 
-export default function PortalEligibilityPage() {
+function PortalEligibilityPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [showWelcome, setShowWelcome] = useState(() => searchParams.get("welcome") === "true");
+
+  function dismissWelcome() {
+    localStorage.setItem("govcert_onboarded", "true");
+    setShowWelcome(false);
+    window.history.replaceState({}, "", "/portal/eligibility");
+  }
 
   const [user, setUser] = useState<any>(null);
   const [clientId, setClientId] = useState<string | null>(null);
@@ -325,6 +334,81 @@ export default function PortalEligibilityPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
+
+      {/* Welcome Video Modal */}
+      {showWelcome && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(11,25,41,0.85)", zIndex: 9999,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 16, maxWidth: 720, width: "90%",
+            overflow: "hidden", boxShadow: "0 24px 64px rgba(11,25,41,0.4)",
+          }}>
+            {/* Video embed area – 16:9 aspect ratio */}
+            <div style={{
+              position: "relative", width: "100%", paddingBottom: "56.25%",
+              background: "#0B1929",
+            }}>
+              {/* Replace with: <iframe src="YOUR_HEYGEN_VIDEO_URL" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} allow="autoplay" allowFullScreen /> */}
+              <div style={{
+                position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                color: "rgba(255,255,255,0.5)", gap: 12,
+              }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3" fill="rgba(200,155,60,0.6)" stroke="rgba(200,155,60,0.8)" />
+                </svg>
+                <span style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>Welcome video loading...</span>
+              </div>
+              {/* Video URL config: set YOUR_HEYGEN_VIDEO_URL above to embed the welcome video */}
+            </div>
+
+            {/* Modal content below video */}
+            <div style={{ padding: "28px 36px 32px" }}>
+              <h2 style={{
+                fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 400,
+                color: "#0B1929", marginBottom: 10, textAlign: "center" as const,
+              }}>
+                Welcome to GovCert
+              </h2>
+              <p style={{
+                fontSize: 14, color: "var(--ink3)", lineHeight: 1.7,
+                textAlign: "center" as const, maxWidth: 520, margin: "0 auto 24px",
+                fontFamily: "'DM Sans', sans-serif",
+              }}>
+                Watch this quick overview to understand how our eligibility assessment works, then get started below.
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                <button
+                  onClick={dismissWelcome}
+                  style={{
+                    padding: "13px 36px", background: "#C89B3C", border: "none",
+                    borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600,
+                    cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                    boxShadow: "0 4px 16px rgba(200,155,60,0.3)",
+                  }}
+                >
+                  Get Started &rarr;
+                </button>
+                <button
+                  onClick={dismissWelcome}
+                  style={{
+                    background: "none", border: "none", color: "var(--ink4)",
+                    fontSize: 13, cursor: "pointer", textDecoration: "underline",
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  Skip video
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ padding: "24px 20px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
@@ -930,5 +1014,17 @@ export default function PortalEligibilityPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PortalEligibilityPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>
+        Loading eligibility wizard...
+      </div>
+    }>
+      <PortalEligibilityPageInner />
+    </Suspense>
   );
 }

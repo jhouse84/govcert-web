@@ -16,6 +16,10 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
         if (res.ok) {
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
+          // Clear onboarded flag for new customers so portal redirects to eligibility welcome
+          if (data.user.role === "CUSTOMER") {
+            localStorage.setItem("govcert_onboarded", "");
+          }
           setStatus("success");
           const dest = data.user.role === "CUSTOMER" ? "/portal" : "/dashboard";
           setTimeout(() => router.push(dest), 2500);

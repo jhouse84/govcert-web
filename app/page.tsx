@@ -74,6 +74,28 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* VIDEO — HOW IT WORKS */}
+      <div style={{ background: "var(--cream)", padding: "72px 0" }}>
+        <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 48px", textAlign: "center" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 12 }}>See How It Works</div>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(28px,3.5vw,42px)", color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 24 }}>Your path to certification, simplified</h2>
+          <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 12, overflow: "hidden", boxShadow: "0 8px 40px rgba(11,25,41,.15)", border: "1px solid var(--border)", background: "var(--navy)" }}>
+            {/* Replace src with your HeyGen video URL */}
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 24px rgba(200,155,60,.4)" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+              <span style={{ fontSize: 14, color: "rgba(255,255,255,.5)" }}>Video coming soon</span>
+            </div>
+            {/* Once you have the HeyGen URL, replace the div above with:
+            <iframe src="YOUR_HEYGEN_VIDEO_URL" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="autoplay; encrypted-media" allowFullScreen /> */}
+          </div>
+          <p style={{ fontSize: 14, color: "var(--ink3)", marginTop: 20, fontWeight: 300, lineHeight: 1.6 }}>
+            Learn how GovCert's AI-powered platform helps small businesses identify which certifications they qualify for and automates the application process.
+          </p>
+        </div>
+      </div>
+
       {/* FEATURES */}
       <div id="features" style={{ background: "var(--navy)", padding: "88px 0" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto", padding: "0 48px" }}>

@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GovCert — Monday Beta Sprint Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0B1929;--navy2:#112238;--navy3:#1A3357;
+  --gold:#C89B3C;--gold2:#E8B84B;
+  --cream:#F5F1E8;--cream2:#EDE8DB;--cream3:#E0D9C8;
+  --ink:#0B1929;--ink2:#2D4A6B;--ink3:#5A7A96;--ink4:#8BA0B4;
+  --border:rgba(11,25,41,.09);--border2:rgba(11,25,41,.16);
+  --green:#1A6644;--green-bg:#E6F4EE;--green-b:rgba(26,102,68,.2);
+  --amber:#8A5E10;--amber-bg:#FBF0DC;--amber-b:rgba(138,94,16,.2);
+  --red:#8B1D1D;--red-bg:#FAE8E8;--red-b:rgba(139,29,29,.2);
+  --blue:#1A3F7A;--blue-bg:#E8EEF8;--blue-b:rgba(26,63,122,.2);
+  --purple:#4A1A7A;--purple-bg:#F0E8F8;--purple-b:rgba(74,26,122,.2);
+  --teal:#1A6A6A;--teal-bg:#E6F4F4;--teal-b:rgba(26,106,106,.2);
+  --r:6px;--rl:10px;
+  --shadow:0 1px 3px rgba(11,25,41,.06),0 4px 12px rgba(11,25,41,.05);
+  --shadow-lg:0 8px 32px rgba(11,25,41,.12);
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);font-size:13.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:290px;background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.body{flex:1;overflow-y:auto;padding:24px 28px}
+
+/* SIDEBAR */
+.sb-head{padding:18px 16px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-brand{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.sb-icon{width:28px;height:28px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.sb-icon svg{width:14px;height:14px;fill:#fff}
+.sb-name{font-family:'Cormorant Garamond',serif;font-size:20px;color:#fff;font-weight:400}
+.sb-name em{color:var(--gold2);font-style:normal}
+.sb-sub{font-size:9.5px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.09em}
+.sb-prog{margin:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:10px 12px}
+.sb-prog-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.sb-prog-label{font-size:9.5px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em}
+.sb-prog-val{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold2)}
+.sb-bar{height:3px;background:rgba(255,255,255,.08);border-radius:100px;overflow:hidden}
+.sb-fill{height:100%;background:var(--gold);border-radius:100px;transition:width .5s}
+.sb-nav{padding:10px 8px;flex:1}
+.sb-sec{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.25);padding:0 9px;margin:12px 0 4px;font-weight:600}
+.sb-item{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:var(--r);cursor:pointer;color:rgba(255,255,255,.42);font-size:12.5px;transition:all .12s;margin-bottom:1px}
+.sb-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.78)}
+.sb-item.on{background:rgba(200,155,60,.15);color:var(--gold2);font-weight:500}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sb-dot.done{background:var(--green)}.sb-dot.active{background:var(--gold)}.sb-dot.planned{background:rgba(255,255,255,.2)}.sb-dot.blocked{background:var(--red)}
+.sb-pct{margin-left:auto;font-size:10px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-foot{padding:10px 12px;border-top:1px solid rgba(255,255,255,.06);font-size:10px;color:rgba(255,255,255,.28);line-height:1.6}
+
+/* TOPBAR */
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 1px 0 var(--border)}
+.tb-title{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--navy);font-weight:400}
+.tb-sub{font-size:11px;color:var(--ink3)}
+.tb-right{display:flex;gap:7px;align-items:center}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:100px;font-size:10px;font-weight:500}
+.bg-green{background:var(--green-bg);color:var(--green)}.bg-amber{background:var(--amber-bg);color:var(--amber)}.bg-gray{background:var(--cream2);color:var(--ink3)}.bg-red{background:var(--red-bg);color:var(--red)}.bg-blue{background:var(--blue-bg);color:var(--blue)}.bg-navy{background:var(--navy);color:rgba(255,255,255,.8)}
+.btn{padding:6px 13px;border-radius:var(--r);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;border:1px solid var(--border2);background:#fff;color:var(--ink);font-weight:500;transition:all .12s}
+.btn:hover{background:var(--cream2)}.btn-gold{background:var(--gold);border-color:var(--gold);color:#fff}.btn-gold:hover{background:var(--gold2)}
+
+/* VIEWS */
+.view{display:none}.view.on{display:block;animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--navy2),var(--navy));border-radius:var(--rl);padding:22px 26px;margin-bottom:18px;color:#fff}
+.hero-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:400;margin-bottom:4px}
+.hero-sub{font-size:12px;color:rgba(255,255,255,.42);margin-bottom:18px;line-height:1.6}
+.hero-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:10px 13px}
+.stat-v{font-family:'Cormorant Garamond',serif;font-size:26px;color:#fff;line-height:1}
+.stat-l{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+
+/* CARDS */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;box-shadow:var(--shadow)}
+.card-title{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.si{display:flex;align-items:flex-start;gap:8px;padding:6px 0;font-size:12.5px;color:var(--ink2);border-bottom:1px solid var(--border);line-height:1.5}
+.si:last-child{border-bottom:none}
+.si-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+
+/* PHASE CARDS */
+.pc{background:#fff;border:1px solid var(--border);border-radius:var(--rl);margin-bottom:8px;overflow:hidden;box-shadow:var(--shadow)}
+.pc-head{padding:12px 16px;display:flex;align-items:center;gap:11px;cursor:pointer;user-select:none;transition:background .12s}
+.pc-head:hover{background:var(--cream)}
+.pc-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;font-weight:700}
+.phi-done{background:var(--green-bg);color:var(--green)}.phi-active{background:var(--amber-bg);color:var(--amber)}.phi-planned{background:var(--cream2);color:var(--ink4)}
+.pc-info{flex:1}
+.pc-name{font-size:13.5px;font-weight:500;color:var(--navy);margin-bottom:2px;display:flex;align-items:center;gap:8px}
+.pc-meta{font-size:11px;color:var(--ink3)}
+.pc-right{text-align:right;flex-shrink:0;min-width:80px}
+.pc-pct{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--navy);line-height:1}
+.pc-pct-lbl{font-size:9px;color:var(--ink4);text-transform:uppercase;letter-spacing:.06em}
+.pc-bar{height:3px;background:var(--cream2);border-radius:100px;margin-top:4px;overflow:hidden}
+.pc-bar-fill{height:100%;border-radius:100px;transition:width .5s}
+.pc-body{display:none;border-top:1px solid var(--border)}
+.pc-body.open{display:block}
+
+/* TASKS */
+.ts{padding:12px 16px;border-bottom:1px solid var(--border)}
+.ts:last-child{border-bottom:none}
+.ts-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.task{display:flex;align-items:flex-start;gap:9px;padding:7px 10px;border-radius:var(--r);cursor:pointer;transition:background .1s}
+.task:hover{background:var(--cream)}
+.tcb{width:15px;height:15px;border-radius:3px;border:1.5px solid var(--border2);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s}
+.task.done .tcb{background:var(--green);border-color:var(--green)}
+.task.done .tcb::after{content:'✓';font-size:8px;color:#fff;font-weight:800}
+.task.active .tcb{border-color:var(--amber);background:var(--amber-bg)}
+.task.active .tcb::after{content:'→';font-size:8px;color:var(--amber);font-weight:700}
+.task.blocked .tcb{border-color:var(--red);background:var(--red-bg)}
+.task.blocked .tcb::after{content:'✕';font-size:8px;color:var(--red);font-weight:800}
+.task-content{flex:1}
+.task-title{font-size:12.5px;color:var(--ink);line-height:1.4}
+.task.done .task-title{text-decoration:line-through;color:var(--ink3)}
+.task-detail{font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.45}
+.task-tags{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap}
+.tag{padding:1px 6px;border-radius:3px;font-size:10px;font-weight:500}
+.tag-fe{background:var(--blue-bg);color:var(--blue)}.tag-be{background:var(--purple-bg);color:var(--purple)}.tag-db{background:var(--teal-bg);color:var(--teal)}.tag-infra{background:var(--red-bg);color:var(--red)}.tag-api{background:var(--amber-bg);color:var(--amber)}.tag-ux{background:rgba(200,155,60,.12);color:var(--gold)}.tag-email{background:var(--green-bg);color:var(--green)}.tag-test{background:var(--purple-bg);color:var(--purple)}
+.task-meta{flex-shrink:0;text-align:right;min-width:80px}
+.task-when{font-size:10px;color:var(--ink4);font-family:'DM Mono',monospace;white-space:nowrap}
+
+/* STACK */
+.srow{display:flex;align-items:center;gap:12px;padding:9px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--r);margin-bottom:5px;box-shadow:var(--shadow)}
+.srow-lbl{width:155px;flex-shrink:0;font-size:11.5px;color:var(--ink3);font-weight:500}
+.srow-val{font-size:13px;color:var(--navy);flex:1}
+.ssec{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink3);font-weight:600;margin:14px 0 7px}
+
+/* BETA */
+.bcheck{display:flex;align-items:center;gap:12px;padding:11px 15px;border-radius:var(--r);margin-bottom:7px}
+.bcheck-cb{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;font-weight:800;color:#fff}
+
+/* COUNTDOWN */
+.countdown{background:linear-gradient(135deg,var(--navy2),var(--navy));border-radius:var(--rl);padding:18px 22px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+.cd-items{display:flex;gap:20px}
+.cd-item{text-align:center}
+.cd-val{font-family:'Cormorant Garamond',serif;font-size:36px;color:var(--gold2);line-height:1}
+.cd-lbl{font-size:9.5px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:9px 14px;border-radius:var(--r);font-size:12.5px;display:flex;align-items:center;gap:7px;box-shadow:var(--shadow-lg);transform:translateY(80px);opacity:0;transition:all .28s cubic-bezier(.34,1.56,.64,1);z-index:9999}
+.toast.show{transform:none;opacity:1}
+.mb16{margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-head">
+    <div class="sb-brand">
+      <div class="sb-icon"><svg viewBox="0 0 16 16"><path d="M8 1L1 4.5v4C1 12 4.5 14.5 8 15c3.5-.5 7-3 7-6.5v-4L8 1z"/></svg></div>
+      <span class="sb-name">Gov<em>Cert</em></span>
+    </div>
+    <div class="sb-sub">Monday Beta Sprint · v5 · govcert.ai</div>
+  </div>
+  <div class="sb-prog">
+    <div class="sb-prog-row"><span class="sb-prog-label">Overall Progress</span><span class="sb-prog-val" id="sb-pct">0%</span></div>
+    <div class="sb-bar"><div class="sb-fill" id="sb-fill" style="width:0%"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      <span style="font-size:10px;color:rgba(255,255,255,.28)" id="sb-done-lbl">0 done</span>
+      <span style="font-size:10px;color:rgba(255,255,255,.28)" id="sb-total-lbl">0 total</span>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Views</div>
+    <div class="sb-item on" onclick="switchView('overview',this)">📊 Overview & Status</div>
+    <div class="sb-item" onclick="switchView('phases',this)">📋 All Tasks</div>
+    <div class="sb-item" onclick="switchView('stack',this)">⚙️ Tech Stack</div>
+    <div class="sb-item" onclick="switchView('beta',this)">🚀 Beta Readiness</div>
+    <div class="sb-item" onclick="switchView('testing',this)">🧪 Testing Checklist</div>
+    <div class="sb-sec">Phases</div>
+    <div id="sb-phases"></div>
+    <div class="sb-sec">Filter</div>
+    <div class="sb-item" onclick="filterTag('fe')"><span style="width:8px;height:8px;background:#1A3F7A;border-radius:2px;display:inline-block"></span> Frontend</div>
+    <div class="sb-item" onclick="filterTag('be')"><span style="width:8px;height:8px;background:#4A1A7A;border-radius:2px;display:inline-block"></span> Backend</div>
+    <div class="sb-item" onclick="filterTag('ux')"><span style="width:8px;height:8px;background:#C89B3C;border-radius:2px;display:inline-block"></span> UX/Design</div>
+    <div class="sb-item" onclick="filterTag('test')"><span style="width:8px;height:8px;background:#4A1A7A;border-radius:2px;display:inline-block"></span> Testing</div>
+    <div class="sb-item" onclick="filterTag('email')"><span style="width:8px;height:8px;background:#1A6644;border-radius:2px;display:inline-block"></span> Email</div>
+    <div class="sb-item" onclick="filterTag('api')"><span style="width:8px;height:8px;background:#8A5E10;border-radius:2px;display:inline-block"></span> APIs</div>
+    <div class="sb-item" onclick="filterTag(null)">✕ Clear filter</div>
+  </nav>
+  <div class="sb-foot">govcert.ai · Beta: Monday AM<br>Next.js · Node · Prisma · Railway · Vercel</div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="tb-title" id="view-title">Overview & Status</div>
+      <div class="tb-sub" id="view-sub">Monday Beta Sprint · Click tasks to cycle status · Last updated Mar 22</div>
+    </div>
+    <div class="tb-right">
+      <span style="font-size:11px;color:var(--ink3)">Legend:</span>
+      <span class="badge bg-green">✓ Done</span>
+      <span class="badge bg-amber">→ Active</span>
+      <span class="badge bg-gray">◦ Planned</span>
+      <span class="badge bg-red">✕ Blocked</span>
+      <button class="btn" onclick="exportStatus()">Export</button>
+      <button class="btn btn-gold" onclick="toast('✦ Plan synced!')">Sync Plan</button>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- OVERVIEW -->
+    <div class="view on" id="view-overview">
+      <div class="countdown">
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.35);margin-bottom:4px">Beta Target</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:32px;color:var(--gold2);line-height:1">Monday AM</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:4px">First tester: Tricia Kelly</div>
+        </div>
+        <div class="cd-items">
+          <div class="cd-item"><div class="cd-val" id="cd-days">—</div><div class="cd-lbl">Days</div></div>
+          <div class="cd-item"><div class="cd-val" id="cd-hours">—</div><div class="cd-lbl">Hours</div></div>
+          <div class="cd-item"><div class="cd-val" id="cd-mins">—</div><div class="cd-lbl">Mins</div></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Progress</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:36px;color:var(--gold2);line-height:1" id="ov-pct">0%</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:3px"><span id="ov-done">0</span>/<span id="ov-total">0</span> tasks</div>
+        </div>
+      </div>
+
+      <div class="hero">
+        <div class="hero-title">GovCert — Monday Beta Sprint</div>
+        <div class="hero-sub">Goal: Tricia Kelly can log in, fill out her GSA MAS application, and receive a complete eOffer submission package by Monday AM. Every item below is either done or must be completed today/tomorrow.</div>
+        <div class="hero-stats">
+          <div class="stat"><div class="stat-v" id="ov-done2">0</div><div class="stat-l">Done</div></div>
+          <div class="stat"><div class="stat-v" id="ov-active">0</div><div class="stat-l">Active</div></div>
+          <div class="stat"><div class="stat-v" id="ov-planned">0</div><div class="stat-l">Remaining</div></div>
+          <div class="stat"><div class="stat-v">9</div><div class="stat-l">Phases</div></div>
+          <div class="stat"><div class="stat-v" id="ov-phase">P5</div><div class="stat-l">Current</div></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title" style="color:var(--green)">✓ Built & Live Right Now</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Auth: register, login, email verify, forgot/reset password</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Admin dashboard, client list, add client</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Client detail: contact, business, OAuth connect, certs, invite</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Certification wizard + cert dashboard with section cards</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Section 1: Corporate Experience (rebuilt — multi-file, guided Q&A, AI, voice)</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Section 2: Quality Control Plan (AI + attribute checklist)</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Section 3: Past Performance (CPARS, PPQ emails, AI narrative)</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Section 4: Project Experience per SIN (AI, voice, char counter)</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Section 5: Financial Statements (multi-file upload + AI extraction)</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Section 6: Pricing CSP-1 (invoices, LCAT library, gap analysis, benchmarking)</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>OAuth backend: QuickBooks + Gusto (AES-256 encrypted tokens)</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Email system: verify, invite, PPQ, password reset via SendGrid</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>SendGrid domain verified: noreply@govcert.ai</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Client invite flow: send email → accept → auto-login</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>One cert per type per client + cascade delete</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>Multi-file upload: PDF, Excel, CSV, DOCX, TXT, PPT</div>
+          <div class="si"><div class="si-dot" style="background:var(--green)"></div>PPQ emails send automatically when reference added</div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--red)">🔴 Must Complete Before Monday</div>
+          <div class="si"><div class="si-dot" style="background:var(--red)"></div><strong>Customer portal (/portal) — role-gated CUSTOMER view</strong></div>
+          <div class="si"><div class="si-dot" style="background:var(--red)"></div><strong>Role routing on login: ADMIN→/dashboard, CUSTOMER→/portal</strong></div>
+          <div class="si"><div class="si-dot" style="background:var(--red)"></div><strong>eOffer submission package — copy buttons + char counters</strong></div>
+          <div class="si"><div class="si-dot" style="background:var(--amber)"></div>"Back to Dashboard" nav bug — all 6 section pages</div>
+          <div class="si"><div class="si-dot" style="background:var(--amber)"></div>QuickBooks OAuth click-through test + financial data sync</div>
+          <div class="si"><div class="si-dot" style="background:var(--amber)"></div>Delete 2 duplicate test certs (Meridian Solutions)</div>
+          <div class="si"><div class="si-dot" style="background:var(--amber)"></div>End-to-end test: admin flow (add client → cert → all sections → eOffer)</div>
+          <div class="si"><div class="si-dot" style="background:var(--amber)"></div>End-to-end test: customer flow (invite → accept → portal → sections)</div>
+          <div class="si"><div class="si-dot" style="background:var(--amber)"></div>Test all email sends with real addresses</div>
+          <div class="si"><div class="si-dot" style="background:var(--amber)"></div>Verify PPQ form works from email link (public route)</div>
+          <div class="si"><div class="si-dot" style="background:var(--amber)"></div>Add Tricia Kelly as client + create GSA MAS cert</div>
+          <div class="si"><div class="si-dot" style="background:var(--amber)"></div>Send Tricia her invite email</div>
+          <div class="card-title" style="color:var(--ink3);margin-top:14px">◦ Post-Beta Roadmap</div>
+          <div class="si"><div class="si-dot" style="background:var(--ink4)"></div>Gusto payroll data sync</div>
+          <div class="si"><div class="si-dot" style="background:var(--ink4)"></div>SAM.gov UEI lookup</div>
+          <div class="si"><div class="si-dot" style="background:var(--ink4)"></div>PDF/ZIP submission package generator</div>
+          <div class="si"><div class="si-dot" style="background:var(--ink4)"></div>Stripe billing</div>
+          <div class="si"><div class="si-dot" style="background:var(--ink4)"></div>8(a), WOSB, HUBZone wizards</div>
+          <div class="si"><div class="si-dot" style="background:var(--ink4)"></div>PPQ 7-day auto-reminder emails</div>
+          <div class="si"><div class="si-dot" style="background:var(--ink4)"></div>Compliance calendar + SAM expiry alerts</div>
+        </div>
+      </div>
+
+      <div id="ov-phases"></div>
+    </div>
+
+    <!-- ALL TASKS -->
+    <div class="view" id="view-phases">
+      <div id="all-phases"></div>
+    </div>
+
+    <!-- TECH STACK -->
+    <div class="view" id="view-stack">
+      <div class="card mb16">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--navy);font-weight:400;margin-bottom:18px">Current Tech Stack — govcert.ai</div>
+        <div class="ssec">Frontend</div>
+        <div class="srow"><div class="srow-lbl">Framework</div><div class="srow-val">Next.js 16 · App Router · TypeScript</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Hosting</div><div class="srow-val">Vercel · govcert-web.vercel.app</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Domain</div><div class="srow-val">govcert.ai (GoDaddy CNAME → Railway)</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Design System</div><div class="srow-val">Navy #0B1929 · Gold #C89B3C · Cream #F5F1E8 · CSS variables</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Fonts</div><div class="srow-val">Cormorant Garamond · DM Sans · DM Mono</div><span class="badge bg-green">Live</span></div>
+        <div class="ssec">Backend</div>
+        <div class="srow"><div class="srow-lbl">Runtime</div><div class="srow-val">Node.js v22 · Express.js (CommonJS)</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Hosting</div><div class="srow-val">Railway · govcert-production.up.railway.app</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Database</div><div class="srow-val">PostgreSQL on Railway</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">ORM</div><div class="srow-val">Prisma 5.22.0 · migrate deploy on startup</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Auth</div><div class="srow-val">JWT (7d) · bcrypt · email verification · ADMIN/ADVISOR/CUSTOMER roles</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Encryption</div><div class="srow-val">AES-256-CBC for OAuth tokens at rest</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">File Upload</div><div class="srow-val">Multer · PDF, DOCX, XLSX, XLS, CSV, TXT, PPT · 10MB</div><span class="badge bg-green">Live</span></div>
+        <div class="ssec">APIs & Integrations</div>
+        <div class="srow"><div class="srow-lbl">AI / Claude</div><div class="srow-val">Anthropic API · claude-sonnet-4-20250514 · server-side only</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Email</div><div class="srow-val">SendGrid · govcert.ai verified · noreply@govcert.ai</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">QuickBooks</div><div class="srow-val">OAuth 2.0 · Credentials in Railway · Redirect URI registered</div><span class="badge bg-amber">Testing</span></div>
+        <div class="srow"><div class="srow-lbl">Gusto</div><div class="srow-val">OAuth 2.0 · Configured</div><span class="badge bg-amber">Testing</span></div>
+        <div class="srow"><div class="srow-lbl">SAM.gov</div><div class="srow-val">API key registered · route not yet built</div><span class="badge bg-gray">Pending</span></div>
+        <div class="srow"><div class="srow-lbl">Stripe</div><div class="srow-val">Not integrated</div><span class="badge bg-gray">Post-beta</span></div>
+        <div class="ssec">Repositories & Test Data</div>
+        <div class="srow"><div class="srow-lbl">Backend repo</div><div class="srow-val" style="font-family:'DM Mono',monospace;font-size:12px">github.com/jhouse84/govcert · C:\Users\jelan\Documents\govcert</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Frontend repo</div><div class="srow-val" style="font-family:'DM Mono',monospace;font-size:12px">github.com/jhouse84/govcert-web · C:\Users\jelan\Documents\govcert-web</div><span class="badge bg-green">Live</span></div>
+        <div class="srow"><div class="srow-lbl">Admin login</div><div class="srow-val" style="font-family:'DM Mono',monospace;font-size:12px">test@govcert.ai / TestPass123! (emailVerified: true)</div><span class="badge bg-green">Active</span></div>
+        <div class="srow"><div class="srow-lbl">Test client</div><div class="srow-val" style="font-family:'DM Mono',monospace;font-size:12px">Meridian Solutions · cmn0ike560000wofzlh1e9g47</div><span class="badge bg-green">Active</span></div>
+        <div class="srow"><div class="srow-lbl">Test cert</div><div class="srow-val" style="font-family:'DM Mono',monospace;font-size:12px">cmn0vef9t00014h7zwvjpt3xe (GSA_MAS · IN_PROGRESS)</div><span class="badge bg-green">Active</span></div>
+      </div>
+    </div>
+
+    <!-- BETA READINESS -->
+    <div class="view" id="view-beta">
+      <div class="card mb16">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--navy);font-weight:400;margin-bottom:6px">Beta Readiness — Tricia Kelly</div>
+        <div style="font-size:13px;color:var(--ink3);margin-bottom:18px">Every item below must be true before Tricia can be successfully onboarded.</div>
+        <div id="beta-list"></div>
+      </div>
+      <div class="card">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--navy);font-weight:400;margin-bottom:18px">Tricia's Journey — Step by Step</div>
+        <div id="journey"></div>
+      </div>
+    </div>
+
+    <!-- TESTING -->
+    <div class="view" id="view-testing">
+      <div class="card mb16">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--navy);font-weight:400;margin-bottom:6px">Testing Checklist — Before Monday Launch</div>
+        <div style="font-size:13px;color:var(--ink3);margin-bottom:18px">Every flow that must be tested end-to-end before Tricia is invited. Click to mark done.</div>
+        <div id="test-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+<div class="toast" id="toast-el"><span style="color:var(--gold2)">✦</span><span id="toast-msg"></span></div>
+
+<script>
+const PHASES = [
+  {
+    id:1,title:'Infrastructure & Auth',subtitle:'Dev env · hosting · database · auth — COMPLETE',status:'done',color:'var(--green)',
+    sections:[
+      {label:'Completed',lc:'var(--green)',tasks:[
+        {title:'VS Code, Node.js v22, Git configured on Windows PC',status:'done',tags:['infra'],when:'Week 1'},
+        {title:'GitHub: govcert (backend) + govcert-web (frontend)',status:'done',tags:['infra'],when:'Week 1'},
+        {title:'Railway backend live · govcert-production.up.railway.app',status:'done',tags:['infra'],when:'Week 1'},
+        {title:'Vercel frontend live · govcert-web.vercel.app',status:'done',tags:['infra'],when:'Week 1'},
+        {title:'PostgreSQL on Railway · Prisma 5.22.0',status:'done',tags:['db'],when:'Week 1'},
+        {title:'govcert.ai domain (GoDaddy CNAME → Railway)',status:'done',tags:['infra'],when:'Week 1'},
+        {title:'prisma migrate deploy on every Railway startup',status:'done',tags:['db'],when:'Week 1'},
+        {title:'Email/password auth · bcrypt · JWT 7d',status:'done',tags:['be'],when:'Week 1'},
+        {title:'Email verification on register (SendGrid)',status:'done',tags:['be','email'],when:'Week 2'},
+        {title:'Forgot password + reset password flow',status:'done',tags:['be','email'],when:'Week 2'},
+        {title:'Role system: ADMIN, ADVISOR, CUSTOMER in schema',status:'done',tags:['be'],when:'Week 1'},
+        {title:'test@govcert.ai admin account — emailVerified: true',status:'done',tags:['be'],when:'Week 2'},
+      ]},
+    ]
+  },
+  {
+    id:2,title:'Admin Panel & Client Management',subtitle:'Dashboard · clients · certifications — COMPLETE',status:'done',color:'var(--green)',
+    sections:[
+      {label:'Completed',lc:'var(--green)',tasks:[
+        {title:'Dashboard with stats and cert overview',status:'done',tags:['fe'],when:'Week 1'},
+        {title:'Client list with search',status:'done',tags:['fe'],when:'Week 1'},
+        {title:'Add client form',status:'done',tags:['fe'],when:'Week 1'},
+        {title:'Client detail: contact, business, OAuth integrations, certs, invite',status:'done',tags:['fe'],when:'Week 2'},
+        {title:'Certifications list page',status:'done',tags:['fe'],when:'Week 1'},
+        {title:'Create certification with type selector',status:'done',tags:['fe'],when:'Week 1'},
+        {title:'Duplicate cert prevention (one per type per client)',status:'done',tags:['be'],when:'Week 2'},
+        {title:'Cascade delete: cert → application → PPQs',status:'done',tags:['be'],when:'Week 2'},
+        {title:'Delete cert button with confirmation',status:'done',tags:['fe'],when:'Week 2'},
+        {title:'Send invite from client detail page',status:'done',tags:['fe','email'],when:'Week 2'},
+        {title:'OAuth connect/disconnect buttons with status badges',status:'done',tags:['fe'],when:'Week 2'},
+      ]},
+    ]
+  },
+  {
+    id:3,title:'GSA MAS — All 6 Application Sections',subtitle:'AI-powered application wizard — COMPLETE',status:'done',color:'var(--green)',
+    sections:[
+      {label:'Infrastructure',lc:'var(--teal)',tasks:[
+        {title:'Cert dashboard with section cards + % progress rings',status:'done',tags:['fe'],when:'Week 1'},
+        {title:'CertificationApplication upsert (one per cert, safe to re-call)',status:'done',tags:['be','db'],when:'Week 1'},
+        {title:'AI draft endpoint: /api/applications/ai/draft',status:'done',tags:['be'],when:'Week 1'},
+        {title:'AI generate-all endpoint: /api/applications/ai/generate-all',status:'done',tags:['be'],when:'Week 1'},
+        {title:'Next.js 15 async params fix (React.use) on all [id] pages',status:'done',tags:['fe'],when:'Week 2'},
+      ]},
+      {label:'Section Pages',lc:'var(--green)',tasks:[
+        {title:'S1: Corporate Experience — rebuilt with multi-file upload, 10 guided questions, GSA instructions, voice on all fields',status:'done',tags:['fe','be'],when:'Week 2'},
+        {title:'S2: Quality Control Plan — AI, 6 sections, attribute checklist',status:'done',tags:['fe','be'],when:'Week 1'},
+        {title:'S3: Past Performance — CPARS upload, PPQ send (real email), AI narrative',status:'done',tags:['fe','be'],when:'Week 1'},
+        {title:'S4: Project Experience per SIN — AI, voice, 500-char description, SIN nav',status:'done',tags:['fe','be'],when:'Week 2'},
+        {title:'S5: Financial Statements — multi-file upload, AI extract, P&L + BS, 2 fiscal years',status:'done',tags:['fe','be'],when:'Week 2'},
+        {title:'S6: Pricing CSP-1 — invoice upload, LCAT library, gap analysis, rate benchmarking, IFF calc, export',status:'done',tags:['fe','be'],when:'Week 2'},
+      ]},
+    ]
+  },
+  {
+    id:4,title:'Email System',subtitle:'SendGrid · all email flows — COMPLETE',status:'done',color:'var(--green)',
+    sections:[
+      {label:'Completed',lc:'var(--green)',tasks:[
+        {title:'SendGrid API key in Railway · govcert.ai domain verified',status:'done',tags:['email','infra'],when:'Week 2'},
+        {title:'emailService.js with branded HTML templates for all flows',status:'done',tags:['be','email'],when:'Week 2'},
+        {title:'Email verification on register',status:'done',tags:['be','email'],when:'Week 2'},
+        {title:'Customer portal invite email (magic link, 7-day expiry)',status:'done',tags:['be','email'],when:'Week 2'},
+        {title:'Password reset email (1hr expiry)',status:'done',tags:['be','email'],when:'Week 2'},
+        {title:'PPQ request email — auto-sends when reference added',status:'done',tags:['be','email'],when:'Week 2'},
+        {title:'invites.js route: POST /api/invites, GET /:token, POST /:token/accept',status:'done',tags:['be'],when:'Week 2'},
+        {title:'/verify-email/[token] page',status:'done',tags:['fe'],when:'Week 2'},
+        {title:'/invite/[token] page (set name + password + auto-login)',status:'done',tags:['fe'],when:'Week 2'},
+        {title:'/forgot-password page',status:'done',tags:['fe'],when:'Week 2'},
+        {title:'/reset-password/[token] page',status:'done',tags:['fe'],when:'Week 2'},
+        {title:'Forgot password link on login page',status:'done',tags:['fe'],when:'Week 2'},
+      ]},
+    ]
+  },
+  {
+    id:5,title:'OAuth Integrations',subtitle:'QuickBooks + Gusto — BACKEND DONE · TESTING PENDING',status:'active',color:'var(--gold)',
+    sections:[
+      {label:'Done',lc:'var(--green)',tasks:[
+        {title:'oauth.js: start, callback, refresh, disconnect, status routes',status:'done',tags:['be','api'],when:'Week 2'},
+        {title:'AES-256-CBC token encryption at rest',status:'done',tags:['be'],when:'Week 2'},
+        {title:'QB credentials + redirect URI registered in Intuit portal',status:'done',tags:['api'],when:'Week 2'},
+        {title:'OAuthToken schema @@unique([clientId, provider]) + realmId',status:'done',tags:['db'],when:'Week 2'},
+        {title:'Auto token refresh (5 min before expiry)',status:'done',tags:['be'],when:'Week 2'},
+        {title:'Connect/disconnect buttons on client detail page',status:'done',tags:['fe'],when:'Week 2'},
+      ]},
+      {label:'Tomorrow',lc:'var(--amber)',tasks:[
+        {title:'QuickBooks OAuth click → authorize → token stored — end-to-end test',status:'active',tags:['api','test'],when:'Tomorrow AM'},
+        {title:'Build /api/sync/financials — pull QB P&L + Balance Sheet',status:'planned',tags:['be','api'],when:'Tomorrow'},
+        {title:'Wire QB financial data into Financial Statements page (replace upload)',status:'planned',tags:['fe','be'],when:'Tomorrow'},
+        {title:'Gusto OAuth end-to-end test',status:'planned',tags:['api','test'],when:'Tomorrow'},
+      ]},
+    ]
+  },
+  {
+    id:6,title:'Customer Portal & Role Separation',subtitle:'CUSTOMER-role gated UX — TOMORROW MORNING (CRITICAL)',status:'active',color:'var(--gold)',
+    sections:[
+      {label:'Role-Based Routing — Tomorrow AM',lc:'var(--red)',tasks:[
+        {title:'Update login: check role → ADMIN/ADVISOR push /dashboard, CUSTOMER push /portal',status:'planned',tags:['fe','be'],when:'Tomorrow 8AM'},
+        {title:'Protect /dashboard route — redirect CUSTOMER to /portal',status:'planned',tags:['be'],when:'Tomorrow 8AM'},
+        {title:'Protect /portal route — redirect non-CUSTOMER to /dashboard',status:'planned',tags:['be'],when:'Tomorrow 8AM'},
+        {title:'auth middleware: attach role to req.user on every request',status:'planned',tags:['be'],when:'Tomorrow 8AM'},
+      ]},
+      {label:'Customer Portal Pages — Tomorrow',lc:'var(--blue)',tasks:[
+        {title:'/portal — home: company name, cert progress, next steps, advisor contact',status:'planned',tags:['fe','ux'],when:'Tomorrow AM'},
+        {title:'/portal/application/[certId] — view sections, read drafts, approve/request changes',status:'planned',tags:['fe','ux'],when:'Tomorrow'},
+        {title:'/portal/documents — upload docs, view submitted docs',status:'planned',tags:['fe'],when:'Tomorrow'},
+        {title:'/portal/messages — view advisor notes, action items, respond',status:'planned',tags:['fe'],when:'Tomorrow'},
+        {title:'Customer data scoping — only sees their own workspace, no other clients',status:'planned',tags:['be'],when:'Tomorrow'},
+        {title:'Customer sidebar distinct from admin: simpler, focused, cream bg',status:'planned',tags:['fe','ux'],when:'Tomorrow'},
+      ]},
+    ]
+  },
+  {
+    id:7,title:'eOffer Submission Package',subtitle:'Final deliverable — copy-paste ready — TOMORROW (CRITICAL)',status:'planned',color:'var(--ink4)',
+    sections:[
+      {label:'eOffer Package — Tomorrow',lc:'var(--teal)',tasks:[
+        {title:'Submission package page — pulls all saved section data into one view',status:'planned',tags:['fe'],when:'Tomorrow'},
+        {title:'Copy button for every GSA eOffer field (one-click clipboard)',status:'planned',tags:['fe','ux'],when:'Tomorrow'},
+        {title:'Character counter per field (green/amber/red based on GSA limits)',status:'planned',tags:['fe','ux'],when:'Tomorrow'},
+        {title:'Completeness score — flag missing or over-limit sections',status:'planned',tags:['fe'],when:'Tomorrow'},
+        {title:'Step-by-step eOffer upload instructions inline on page',status:'planned',tags:['fe','ux'],when:'Tomorrow'},
+        {title:'GSA eOffer field mapping: which section → which eOffer tab',status:'planned',tags:['fe','ux'],when:'Tomorrow'},
+        {title:'Warn if any required section is empty before allowing copy',status:'planned',tags:['fe'],when:'Tomorrow'},
+      ]},
+    ]
+  },
+  {
+    id:8,title:'Navigation & UX Fixes',subtitle:'Known bugs + polish — TOMORROW AM',status:'active',color:'var(--gold)',
+    sections:[
+      {label:'Navigation Bugs — Fix First Thing Tomorrow',lc:'var(--red)',tasks:[
+        {title:'Audit "Back to Dashboard" on all 6 section pages',detail:'corporate, qcp, past-performance, project-experience, financials, pricing — each must return to /certifications/[certId]',status:'planned',tags:['fe','ux'],when:'Tomorrow 8AM'},
+        {title:'Fix corporate experience back link',status:'planned',tags:['fe'],when:'Tomorrow 8AM'},
+        {title:'Fix QCP back link',status:'planned',tags:['fe'],when:'Tomorrow 8AM'},
+        {title:'Fix past performance back link',status:'planned',tags:['fe'],when:'Tomorrow 8AM'},
+        {title:'Fix project experience per SIN back link',status:'planned',tags:['fe'],when:'Tomorrow 8AM'},
+        {title:'Fix financials back link',status:'planned',tags:['fe'],when:'Tomorrow 8AM'},
+        {title:'Fix pricing CSP-1 back link',status:'planned',tags:['fe'],when:'Tomorrow 8AM'},
+        {title:'Delete 2 duplicate GSA_MAS certs from Meridian Solutions',status:'planned',tags:['be'],when:'Tomorrow 8AM'},
+      ]},
+      {label:'Already Fixed',lc:'var(--green)',tasks:[
+        {title:'Forgot password link on login page',status:'done',tags:['fe'],when:'Done'},
+        {title:'Next.js 15 async params (React.use) on all [id] pages',status:'done',tags:['fe'],when:'Done'},
+        {title:'ppq.js syntax error (duplicate block)',status:'done',tags:['be'],when:'Done'},
+        {title:'pricingData migration not pushed to git',status:'done',tags:['db'],when:'Done'},
+        {title:'Prisma client not regenerating on Railway deploy',status:'done',tags:['infra'],when:'Done'},
+      ]},
+    ]
+  },
+  {
+    id:9,title:'Testing & Beta Launch',subtitle:'Tricia Kelly onboarding — Monday AM',status:'planned',color:'var(--ink4)',
+    sections:[
+      {label:'End-to-End Testing — Sunday',lc:'var(--purple)',tasks:[
+        {title:'Admin flow: add client → create cert → all 6 sections → eOffer package',status:'planned',tags:['test'],when:'Sunday'},
+        {title:'Customer flow: receive invite → accept → land in portal → fill section',status:'planned',tags:['test'],when:'Sunday'},
+        {title:'Email test: verify, invite, PPQ, reset — send to real email addresses',status:'planned',tags:['test','email'],when:'Sunday'},
+        {title:'PPQ test: send PPQ → reference receives email → fills form → submits',status:'planned',tags:['test','email'],when:'Sunday'},
+        {title:'OAuth test: click Connect QuickBooks → authorize → confirm token stored',status:'planned',tags:['test','api'],when:'Sunday'},
+        {title:'Financial upload: upload CSV files → AI extracts figures → saves correctly',status:'planned',tags:['test'],when:'Sunday'},
+        {title:'CSP-1 test: upload invoices → group → add LCATs → benchmark → export',status:'planned',tags:['test'],when:'Sunday'},
+        {title:'eOffer package: all 6 sections complete → copy each field → char counts correct',status:'planned',tags:['test'],when:'Sunday'},
+        {title:'Role test: login as CUSTOMER → confirm redirect to /portal, not /dashboard',status:'planned',tags:['test'],when:'Sunday'},
+        {title:'Mobile responsive check on key pages',status:'planned',tags:['test','ux'],when:'Sunday'},
+      ]},
+      {label:'Launch — Monday AM',lc:'var(--green)',tasks:[
+        {title:'All 8 phases above confirmed complete',status:'planned',tags:['infra'],when:'Monday AM'},
+        {title:'Add Tricia Kelly as a client in GovCert',status:'planned',tags:['ux'],when:'Monday AM'},
+        {title:'Create GSA MAS certification for her company',status:'planned',tags:['ux'],when:'Monday AM'},
+        {title:'Send invite email from client page',status:'planned',tags:['email'],when:'Monday AM'},
+        {title:'Confirm Tricia receives invite email',status:'planned',tags:['email','test'],when:'Monday AM'},
+        {title:'Tricia accepts invite, sets password, lands in /portal',status:'planned',tags:['ux'],when:'Monday'},
+        {title:'Tricia completes at least one application section',status:'planned',tags:['ux'],when:'Monday'},
+        {title:'🚀 GovCert Beta is live',status:'planned',tags:['infra'],when:'Monday'},
+      ]},
+    ]
+  },
+];
+
+const BETA_ITEMS = [
+  {label:'Customer portal (/portal) built and deployed',done:false,critical:true},
+  {label:'Role-based login routing working (admin→/dashboard, customer→/portal)',done:false,critical:true},
+  {label:'eOffer submission package with copy buttons + char counters',done:false,critical:true},
+  {label:'"Back to Dashboard" nav bug fixed on all 6 section pages',done:false,critical:true},
+  {label:'QuickBooks OAuth tested end-to-end',done:false,critical:false},
+  {label:'Duplicate test certs cleaned up (Meridian Solutions)',done:false,critical:false},
+  {label:'Admin end-to-end flow tested',done:false,critical:true},
+  {label:'Customer end-to-end flow tested',done:false,critical:true},
+  {label:'All email flows tested with real addresses',done:false,critical:true},
+  {label:'Tricia Kelly added as a client',done:false,critical:true},
+  {label:'GSA MAS cert created for Tricia\'s company',done:false,critical:true},
+  {label:'Invite sent to Tricia',done:false,critical:true},
+  {label:'Email verification working',done:true,critical:true},
+  {label:'Invite flow: send → accept → login working',done:true,critical:true},
+  {label:'PPQ emails send automatically on reference add',done:true,critical:true},
+  {label:'All 6 application sections save data correctly',done:true,critical:true},
+  {label:'Corporate Experience rebuilt (multi-file, guided questions)',done:true,critical:true},
+  {label:'Financial statements multi-file upload + AI extraction working',done:true,critical:true},
+  {label:'CSP-1 pricing saves, exports to CSV',done:true,critical:true},
+  {label:'SendGrid domain verified (govcert.ai)',done:true,critical:true},
+  {label:'Railway backend stable — no crash loops',done:true,critical:true},
+  {label:'test@govcert.ai admin login confirmed working',done:true,critical:true},
+];
+
+const TEST_ITEMS = [
+  {label:'Register a new user → receive verification email → click link → auto-login',done:false,section:'Auth'},
+  {label:'Login with unverified account → see clear error message',done:false,section:'Auth'},
+  {label:'Forgot password → receive email → click link → set new password → login',done:false,section:'Auth'},
+  {label:'Login as ADMIN → land on /dashboard',done:false,section:'Roles'},
+  {label:'Login as CUSTOMER → land on /portal (not /dashboard)',done:false,section:'Roles'},
+  {label:'CUSTOMER tries to navigate to /dashboard → redirected to /portal',done:false,section:'Roles'},
+  {label:'Add new client → fill all fields → save → appears in client list',done:false,section:'Clients'},
+  {label:'Try to add duplicate GSA_MAS cert for same client → see error',done:false,section:'Clients'},
+  {label:'Delete a certification → confirm all related data deleted',done:false,section:'Clients'},
+  {label:'Send client invite → receive email → click link → set password → land in portal',done:false,section:'Invite'},
+  {label:'Accept invite with expired token → see clear error',done:false,section:'Invite'},
+  {label:'Corporate Experience: upload 2+ files → pre-fill questions → generate all 8 sections',done:false,section:'S1 Corp'},
+  {label:'Corporate Experience: voice input on a guided question',done:false,section:'S1 Corp'},
+  {label:'Corporate Experience: redraft single section → different from first draft',done:false,section:'S1 Corp'},
+  {label:'Corporate Experience: save → refresh page → data persists',done:false,section:'S1 Corp'},
+  {label:'QCP: AI draft all 6 sections → save → data persists',done:false,section:'S2 QCP'},
+  {label:'Past Performance: add contract → all fields → send PPQ → reference receives email',done:false,section:'S3 PP'},
+  {label:'PPQ public form: click email link → fill ratings → submit → status updates in admin',done:false,section:'S3 PP'},
+  {label:'Project Experience: navigate between SINs → each saves independently',done:false,section:'S4 SIN'},
+  {label:'Financials: upload CSV + PDF together → AI extracts both years → save',done:false,section:'S5 Fin'},
+  {label:'Financials: QuickBooks sync (if connected) → data populates fields',done:false,section:'S5 Fin'},
+  {label:'CSP-1: upload 3+ invoices → AI groups by service type → add to CSP-1',done:false,section:'S6 CSP'},
+  {label:'CSP-1: search LCAT library → add 2 results → rates auto-calculate IFF',done:false,section:'S6 CSP'},
+  {label:'CSP-1: run gap analysis → see coverage score → click suggested LCAT',done:false,section:'S6 CSP'},
+  {label:'CSP-1: benchmark all rates → see competitive/check/low badges',done:false,section:'S6 CSP'},
+  {label:'CSP-1: export to CSV → file downloads with correct column headers',done:false,section:'S6 CSP'},
+  {label:'eOffer package: all 6 sections complete → all fields populated → copy buttons work',done:false,section:'eOffer'},
+  {label:'eOffer: character counter shows correct counts + warns on over-limit',done:false,section:'eOffer'},
+  {label:'eOffer: completeness score flags empty sections',done:false,section:'eOffer'},
+  {label:'"Back to Dashboard" from each of 6 section pages → lands on correct cert dashboard',done:false,section:'Nav'},
+  {label:'Customer portal: Tricia logs in → sees only her company, not Meridian Solutions',done:false,section:'Portal'},
+  {label:'Mobile: login, cert dashboard, and CSP-1 page usable on phone',done:false,section:'Mobile'},
+];
+
+const JOURNEY_STEPS = [
+  {n:'1',title:'You add Tricia as a client',desc:'Enter her company in GovCert. Create a GSA MAS certification for her.'},
+  {n:'2',title:'Send her an invite',desc:'Click Send Invite on her client page. SendGrid fires a branded email with a magic link (7-day expiry).'},
+  {n:'3',title:'Tricia accepts the invite',desc:'She clicks the link, enters her name and password, lands directly in /portal — her customer workspace.'},
+  {n:'4',title:'She works through her application',desc:'The customer portal walks her through each section. She uploads documents, answers guided questions, and reviews AI-drafted narratives.'},
+  {n:'5',title:'PPQ emails go to her references',desc:'As she adds past performance contracts, SendGrid automatically emails each reference the PPQ form. References submit ratings directly from the email link.'},
+  {n:'6',title:'You review as advisor',desc:'In the admin panel you see all her section progress, read every AI draft, see PPQ responses as they come in, and add advisor notes.'},
+  {n:'7',title:'eOffer submission package',desc:'Once all 6 sections are complete, GovCert generates a copy-paste ready submission package. Every field maps to a specific eOffer tab with character counts.'},
+  {n:'8',title:'🚀 Submitted to GSA',desc:'Tricia logs into GSA eOffer, pastes each field using the copy buttons, and submits her GSA MAS application.'},
+];
+
+let activeFilter = null;
+
+function totals(){
+  let t=0,d=0,a=0,p=0;
+  PHASES.forEach(ph=>ph.sections.forEach(s=>s.tasks.forEach(tk=>{t++;if(tk.status==='done')d++;else if(tk.status==='active')a++;else p++;})));
+  return{t,d,a,p,pct:t?Math.round(d/t*100):0};
+}
+
+function scol(s){return s==='done'?'var(--green)':s==='active'?'var(--gold)':s==='blocked'?'var(--red)':'var(--ink4)';}
+function slbl(s){return s==='done'?'✓ Done':s==='active'?'→ Active':s==='blocked'?'✕ Blocked':'◦ Planned';}
+function scls(s){return s==='done'?'bg-green':s==='active'?'bg-amber':s==='blocked'?'bg-red':'bg-gray';}
+
+function updateAll(){
+  const{t,d,a,p,pct}=totals();
+  ['sb-pct','ov-pct'].forEach(id=>document.getElementById(id)&&(document.getElementById(id).textContent=pct+'%'));
+  document.getElementById('sb-fill').style.width=pct+'%';
+  ['sb-done-lbl'].forEach(id=>document.getElementById(id)&&(document.getElementById(id).textContent=d+' done'));
+  ['sb-total-lbl'].forEach(id=>document.getElementById(id)&&(document.getElementById(id).textContent=t+' total'));
+  ['ov-done','ov-done2'].forEach(id=>document.getElementById(id)&&(document.getElementById(id).textContent=d));
+  document.getElementById('ov-total')&&(document.getElementById('ov-total').textContent=t);
+  document.getElementById('ov-active')&&(document.getElementById('ov-active').textContent=a);
+  document.getElementById('ov-planned')&&(document.getElementById('ov-planned').textContent=p);
+  const cur=PHASES.find(ph=>ph.status==='active')||PHASES[0];
+  document.getElementById('ov-phase')&&(document.getElementById('ov-phase').textContent='P'+cur.id);
+}
+
+function renderSbPhases(){
+  const el=document.getElementById('sb-phases');
+  el.innerHTML=PHASES.map(ph=>{
+    const all=ph.sections.flatMap(s=>s.tasks);
+    const d=all.filter(t=>t.status==='done').length;
+    const pct=all.length?Math.round(d/all.length*100):0;
+    return`<div class="sb-item" onclick="showPhase(${ph.id},this)"><div class="sb-dot ${ph.status}"></div><span>P${ph.id}: ${ph.title.split(' ').slice(0,3).join(' ')}</span><span class="sb-pct">${pct}%</span></div>`;
+  }).join('');
+}
+
+function renderPhases(cid){
+  const el=document.getElementById(cid);
+  el.innerHTML=PHASES.map((ph,i)=>{
+    const all=ph.sections.flatMap(s=>s.tasks);
+    const d=all.filter(t=>t.status==='done').length;
+    const pct=all.length?Math.round(d/all.length*100):0;
+    const ic=ph.status==='done'?'phi-done':ph.status==='active'?'phi-active':'phi-planned';
+    const ig=ph.status==='done'?'✓':ph.status==='active'?'→':'◦';
+    const open=ph.status==='active'||(ph.status==='done'&&i===0);
+    return`<div class="pc" id="pc-${ph.id}"><div class="pc-head" onclick="togglePc(${ph.id})"><div class="pc-icon ${ic}">${ig}</div><div class="pc-info"><div class="pc-name">Phase ${ph.id}: ${ph.title}<span class="badge ${scls(ph.status)}" style="font-size:9px">${slbl(ph.status)}</span></div><div class="pc-meta">${ph.subtitle} · ${d}/${all.length} tasks</div></div><div class="pc-right"><div class="pc-pct" style="color:${ph.color}">${pct}%</div><div class="pc-pct-lbl">${ph.status==='done'?'complete':ph.status==='active'?'in progress':'not started'}</div><div class="pc-bar"><div class="pc-bar-fill" style="width:${pct}%;background:${ph.color}"></div></div></div></div><div class="pc-body${open?' open':''}" id="pb-${ph.id}">${renderSecs(ph)}</div></div>`;
+  }).join('');
+}
+
+function renderSecs(ph){
+  return ph.sections.map(sec=>{
+    const tasks=activeFilter?sec.tasks.filter(t=>t.tags&&t.tags.includes(activeFilter)):sec.tasks;
+    if(!tasks.length&&activeFilter)return'';
+    return`<div class="ts"><div class="ts-lbl" style="color:${sec.lc}"><span style="width:8px;height:8px;background:${sec.lc};border-radius:2px;display:inline-block;flex-shrink:0"></span>${sec.label} (${tasks.length})</div><div>${tasks.map(t=>renderTask(t,ph.id)).join('')}</div></div>`;
+  }).join('');
+}
+
+function renderTask(t,pid){
+  const tags=(t.tags||[]).map(tg=>`<span class="tag tag-${tg}">${tg}</span>`).join('');
+  return`<div class="task ${t.status}" onclick="cycleTask(${pid},'${t.title.replace(/'/g,"\\'").substring(0,40)}')"><div class="tcb"></div><div class="task-content"><div class="task-title">${t.title}</div>${t.detail?`<div class="task-detail">${t.detail}</div>`:''} ${tags?`<div class="task-tags">${tags}</div>`:''}</div><div class="task-meta"><div class="task-when">${t.when||''}</div></div></div>`;
+}
+
+function togglePc(id){document.getElementById('pb-'+id).classList.toggle('open');}
+
+function cycleTask(pid,titleStart){
+  const ph=PHASES.find(p=>p.id===pid);
+  let task;
+  ph.sections.forEach(s=>{task=task||s.tasks.find(t=>t.title.startsWith(titleStart));});
+  if(!task)return;
+  const cycle=['planned','active','done','blocked'];
+  task.status=cycle[(cycle.indexOf(task.status)+1)%cycle.length];
+  const all=ph.sections.flatMap(s=>s.tasks);
+  const dc=all.filter(t=>t.status==='done').length;
+  const ha=all.some(t=>t.status==='active'||t.status==='blocked');
+  if(dc===all.length)ph.status='done';else if(ha||dc>0)ph.status='active';else ph.status='planned';
+  ph.color=scol(ph.status);
+  rerender();updateAll();renderSbPhases();toast('Task → '+task.status);
+}
+
+function rerender(){
+  if(document.getElementById('ov-phases').children.length)renderPhases('ov-phases');
+  if(document.getElementById('all-phases').children.length)renderPhases('all-phases');
+}
+
+function filterTag(tag){activeFilter=tag;rerender();toast(tag?'Filter: '+tag:'Filter cleared');}
+
+function showPhase(id,navEl){
+  document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('on'));
+  if(navEl)navEl.classList.add('on');
+  switchView('phases');
+  if(!document.getElementById('all-phases').children.length)renderPhases('all-phases');
+  setTimeout(()=>{const el=document.getElementById('pc-'+id);if(el){el.scrollIntoView({behavior:'smooth',block:'start'});document.getElementById('pb-'+id).classList.add('open');}},100);
+}
+
+function renderBeta(){
+  document.getElementById('beta-list').innerHTML=BETA_ITEMS.map(item=>`
+    <div class="bcheck" style="border:1px solid ${item.done?'var(--green-b)':item.critical?'var(--amber-b)':'var(--border)'};background:${item.done?'var(--green-bg)':item.critical?'var(--amber-bg)':'#fff'}">
+      <div class="bcheck-cb" style="background:${item.done?'var(--green)':item.critical?'var(--amber)':'var(--cream3)'}">
+        ${item.done?'✓':item.critical?'!':''}
+      </div>
+      <span style="flex:1;font-size:13px;color:${item.done?'var(--green)':'var(--ink2)'}${item.done?';text-decoration:line-through':''}">${item.label}</span>
+      <span class="badge ${item.done?'bg-green':item.critical?'bg-amber':'bg-gray'}">${item.done?'✓ Ready':item.critical?'Required':'Optional'}</span>
+    </div>`).join('');
+
+  document.getElementById('journey').innerHTML=`<div style="position:relative;padding-left:28px"><div style="position:absolute;left:8px;top:0;bottom:0;width:1px;background:var(--cream3)"></div>`+
+  JOURNEY_STEPS.map(s=>`<div style="position:relative;margin-bottom:20px"><div style="position:absolute;left:-24px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--gold);border:2px solid #fff;box-shadow:0 0 0 2px rgba(200,155,60,.3)"></div><div style="font-size:10px;color:var(--ink4);font-family:'DM Mono',monospace;margin-bottom:3px">Step ${s.n}</div><div style="font-size:14px;font-weight:500;color:var(--navy);margin-bottom:3px">${s.title}</div><div style="font-size:12.5px;color:var(--ink3);line-height:1.55">${s.desc}</div></div>`).join('')+`</div>`;
+}
+
+function renderTesting(){
+  const sections=[...new Set(TEST_ITEMS.map(t=>t.section))];
+  document.getElementById('test-list').innerHTML=sections.map(sec=>{
+    const items=TEST_ITEMS.filter(t=>t.section===sec);
+    const done=items.filter(t=>t.done).length;
+    return`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">${sec}<span class="badge ${done===items.length?'bg-green':'bg-gray'}">${done}/${items.length}</span></div>${items.map((item,i)=>`
+      <div onclick="cycleTest('${sec}',${i})" class="task ${item.done?'done':'planned'}" style="margin-bottom:4px">
+        <div class="tcb"></div>
+        <div class="task-content"><div class="task-title">${item.label}</div></div>
+      </div>`).join('')}</div>`;
+  }).join('');
+}
+
+function cycleTest(sec,idx){
+  const item=TEST_ITEMS.filter(t=>t.section===sec)[idx];
+  if(item){item.done=!item.done;renderTesting();toast(item.done?'Test passed ✓':'Test reset');}
+}
+
+const viewMeta={
+  overview:['Overview & Status','Monday Beta Sprint · Click tasks to cycle status'],
+  phases:['All Phases & Tasks','Click any task to cycle through status'],
+  stack:['Tech Stack','Current architecture · deployment details · test credentials'],
+  beta:['Beta Readiness','What must be true before Tricia Kelly is invited'],
+  testing:['Testing Checklist','End-to-end test scenarios — check off as you verify each one'],
+};
+
+function switchView(id,navEl){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('view-'+id).classList.add('on');
+  document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('on'));
+  if(navEl)navEl.classList.add('on');
+  const m=viewMeta[id]||[id,''];
+  document.getElementById('view-title').textContent=m[0];
+  document.getElementById('view-sub').textContent=m[1];
+  if(id==='overview'&&!document.getElementById('ov-phases').children.length)renderPhases('ov-phases');
+  if(id==='phases'&&!document.getElementById('all-phases').children.length)renderPhases('all-phases');
+  if(id==='beta')renderBeta();
+  if(id==='testing')renderTesting();
+}
+
+function updateCountdown(){
+  const now=new Date();
+  const monday=new Date();
+  const day=monday.getDay();
+  const daysUntil=day===0?1:day===1?0:8-day;
+  monday.setDate(monday.getDate()+daysUntil);
+  monday.setHours(9,0,0,0);
+  const diff=monday-now;
+  if(diff<=0){['cd-days','cd-hours','cd-mins'].forEach(id=>document.getElementById(id)&&(document.getElementById(id).textContent='0'));return;}
+  const days=Math.floor(diff/(1000*60*60*24));
+  const hours=Math.floor((diff%(1000*60*60*24))/(1000*60*60));
+  const mins=Math.floor((diff%(1000*60*60))/(1000*60));
+  document.getElementById('cd-days')&&(document.getElementById('cd-days').textContent=days);
+  document.getElementById('cd-hours')&&(document.getElementById('cd-hours').textContent=hours);
+  document.getElementById('cd-mins')&&(document.getElementById('cd-mins').textContent=mins);
+}
+
+function exportStatus(){
+  const{t,d,pct}=totals();
+  const lines=[`GovCert Status — ${new Date().toLocaleDateString()} — ${pct}% (${d}/${t} tasks)`,''];
+  PHASES.forEach(ph=>{
+    const all=ph.sections.flatMap(s=>s.tasks);
+    const dc=all.filter(t=>t.status==='done').length;
+    lines.push(`P${ph.id}: ${ph.title} — ${dc}/${all.length}`);
+    ph.sections.forEach(s=>s.tasks.forEach(t=>lines.push(`  [${t.status.toUpperCase()}] ${t.title}`)));
+    lines.push('');
+  });
+  const blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`GovCert_${new Date().toISOString().split('T')[0]}.txt`;a.click();
+  toast('Exported ✓');
+}
+
+let toastT;
+function toast(msg){
+  const el=document.getElementById('toast-el');
+  document.getElementById('toast-msg').textContent=msg;
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// INIT
+renderSbPhases();
+updateAll();
+renderPhases('ov-phases');
+updateCountdown();
+setInterval(updateCountdown,30000);
+</script>
+</body>
+</html>

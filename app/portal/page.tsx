@@ -18,6 +18,8 @@ export default function PortalPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [certs, setCerts] = useState<any[]>([]);
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [eligibility, setEligibility] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,10 +44,30 @@ export default function PortalPage() {
     fetchMyCerts();
   }, []);
 
+  async function fetchEligibility(cId: string) {
+    try {
+      const data = await apiRequest(`/api/eligibility/${cId}`);
+      if (data?.assessmentResults) setEligibility(data.assessmentResults);
+    } catch {}
+  }
+
   async function fetchMyCerts() {
     try {
       const data = await apiRequest("/api/certifications");
       setCerts(data);
+      if (data && data.length > 0 && data[0].clientId) {
+        setClientId(data[0].clientId);
+        fetchEligibility(data[0].clientId);
+      } else {
+        // Try to find client directly
+        try {
+          const clients = await apiRequest("/api/clients");
+          if (clients && clients.length > 0) {
+            setClientId(clients[0].id);
+            fetchEligibility(clients[0].id);
+          }
+        } catch {}
+      }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }
@@ -149,22 +171,101 @@ export default function PortalPage() {
           </div>
 
           {/* Eligibility Scorecard */}
-          {certs.length > 0 && certs[0]?.clientId && (
+          {clientId && (
             <div style={{ marginBottom: 28 }}>
-              <EligibilityScorecard clientId={certs[0].clientId} compact />
+              <EligibilityScorecard clientId={clientId} compact />
             </div>
           )}
 
           {/* Certifications */}
           {certs.length === 0 ? (
-            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "60px 40px", textAlign: "center" as const, boxShadow: "var(--shadow)" }}>
-              <div style={{ fontSize: 40, marginBottom: 16 }}>📋</div>
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>
-                Your certification application hasn't been set up yet
-              </h3>
-              <p style={{ fontSize: 13.5, color: "var(--ink3)", maxWidth: 420, margin: "0 auto", lineHeight: 1.6 }}>
-                Your advisor will create your certification and send you next steps. If you haven't heard from them yet, reach out directly.
-              </p>
+            <div>
+              {/* Getting Started Steps */}
+              <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "36px 32px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>Get Started</div>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>
+                  Your certification journey starts here
+                </h3>
+                <p style={{ fontSize: 14, color: "var(--ink3)", marginBottom: 28, lineHeight: 1.6 }}>
+                  Follow these steps to find out which certifications you qualify for and start your applications.
+                </p>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {[
+                    {
+                      step: 1,
+                      title: "Complete the Eligibility Assessment",
+                      desc: "Answer questions about your business, ownership, and financials. We'll tell you which certifications you likely qualify for.",
+                      time: "~12 min",
+                      href: "/portal/eligibility",
+                      done: !!eligibility,
+                      cta: "Start Assessment →",
+                    },
+                    {
+                      step: 2,
+                      title: "Upload Key Documents",
+                      desc: "Financial statements, tax returns, capability statement, and org chart. These feed into every application automatically.",
+                      time: "~5 min",
+                      href: "/portal/documents",
+                      done: false,
+                      cta: "Upload Documents →",
+                    },
+                    {
+                      step: 3,
+                      title: "Connect Your Financial Tools",
+                      desc: "Link QuickBooks or upload financials manually. Revenue data is required for most certifications.",
+                      time: "~2 min",
+                      href: "/portal/eligibility",
+                      done: false,
+                      cta: "Connect Tools →",
+                    },
+                  ].map(item => (
+                    <a key={item.step} href={item.href} style={{
+                      display: "flex", alignItems: "center", gap: 16, padding: "18px 20px",
+                      background: item.done ? "var(--green-bg)" : "var(--cream)",
+                      border: `1px solid ${item.done ? "var(--green-b)" : "var(--border)"}`,
+                      borderRadius: "var(--r)", textDecoration: "none", transition: "all .15s",
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: "50%",
+                        background: item.done ? "var(--green)" : "var(--gold)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "#fff", fontSize: 15, fontWeight: 600, flexShrink: 0,
+                      }}>
+                        {item.done ? "✓" : item.step}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)", marginBottom: 3 }}>{item.title}</div>
+                        <div style={{ fontSize: 12.5, color: "var(--ink3)", lineHeight: 1.5 }}>{item.desc}</div>
+                      </div>
+                      <div style={{ textAlign: "right" as const, flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, color: "var(--ink4)", marginBottom: 4 }}>{item.time}</div>
+                        <span style={{ padding: "5px 14px", borderRadius: 100, fontSize: 12, fontWeight: 500, background: item.done ? "var(--green-bg)" : "var(--gold)", color: item.done ? "var(--green)" : "#fff", border: item.done ? "1px solid var(--green-b)" : "none" }}>
+                          {item.done ? "Complete" : item.cta}
+                        </span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+
+              {/* Managed Service CTA */}
+              {user?.subscriptionTier === "PLATFORM" && (
+                <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 20, display: "flex", gap: 20, alignItems: "center" }}>
+                  <span style={{ fontSize: 32, flexShrink: 0 }}>✦</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: "#fff", marginBottom: 4 }}>Want an expert to handle everything?</div>
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,.5)", lineHeight: 1.5 }}>
+                      Upgrade to our Managed Service. A dedicated advisor will manage your entire certification process — you just review and approve.
+                    </div>
+                  </div>
+                  <a href="/portal/eligibility" style={{ padding: "10px 22px", background: "var(--gold)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none", whiteSpace: "nowrap" as const, boxShadow: "0 4px 16px rgba(200,155,60,.3)" }}>
+                    Learn More →
+                  </a>
+                </div>
+              )}
             </div>
           ) : (
             <div>

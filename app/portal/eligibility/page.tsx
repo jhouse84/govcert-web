@@ -323,14 +323,22 @@ function PortalEligibilityPageInner() {
     if (!clientId) return;
     setAssessing(true);
     try {
-      await apiRequest(`/api/eligibility/${clientId}`, {
-        method: "PUT",
-        body: JSON.stringify(buildPayload()),
-      });
-      await apiRequest(`/api/eligibility/${clientId}/assess`, { method: "POST" });
+      // Save current data (don't block assessment if save fails)
+      try {
+        await apiRequest(`/api/eligibility/${clientId}`, {
+          method: "PUT",
+          body: JSON.stringify({ ...buildPayload(), completedSteps: 7 }),
+        });
+      } catch (saveErr) {
+        console.error("Save before assess failed (continuing):", saveErr);
+      }
+      // Run assessment
+      const result = await apiRequest(`/api/eligibility/${clientId}/assess`, { method: "POST" });
+      console.log("Assessment result:", result);
       router.push("/portal?assessed=true");
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Assessment failed:", err);
+      alert("Assessment failed: " + (err.message || "Unknown error. Please try again."));
       setAssessing(false);
     }
   }

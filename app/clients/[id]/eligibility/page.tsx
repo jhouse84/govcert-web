@@ -191,11 +191,19 @@ export default function AdminEligibilityPage({ params }: { params: Promise<{ id:
     try {
       await apiRequest(`/api/eligibility/${clientId}`, {
         method: "PUT",
-        body: JSON.stringify({ ...buildPayload(), currentStep: step + 1 }),
+        body: JSON.stringify({ ...buildPayload(), completedSteps: step }),
       });
-      setStep(s => s + 1);
-    } catch (err) { console.error(err); }
-    finally { setSaving(false); }
+      if (step < 7) setStep(s => (s + 1) as any);
+    } catch (err: any) {
+      console.error("Save failed:", err);
+      alert("Failed to save: " + (err.message || "Unknown error"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function skipStep() {
+    if (step < 7) setStep(s => (s + 1) as any);
   }
 
   async function saveAndExit() {
@@ -203,11 +211,14 @@ export default function AdminEligibilityPage({ params }: { params: Promise<{ id:
     try {
       await apiRequest(`/api/eligibility/${clientId}`, {
         method: "PUT",
-        body: JSON.stringify(buildPayload()),
+        body: JSON.stringify({ ...buildPayload(), completedSteps: step }),
       });
       router.push(`/clients/${clientId}`);
-    } catch (err) { console.error(err); }
-    finally { setSaving(false); }
+    } catch (err: any) {
+      console.error("Save failed:", err);
+      alert("Failed to save: " + (err.message || "Unknown error"));
+      setSaving(false);
+    }
   }
 
   async function checkHubzone() {

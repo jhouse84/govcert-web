@@ -223,7 +223,7 @@ export default function PortalPage() {
                             title: "Eligibility Assessment Complete",
                             desc: "Your assessment is complete. Review your results below and start any application you're eligible for.",
                             time: "",
-                            href: "/portal/eligibility",
+                            href: "/portal/eligibility/results",
                             done: true,
                             cta: "View Results",
                           }

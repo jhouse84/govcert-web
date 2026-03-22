@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiRequest } from "@/lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [stats, setStats] = useState({ clients: 0, certifications: 0, pending: 0, expiring: 0 });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -12,14 +14,32 @@ export default function DashboardPage() {
     if (!token) { router.push("/login"); return; }
     if (userData) {
       const parsed = JSON.parse(userData);
-      // Redirect customers to portal
       if (parsed.role === "CUSTOMER") {
         router.push("/portal");
         return;
       }
       setUser(parsed);
     }
+    fetchStats();
   }, []);
+
+  async function fetchStats() {
+    try {
+      const [clients, certs] = await Promise.all([
+        apiRequest("/api/clients"),
+        apiRequest("/api/certifications"),
+      ]);
+      const pending = certs.filter((c: any) => c.status === "IN_PROGRESS" || c.status === "NOT_STARTED").length;
+      setStats({
+        clients: clients.length,
+        certifications: certs.length,
+        pending,
+        expiring: 0,
+      });
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    }
+  }
 
   function logout() {
     localStorage.removeItem("token");
@@ -52,6 +72,7 @@ export default function DashboardPage() {
             { label: "Calendar", icon: "📅", href: "/calendar" },
             { label: "Integrations", icon: "🔗", href: "/integrations" },
             { label: "Team & Advisors", icon: "👤", href: "/settings/team" },
+            { label: "Usage & Costs", icon: "📊", href: "/usage" },
           ].map(item => (
             <a key={item.label} href={item.href} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)",
@@ -89,10 +110,10 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
             {[
-              { label: "Active Clients", value: "—", change: "View all clients" },
-              { label: "Certifications", value: "—", change: "View certifications" },
-              { label: "Pending Items", value: "—", change: "All clear" },
-              { label: "Expiring Soon", value: "—", change: "No upcoming expirations" },
+              { label: "Active Clients", value: String(stats.clients), change: "View all clients" },
+              { label: "Certifications", value: String(stats.certifications), change: "View certifications" },
+              { label: "Pending Items", value: String(stats.pending), change: stats.pending === 0 ? "All clear" : "In progress" },
+              { label: "Expiring Soon", value: String(stats.expiring), change: stats.expiring === 0 ? "No upcoming expirations" : "Review soon" },
             ].map(stat => (
               <div key={stat.label} style={{ background: "#fff", borderRadius: "var(--rl)", padding: "24px 20px", boxShadow: "var(--shadow)", border: "1px solid var(--border)" }}>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: "var(--navy)", fontWeight: 400, lineHeight: 1 }}>{stat.value}</div>

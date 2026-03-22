@@ -17,6 +17,7 @@ export default function LoginPage() {
     try {
       const data = await auth.login({ email, password });
       localStorage.setItem("token", data.token);
+      localStorage.setItem("refreshToken", data.refreshToken);
       localStorage.setItem("user", JSON.stringify(data.user));
       // Route based on role
       if (data.user.role === "CUSTOMER") {

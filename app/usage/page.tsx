@@ -1,0 +1,399 @@
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { apiRequest } from "@/lib/api";
+
+interface UsageSummary {
+  thisMonthCost: number;
+  lastMonthCost: number;
+  aiCallsThisMonth: number;
+  activeIntegrations: number;
+  serviceBreakdown: ServiceCost[];
+  clientBreakdown: ClientCost[];
+}
+
+interface ServiceCost {
+  service: string;
+  cost: number;
+  calls: number;
+}
+
+interface ClientCost {
+  clientId: string;
+  clientName: string;
+  integrations: string[];
+  aiCalls: number;
+  estimatedCost: number;
+}
+
+interface MonthlyHistory {
+  months: { month: string; cost: number }[];
+}
+
+interface ClientIntegration {
+  clientId: string;
+  clientName: string;
+  integrations: {
+    provider: string;
+    connectedDate: string;
+    lastRefreshed: string;
+    status: "connected" | "expired";
+  }[];
+}
+
+const SERVICE_COLORS: Record<string, string> = {
+  "Anthropic AI": "#8B5CF6",
+  QuickBooks: "#2CA01C",
+  Gusto: "#F45D48",
+  "SAM.gov": "#0071BC",
+  SendGrid: "#1A82E2",
+};
+
+const INTEGRATION_BADGE_COLORS: Record<string, string> = {
+  QB: "#2CA01C",
+  Gusto: "#F45D48",
+  SAM: "#0071BC",
+  SendGrid: "#1A82E2",
+  AI: "#8B5CF6",
+};
+
+const NAV_ITEMS = [
+  { label: "Dashboard", icon: "\u2B1B", href: "/dashboard" },
+  { label: "Clients", icon: "\uD83D\uDC65", href: "/clients" },
+  { label: "Certifications", icon: "\uD83D\uDCCB", href: "/certifications" },
+  { label: "Documents", icon: "\uD83D\uDCC4", href: "/documents" },
+  { label: "Calendar", icon: "\uD83D\uDCC5", href: "/calendar" },
+  { label: "Integrations", icon: "\uD83D\uDD17", href: "/integrations" },
+  { label: "Team & Advisors", icon: "\uD83D\uDC64", href: "/settings/team" },
+  { label: "Usage", icon: "\uD83D\uDCCA", href: "/usage", active: true },
+];
+
+export default function UsagePage() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<UsageSummary | null>(null);
+  const [history, setHistory] = useState<MonthlyHistory | null>(null);
+  const [integrations, setIntegrations] = useState<ClientIntegration[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
+    if (!token) { router.push("/login"); return; }
+    if (userData) {
+      const parsed = JSON.parse(userData);
+      if (parsed.role === "CUSTOMER") { router.push("/portal"); return; }
+      if (parsed.role === "ADVISOR") { router.push("/dashboard"); return; }
+      setUser(parsed);
+    }
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    setLoading(true);
+    try {
+      const [summaryRes, historyRes, integrationsRes] = await Promise.allSettled([
+        apiRequest("/api/usage/summary"),
+        apiRequest("/api/usage/history"),
+        apiRequest("/api/usage/integrations"),
+      ]);
+      if (summaryRes.status === "fulfilled") setSummary(summaryRes.value);
+      if (historyRes.status === "fulfilled") setHistory(historyRes.value);
+      if (integrationsRes.status === "fulfilled") setIntegrations(integrationsRes.value);
+    } catch (err) {
+      console.error("Failed to fetch usage data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    router.push("/login");
+  }
+
+  function formatCurrency(value: number) {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+  }
+
+  function formatDate(dateStr: string) {
+    try {
+      return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch {
+      return dateStr;
+    }
+  }
+
+  if (!user) return null;
+
+  const maxServiceCost = summary
+    ? Math.max(...summary.serviceBreakdown.map((s) => s.cost), 1)
+    : 1;
+
+  const maxHistoryCost = history
+    ? Math.max(...history.months.map((m) => m.cost), 1)
+    : 1;
+
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
+      {/* Sidebar */}
+      <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+        <div style={{ padding: "24px 20px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 32, height: 32, background: "var(--gold)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+            </div>
+            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "#fff", fontWeight: 500 }}>
+              Gov<em style={{ color: "var(--gold2)", fontStyle: "normal" }}>Cert</em>
+            </span>
+          </div>
+        </div>
+        <nav style={{ padding: "16px 12px", flex: 1 }}>
+          {NAV_ITEMS.map((item) => (
+            <a key={item.label} href={item.href} style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)",
+              background: item.active ? "rgba(200,155,60,.15)" : "transparent",
+              border: item.active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
+              color: item.active ? "var(--gold2)" : "rgba(255,255,255,.5)",
+              textDecoration: "none", fontSize: 13.5, fontWeight: item.active ? 500 : 400,
+              marginBottom: 2, transition: "all .15s",
+            }}>
+              <span style={{ fontSize: 14 }}>{item.icon}</span>
+              {item.label}
+            </a>
+          ))}
+        </nav>
+        <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
+          <div style={{ padding: "10px 12px", marginBottom: 8 }}>
+            <div style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>{user.firstName} {user.lastName}</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 2 }}>{user.email}</div>
+          </div>
+          <button onClick={logout} style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.1)", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", fontSize: 13, cursor: "pointer", textAlign: "left" as const }}>
+            Sign Out
+          </button>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div style={{ flex: 1, overflow: "auto" }}>
+        <div style={{ padding: "40px 48px" }}>
+          {/* Header */}
+          <div style={{ marginBottom: 40 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Administration</div>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>
+              Usage &amp; Costs
+            </h1>
+            <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Monitor integration and AI usage across your organization</p>
+          </div>
+
+          {/* Loading state */}
+          {loading && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0", color: "var(--ink4)" }}>
+              <div style={{ textAlign: "center" as const }}>
+                <div style={{ width: 40, height: 40, border: "3px solid var(--border)", borderTopColor: "var(--gold)", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+                <div style={{ fontSize: 14, color: "var(--ink3)" }}>Loading usage data...</div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+            </div>
+          )}
+
+          {!loading && (
+            <>
+              {/* Top Stats Row */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+                {[
+                  { label: "This Month's Cost", value: summary ? formatCurrency(summary.thisMonthCost) : "$0.00", sub: "Current billing period" },
+                  { label: "Last Month's Cost", value: summary ? formatCurrency(summary.lastMonthCost) : "$0.00", sub: "Previous billing period" },
+                  { label: "AI Calls This Month", value: summary ? summary.aiCallsThisMonth.toLocaleString() : "0", sub: "Anthropic API requests" },
+                  { label: "Active Integrations", value: summary ? String(summary.activeIntegrations) : "0", sub: "Connected OAuth tokens" },
+                ].map((stat) => (
+                  <div key={stat.label} style={{ background: "#fff", borderRadius: "var(--rl)", padding: "24px 20px", boxShadow: "var(--shadow)", border: "1px solid var(--border)" }}>
+                    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: "var(--navy)", fontWeight: 400, lineHeight: 1 }}>{stat.value}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "8px 0 4px" }}>{stat.label}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--ink4)" }}>{stat.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Cost by Service */}
+              <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)", border: "1px solid var(--border)", marginBottom: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Breakdown</div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 24 }}>Cost by Service</h2>
+                {summary && summary.serviceBreakdown.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    {summary.serviceBreakdown.map((service) => (
+                      <div key={service.service}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)" }}>{service.service}</span>
+                          <span style={{ fontSize: 13, color: "var(--ink3)" }}>
+                            {formatCurrency(service.cost)} &middot; {service.calls.toLocaleString()} calls
+                          </span>
+                        </div>
+                        <div style={{ height: 28, background: "var(--cream)", borderRadius: 6, overflow: "hidden", position: "relative" as const }}>
+                          <div style={{
+                            height: "100%",
+                            width: `${Math.max((service.cost / maxServiceCost) * 100, 2)}%`,
+                            background: SERVICE_COLORS[service.service] || "#94A3B8",
+                            borderRadius: 6,
+                            transition: "width .4s ease",
+                            display: "flex",
+                            alignItems: "center",
+                            paddingLeft: 10,
+                          }}>
+                            <span style={{ fontSize: 11.5, color: "#fff", fontWeight: 600, whiteSpace: "nowrap" as const }}>
+                              {formatCurrency(service.cost)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="No service usage data available" />
+                )}
+              </div>
+
+              {/* Cost by Client */}
+              <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)", border: "1px solid var(--border)", marginBottom: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Clients</div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 24 }}>Cost by Client</h2>
+                {summary && summary.clientBreakdown.length > 0 ? (
+                  <div style={{ overflowX: "auto" as const }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 13.5 }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid var(--border)" }}>
+                          <th style={{ textAlign: "left" as const, padding: "10px 12px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink3)" }}>Client</th>
+                          <th style={{ textAlign: "left" as const, padding: "10px 12px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink3)" }}>Integrations</th>
+                          <th style={{ textAlign: "right" as const, padding: "10px 12px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink3)" }}>AI Calls</th>
+                          <th style={{ textAlign: "right" as const, padding: "10px 12px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink3)" }}>Est. Cost</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...summary.clientBreakdown]
+                          .sort((a, b) => b.estimatedCost - a.estimatedCost)
+                          .map((client) => (
+                            <tr key={client.clientId} style={{ borderBottom: "1px solid var(--border)" }}>
+                              <td style={{ padding: "12px", fontWeight: 500, color: "var(--navy)" }}>{client.clientName}</td>
+                              <td style={{ padding: "12px" }}>
+                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                                  {client.integrations.map((intg) => (
+                                    <span key={intg} style={{
+                                      display: "inline-block",
+                                      padding: "2px 8px",
+                                      borderRadius: 4,
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      color: "#fff",
+                                      background: INTEGRATION_BADGE_COLORS[intg] || "#94A3B8",
+                                    }}>
+                                      {intg}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                              <td style={{ padding: "12px", textAlign: "right" as const, color: "var(--ink3)" }}>{client.aiCalls.toLocaleString()}</td>
+                              <td style={{ padding: "12px", textAlign: "right" as const, fontWeight: 600, color: "var(--navy)" }}>{formatCurrency(client.estimatedCost)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <EmptyState message="No client usage data available" />
+                )}
+              </div>
+
+              {/* Monthly History */}
+              <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)", border: "1px solid var(--border)", marginBottom: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Trends</div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 24 }}>Monthly History</h2>
+                {history && history.months.length > 0 ? (
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 12, height: 200, padding: "0 8px" }}>
+                    {history.months.map((month) => {
+                      const barHeight = Math.max((month.cost / maxHistoryCost) * 160, 4);
+                      return (
+                        <div key={month.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--navy)" }}>{formatCurrency(month.cost)}</span>
+                          <div style={{
+                            width: "100%",
+                            maxWidth: 64,
+                            height: barHeight,
+                            background: "linear-gradient(180deg, #C89B3C 0%, #E8B84B 100%)",
+                            borderRadius: "6px 6px 2px 2px",
+                            transition: "height .4s ease",
+                          }} />
+                          <span style={{ fontSize: 11, color: "var(--ink3)", fontWeight: 500 }}>{month.month}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState message="No monthly history available" />
+                )}
+              </div>
+
+              {/* Connected Integrations */}
+              <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)", border: "1px solid var(--border)" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Connections</div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 24 }}>Connected Integrations</h2>
+                {integrations.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                    {integrations.map((client) => (
+                      <div key={client.clientId} style={{ borderBottom: "1px solid var(--border)", paddingBottom: 20 }}>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--navy)", marginBottom: 12 }}>{client.clientName}</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 10 }}>
+                          {client.integrations.map((intg, idx) => (
+                            <div key={idx} style={{
+                              padding: "12px 16px",
+                              background: "var(--cream)",
+                              borderRadius: 8,
+                              border: "1px solid var(--border)",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}>
+                              <div>
+                                <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)", marginBottom: 4 }}>{intg.provider}</div>
+                                <div style={{ fontSize: 11, color: "var(--ink4)" }}>
+                                  Connected {formatDate(intg.connectedDate)} &middot; Refreshed {formatDate(intg.lastRefreshed)}
+                                </div>
+                              </div>
+                              <span style={{
+                                display: "inline-block",
+                                padding: "3px 10px",
+                                borderRadius: 20,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: intg.status === "connected" ? "#15803D" : "#B91C1C",
+                                background: intg.status === "connected" ? "#DCFCE7" : "#FEE2E2",
+                              }}>
+                                {intg.status === "connected" ? "Connected" : "Expired"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="No connected integrations found" />
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 0", color: "var(--ink4)", textAlign: "center" as const }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>--</div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink3)", marginBottom: 4 }}>{message}</div>
+      <div style={{ fontSize: 12, color: "var(--ink4)" }}>Data will appear here once usage is recorded</div>
+    </div>
+  );
+}

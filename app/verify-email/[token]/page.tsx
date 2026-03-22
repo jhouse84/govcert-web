@@ -17,7 +17,8 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
           setStatus("success");
-          setTimeout(() => router.push("/dashboard"), 2500);
+          const dest = data.user.role === "CUSTOMER" ? "/portal" : "/dashboard";
+          setTimeout(() => router.push(dest), 2500);
         } else {
           setStatus("error");
           setMessage(data.error || "Verification failed.");

@@ -43,7 +43,7 @@ export default function LandingPage() {
 
       {/* HERO */}
       <div style={{ position: "relative", height: "100vh", minHeight: 700, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(11,25,41,.75) 0%,rgba(11,25,41,.50) 40%,rgba(11,25,41,.80) 100%), url(https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=1800&q=80&auto=format&fit=crop) center/cover no-repeat" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(11,25,41,.75) 0%,rgba(11,25,41,.50) 40%,rgba(11,25,41,.80) 100%), url(https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=1800&q=80&auto=format&fit=crop) center/cover no-repeat" }} />
         <div style={{ position: "relative", zIndex: 2, textAlign: "center", maxWidth: 860, padding: "0 24px" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(200,155,60,.18)", border: "1px solid rgba(200,155,60,.3)", borderRadius: 100, padding: "5px 14px", marginBottom: 28 }}>
             <div style={{ width: 6, height: 6, background: "var(--gold2)", borderRadius: "50%" }} />

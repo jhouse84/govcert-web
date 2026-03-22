@@ -98,11 +98,12 @@ export default function PortalPage() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
+    <div style={{ minHeight: "100vh", background: "radial-gradient(ellipse at top right, rgba(200,155,60,.03) 0%, transparent 50%), var(--cream)", display: "flex" }}>
 
       {/* Sidebar */}
-      <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
-        <div style={{ padding: "24px 20px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
+      <div style={{ width: 240, background: "linear-gradient(180deg, #0B1929 0%, #0D1F35 100%)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
+        <div style={{ height: 2, background: "linear-gradient(90deg, #C89B3C, #E8B84B)", flexShrink: 0 }} />
+        <div style={{ padding: "28px 20px 24px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 32, height: 32, background: "var(--gold)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
@@ -114,13 +115,16 @@ export default function PortalPage() {
         </div>
         <nav style={{ padding: "16px 12px", flex: 1 }}>
           <div style={{ fontSize: 9.5, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 8, fontWeight: 600 }}>My Portal</div>
-          <a href="/portal" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", background: "rgba(200,155,60,.15)", border: "1px solid rgba(200,155,60,.25)", color: "var(--gold2)", textDecoration: "none", fontSize: 13.5, fontWeight: 500, marginBottom: 2 }}>
+          <a href="/portal" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, background: "rgba(200,155,60,.15)", border: "1px solid rgba(200,155,60,.25)", borderLeft: "3px solid var(--gold)", color: "var(--gold2)", textDecoration: "none", fontSize: 13.5, fontWeight: 500, marginBottom: 2 }}>
             <span>🏠</span> My Applications
           </a>
-          <a href="/portal/eligibility" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
+          <a href="/portal/eligibility" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
             <span>✅</span> Eligibility
           </a>
-          <a href="/portal/documents" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
+          <a href="/portal/integrations" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
+            <span>🔗</span> Integrations
+          </a>
+          <a href="/portal/documents" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
             <span>📄</span> My Documents
           </a>
         </nav>
@@ -142,16 +146,17 @@ export default function PortalPage() {
 
           <div style={{ marginBottom: 36 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Client Portal</div>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 4 }}>
               Welcome, {user?.firstName}
             </h1>
+            <div style={{ width: 48, height: 2, background: "linear-gradient(90deg, #C89B3C, #E8B84B)", borderRadius: 2, marginBottom: 8 }} />
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300, lineHeight: 1.6 }}>
               Track your certification application progress and work directly on your application sections below.
             </p>
           </div>
 
           {/* How it works */}
-          <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "22px 26px", marginBottom: 28 }}>
+          <div style={{ background: "linear-gradient(135deg, #0B1929 0%, #1A3357 50%, #0B1929 100%)", borderRadius: 12, padding: "22px 26px", marginBottom: 28 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold2)", marginBottom: 12 }}>How GovCert Works</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
               {[
@@ -159,7 +164,7 @@ export default function PortalPage() {
                 { icon: "✏️", title: "You review and refine", body: "Read every drafted section, make edits, and use voice input or re-draft any section until it's exactly right." },
                 { icon: "📬", title: "References receive PPQ emails", body: "Your past performance references automatically receive a questionnaire by email to complete online." },
               ].map((item, i) => (
-                <div key={i} style={{ display: "flex", gap: 10 }}>
+                <div key={i} style={{ display: "flex", gap: 10, borderLeft: "3px solid var(--gold)", paddingLeft: 10 }}>
                   <span style={{ fontSize: 18, flexShrink: 0, color: "var(--gold2)" }}>{item.icon}</span>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: "#fff", marginBottom: 4 }}>{item.title}</div>
@@ -181,7 +186,7 @@ export default function PortalPage() {
           {certs.length === 0 ? (
             <div>
               {/* Getting Started Steps */}
-              <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "36px 32px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+              <div style={{ background: "#fff", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, padding: "36px 32px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>Get Started</div>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>
                   Your certification journey starts here
@@ -190,7 +195,9 @@ export default function PortalPage() {
                   Follow these steps to find out which certifications you qualify for and start your applications.
                 </p>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
+                  {/* Connecting line */}
+                  <div style={{ position: "absolute", left: 43, top: 56, bottom: 56, width: 2, borderLeft: "2px dotted rgba(200,155,60,.25)", zIndex: 0 }} />
                   {[
                     {
                       step: 1,
@@ -215,7 +222,7 @@ export default function PortalPage() {
                       title: "Connect Your Financial Tools",
                       desc: "Link QuickBooks or upload financials manually. Revenue data is required for most certifications.",
                       time: "~2 min",
-                      href: "/portal/eligibility",
+                      href: "/portal/integrations",
                       done: false,
                       cta: "Connect Tools →",
                     },
@@ -224,15 +231,17 @@ export default function PortalPage() {
                       display: "flex", alignItems: "center", gap: 16, padding: "18px 20px",
                       background: item.done ? "var(--green-bg)" : "var(--cream)",
                       border: `1px solid ${item.done ? "var(--green-b)" : "var(--border)"}`,
-                      borderRadius: "var(--r)", textDecoration: "none", transition: "all .15s",
+                      borderRadius: 8, textDecoration: "none", transition: "all .2s",
+                      position: "relative", zIndex: 1,
                     }}
-                      onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}>
+                      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.borderLeft = "3px solid var(--gold)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; e.currentTarget.style.borderLeft = `1px solid ${item.done ? "var(--green-b)" : "var(--border)"}`; }}>
                       <div style={{
-                        width: 40, height: 40, borderRadius: "50%",
-                        background: item.done ? "var(--green)" : "var(--gold)",
+                        width: 48, height: 48, borderRadius: "50%",
+                        background: item.done ? "var(--green)" : "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#fff", fontSize: 15, fontWeight: 600, flexShrink: 0,
+                        color: "#fff", fontSize: 16, fontWeight: 600, flexShrink: 0,
+                        boxShadow: "0 2px 8px rgba(200,155,60,.25)",
                       }}>
                         {item.done ? "✓" : item.step}
                       </div>
@@ -242,7 +251,7 @@ export default function PortalPage() {
                       </div>
                       <div style={{ textAlign: "right" as const, flexShrink: 0 }}>
                         <div style={{ fontSize: 11, color: "var(--ink4)", marginBottom: 4 }}>{item.time}</div>
-                        <span style={{ padding: "5px 14px", borderRadius: 100, fontSize: 12, fontWeight: 500, background: item.done ? "var(--green-bg)" : "var(--gold)", color: item.done ? "var(--green)" : "#fff", border: item.done ? "1px solid var(--green-b)" : "none" }}>
+                        <span style={{ padding: "5px 14px", borderRadius: 100, fontSize: 12, fontWeight: 500, background: item.done ? "var(--green-bg)" : "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)", color: item.done ? "var(--green)" : "#fff", border: item.done ? "1px solid var(--green-b)" : "none", boxShadow: item.done ? "none" : "0 4px 20px rgba(200,155,60,.35)" }}>
                           {item.done ? "Complete" : item.cta}
                         </span>
                       </div>
@@ -252,7 +261,7 @@ export default function PortalPage() {
               </div>
 
               {/* Connect Your Tools */}
-              <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px 28px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+              <div style={{ background: "#fff", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, padding: "28px 28px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>Integrations</div>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>Connect your tools</h3>
                 <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.5 }}>Link your financial and business tools so GovCert can pull data directly into your applications.</p>
@@ -262,7 +271,9 @@ export default function PortalPage() {
                     { id: "gusto", name: "Gusto", icon: "🟡", desc: "Payroll totals, employee roster", color: "#F45D48" },
                     { id: "sam", name: "SAM.gov", icon: "🏛️", desc: "Entity registration, NAICS codes", color: "#1A3F7A" },
                   ].map(tool => (
-                    <div key={tool.id} style={{ padding: "16px", border: "1px solid var(--border)", borderRadius: "var(--r)", textAlign: "center" as const }}>
+                    <div key={tool.id} style={{ padding: "16px", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, textAlign: "center" as const, transition: "all .2s" }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.background = "rgba(200,155,60,.03)"; e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.background = "transparent"; e.currentTarget.style.boxShadow = "none"; }}>
                       <div style={{ fontSize: 24, marginBottom: 8 }}>{tool.icon}</div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 4 }}>{tool.name}</div>
                       <div style={{ fontSize: 11, color: "var(--ink4)", marginBottom: 12, lineHeight: 1.4 }}>{tool.desc}</div>
@@ -279,7 +290,7 @@ export default function PortalPage() {
               </div>
 
               {/* Start an Application */}
-              <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px 28px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+              <div style={{ background: "#fff", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, padding: "28px 28px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>Applications</div>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>Start a certification application</h3>
                 <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.5 }}>Choose a certification type to begin. We recommend completing the eligibility assessment first.</p>
@@ -292,9 +303,9 @@ export default function PortalPage() {
                     { type: "SDVOSB", label: "SDVOSB / VOSB", badge: "VA", badgeColor: "#5A1A6A", badgeBg: "#F0E8F8", desc: "Service-Disabled Veteran-Owned Small Business certification.", available: false },
                     { type: "MBE", label: "State MBE / DBE", badge: "State", badgeColor: "#5A1A6A", badgeBg: "#F0E8F8", desc: "Minority and Disadvantaged Business Enterprise for state contracts.", available: false },
                   ].map(cert => (
-                    <div key={cert.type} style={{ padding: "18px", border: `1px solid ${cert.available ? "var(--border)" : "var(--border)"}`, borderRadius: "var(--r)", position: "relative", opacity: cert.available ? 1 : 0.6 }}>
+                    <div key={cert.type} style={{ padding: "18px", border: `1px solid rgba(200,155,60,.08)`, borderRadius: 12, position: "relative", opacity: cert.available ? 1 : 0.6, borderTop: cert.available ? "3px solid transparent" : undefined, backgroundImage: cert.available ? "linear-gradient(#fff, #fff), linear-gradient(90deg, #C89B3C, #E8B84B)" : undefined, backgroundOrigin: "border-box", backgroundClip: cert.available ? "padding-box, border-box" : undefined, transition: "all .2s" }}>
                       {!cert.available && (
-                        <div style={{ position: "absolute", top: 12, right: 12, padding: "3px 8px", borderRadius: 100, fontSize: 9, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".06em", background: "var(--cream2)", color: "var(--ink4)", border: "1px solid var(--border)" }}>
+                        <div style={{ position: "absolute", top: 12, right: 12, padding: "4px 10px", borderRadius: 100, fontSize: 9.5, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".06em", background: "var(--navy)", color: "var(--gold2)", border: "1px solid rgba(200,155,60,.2)" }}>
                           Coming Soon
                         </div>
                       )}
@@ -318,7 +329,7 @@ export default function PortalPage() {
                               console.error(err);
                             }
                           }
-                        }} style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer", boxShadow: "0 2px 12px rgba(200,155,60,.3)" }}>
+                        }} style={{ padding: "8px 20px", background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)", border: "none", borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 20px rgba(200,155,60,.35)", transition: "all .2s" }}>
                           Start Application →
                         </button>
                       ) : (
@@ -339,7 +350,7 @@ export default function PortalPage() {
                       Upgrade to our Managed Service. A dedicated advisor will manage your entire certification process — you just review and approve.
                     </div>
                   </div>
-                  <a href="/portal/eligibility" style={{ padding: "10px 22px", background: "var(--gold)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none", whiteSpace: "nowrap" as const, boxShadow: "0 4px 16px rgba(200,155,60,.3)" }}>
+                  <a href="/portal/upgrade" style={{ padding: "10px 22px", background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none", whiteSpace: "nowrap" as const, boxShadow: "0 4px 20px rgba(200,155,60,.35)" }}>
                     Learn More →
                   </a>
                 </div>
@@ -354,7 +365,7 @@ export default function PortalPage() {
                 {certs.map(cert => {
                   const progress = getSectionProgress(cert.application);
                   return (
-                    <div key={cert.id} style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
+                    <div key={cert.id} style={{ background: "#fff", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)" }}>
                       <div style={{ padding: "22px 28px", background: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div>
                           <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold2)", marginBottom: 4 }}>
@@ -419,7 +430,7 @@ export default function PortalPage() {
             </div>
           )}
 
-          <div style={{ marginTop: 28, padding: "20px 24px", background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", boxShadow: "var(--shadow)", display: "flex", gap: 16, alignItems: "center" }}>
+          <div style={{ marginTop: 28, padding: "20px 24px", background: "#fff", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", display: "flex", gap: 16, alignItems: "center" }}>
             <span style={{ fontSize: 28, flexShrink: 0 }}>💬</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 3 }}>Questions about your application?</div>

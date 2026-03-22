@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import EligibilityScorecard from "@/components/EligibilityScorecard";
 
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
@@ -87,6 +88,9 @@ export default function PortalPage() {
           <a href="/portal" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", background: "rgba(200,155,60,.15)", border: "1px solid rgba(200,155,60,.25)", color: "var(--gold2)", textDecoration: "none", fontSize: 13.5, fontWeight: 500, marginBottom: 2 }}>
             <span>🏠</span> My Applications
           </a>
+          <a href="/portal/eligibility" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
+            <span>✅</span> Eligibility
+          </a>
           <a href="/portal/documents" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
             <span>📄</span> My Documents
           </a>
@@ -136,6 +140,13 @@ export default function PortalPage() {
               ))}
             </div>
           </div>
+
+          {/* Eligibility Scorecard */}
+          {certs.length > 0 && certs[0]?.clientId && (
+            <div style={{ marginBottom: 28 }}>
+              <EligibilityScorecard clientId={certs[0].clientId} compact />
+            </div>
+          )}
 
           {/* Certifications */}
           {certs.length === 0 ? (

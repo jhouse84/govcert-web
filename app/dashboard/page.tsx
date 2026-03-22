@@ -66,6 +66,7 @@ export default function DashboardPage() {
         <nav style={{ padding: "16px 12px", flex: 1 }}>
           {[
             { label: "Dashboard", icon: "⬛", href: "/dashboard", active: true },
+            { label: "Eligibility", icon: "✅", href: "/clients" },
             { label: "Clients", icon: "👥", href: "/clients" },
             { label: "Certifications", icon: "📋", href: "/certifications" },
             { label: "Documents", icon: "📄", href: "/documents" },

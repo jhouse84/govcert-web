@@ -10,7 +10,15 @@ export default function DashboardPage() {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
     if (!token) { router.push("/login"); return; }
-    if (userData) setUser(JSON.parse(userData));
+    if (userData) {
+      const parsed = JSON.parse(userData);
+      // Redirect customers to portal
+      if (parsed.role === "CUSTOMER") {
+        router.push("/portal");
+        return;
+      }
+      setUser(parsed);
+    }
   }, []);
 
   function logout() {
@@ -35,7 +43,6 @@ export default function DashboardPage() {
             </span>
           </div>
         </div>
-
         <nav style={{ padding: "16px 12px", flex: 1 }}>
           {[
             { label: "Dashboard", icon: "⬛", href: "/dashboard", active: true },
@@ -58,17 +65,12 @@ export default function DashboardPage() {
             </a>
           ))}
         </nav>
-
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ padding: "10px 12px", marginBottom: 8 }}>
             <div style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>{user.firstName} {user.lastName}</div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 2 }}>{user.email}</div>
           </div>
-          <button onClick={logout} style={{
-            width: "100%", padding: "8px 12px", background: "rgba(255,255,255,.05)",
-            border: "1px solid rgba(255,255,255,.1)", borderRadius: "var(--r)",
-            color: "rgba(255,255,255,.5)", fontSize: 13, cursor: "pointer", textAlign: "left"
-          }}>
+          <button onClick={logout} style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.1)", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", fontSize: 13, cursor: "pointer", textAlign: "left" as const }}>
             Sign Out
           </button>
         </div>
@@ -84,14 +86,12 @@ export default function DashboardPage() {
             </h1>
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Your certification management dashboard</p>
           </div>
-
-          {/* Stats */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
             {[
-              { label: "Active Clients", value: "0", change: "Add your first client" },
-              { label: "Certifications", value: "0", change: "No active certifications" },
-              { label: "Pending Items", value: "0", change: "All clear" },
-              { label: "Expiring Soon", value: "0", change: "No upcoming expirations" },
+              { label: "Active Clients", value: "—", change: "View all clients" },
+              { label: "Certifications", value: "—", change: "View certifications" },
+              { label: "Pending Items", value: "—", change: "All clear" },
+              { label: "Expiring Soon", value: "—", change: "No upcoming expirations" },
             ].map(stat => (
               <div key={stat.label} style={{ background: "#fff", borderRadius: "var(--rl)", padding: "24px 20px", boxShadow: "var(--shadow)", border: "1px solid var(--border)" }}>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: "var(--navy)", fontWeight: 400, lineHeight: 1 }}>{stat.value}</div>
@@ -100,8 +100,6 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-
-          {/* Two column */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
             <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)", border: "1px solid var(--border)" }}>
               <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Actions</div>
@@ -117,11 +115,10 @@ export default function DashboardPage() {
                 </a>
               ))}
             </div>
-
             <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)", border: "1px solid var(--border)" }}>
               <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Activity</div>
               <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 20 }}>Recent Activity</h2>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 0", color: "var(--ink4)", textAlign: "center" }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 0", color: "var(--ink4)", textAlign: "center" as const }}>
                 <div style={{ fontSize: 32, marginBottom: 12 }}>📋</div>
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink3)", marginBottom: 4 }}>No activity yet</div>
                 <div style={{ fontSize: 12, color: "var(--ink4)" }}>Add your first client to get started</div>

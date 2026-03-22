@@ -18,7 +18,12 @@ export default function LoginPage() {
       const data = await auth.login({ email, password });
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      router.push("/dashboard");
+      // Route based on role
+      if (data.user.role === "CUSTOMER") {
+        router.push("/portal");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -61,8 +66,6 @@ export default function LoginPage() {
                 style={{ width: "100%", padding: "11px 14px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", fontSize: 14, color: "#fff", outline: "none", boxSizing: "border-box" as const }}
                 placeholder="........" />
             </div>
-
-            {/* Forgot password link */}
             <div style={{ textAlign: "right", marginBottom: 24 }}>
               <a href="/forgot-password" style={{ fontSize: 12.5, color: "rgba(255,255,255,.4)", textDecoration: "none" }}
                 onMouseEnter={e => (e.currentTarget.style.color = "var(--gold2)")}
@@ -70,13 +73,11 @@ export default function LoginPage() {
                 Forgot password?
               </a>
             </div>
-
             <button type="submit" disabled={loading}
               style={{ width: "100%", padding: "13px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 15, fontWeight: 500, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 4px 24px rgba(200,155,60,.4)", transition: "all .2s" }}>
               {loading ? "Signing in..." : "Sign In →"}
             </button>
           </form>
-
           <p style={{ textAlign: "center", marginTop: 24, fontSize: 13, color: "rgba(255,255,255,.35)" }}>
             No account?{" "}
             <a href="/register" style={{ color: "var(--gold2)", textDecoration: "none", fontWeight: 500 }}>Register here</a>

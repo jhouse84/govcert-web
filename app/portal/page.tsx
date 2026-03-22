@@ -192,44 +192,73 @@ export default function PortalPage() {
               <div style={{ background: "#fff", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, padding: "36px 32px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>Get Started</div>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>
-                  Your certification journey starts here
+                  {eligibility ? "Your certification dashboard" : "Your certification journey starts here"}
                 </h3>
                 <p style={{ fontSize: 14, color: "var(--ink3)", marginBottom: 28, lineHeight: 1.6 }}>
-                  Follow these steps to find out which certifications you qualify for and start your applications.
+                  {eligibility
+                    ? "Your eligibility assessment is complete. Start an application below, or update your information to refine your results."
+                    : "Follow these steps to find out which certifications you qualify for and start your applications."}
                 </p>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
                   {/* Connecting line */}
                   <div style={{ position: "absolute", left: 43, top: 56, bottom: 56, width: 2, borderLeft: "2px dotted rgba(200,155,60,.25)", zIndex: 0 }} />
-                  {[
-                    {
-                      step: 1,
-                      title: "Complete the Eligibility Assessment",
-                      desc: "Answer questions about your business, ownership, and financials. We'll tell you which certifications you likely qualify for.",
-                      time: "~12 min",
-                      href: "/portal/eligibility",
-                      done: !!eligibility,
-                      cta: "Start Assessment →",
-                    },
-                    {
-                      step: 2,
-                      title: "Upload Key Documents",
-                      desc: "Financial statements, tax returns, capability statement, and org chart. These feed into every application automatically.",
-                      time: "~5 min",
-                      href: "/portal/documents",
-                      done: false,
-                      cta: "Upload Documents →",
-                    },
-                    {
-                      step: 3,
-                      title: "Connect Your Financial Tools",
-                      desc: "Link QuickBooks or upload financials manually. Revenue data is required for most certifications.",
-                      time: "~2 min",
-                      href: "/portal/integrations",
-                      done: false,
-                      cta: "Connect Tools →",
-                    },
-                  ].map(item => (
+                  {(() => {
+                    const hasAssessment = !!eligibility;
+                    const hasInconclusive = hasAssessment && eligibility?.assessments?.some((a: any) => a.status === "NEEDS_REVIEW" || a.criteriaResults?.some((c: any) => c.met === null));
+
+                    const step1 = hasAssessment
+                      ? hasInconclusive
+                        ? {
+                            step: 1,
+                            title: "Update Your Eligibility Assessment",
+                            desc: "Your assessment found some areas where additional information would help us give you a more accurate result. Providing more details improves your eligibility score. If you're confident in your eligibility, scroll down to start an application directly.",
+                            time: "~5 min",
+                            href: "/portal/eligibility",
+                            done: false,
+                            cta: "Provide More Details →",
+                          }
+                        : {
+                            step: 1,
+                            title: "Eligibility Assessment Complete",
+                            desc: "Your assessment is complete. Review your results below and start any application you're eligible for.",
+                            time: "",
+                            href: "/portal/eligibility",
+                            done: true,
+                            cta: "View Results",
+                          }
+                      : {
+                          step: 1,
+                          title: "Complete the Eligibility Assessment",
+                          desc: "Answer questions about your business, ownership, and financials. We'll tell you which certifications you likely qualify for.",
+                          time: "~12 min",
+                          href: "/portal/eligibility",
+                          done: false,
+                          cta: "Start Assessment →",
+                        };
+
+                    return [
+                      step1,
+                      {
+                        step: 2,
+                        title: "Upload Key Documents",
+                        desc: "Financial statements, tax returns, capability statement, and org chart. These feed into every application automatically.",
+                        time: "~5 min",
+                        href: "/portal/documents",
+                        done: false,
+                        cta: "Upload Documents →",
+                      },
+                      {
+                        step: 3,
+                        title: "Connect Your Financial Tools",
+                        desc: "Link QuickBooks or upload financials manually. Revenue data is required for most certifications.",
+                        time: "~2 min",
+                        href: "/portal/integrations",
+                        done: false,
+                        cta: "Connect Tools →",
+                      },
+                    ];
+                  })().map(item => (
                     <a key={item.step} href={item.href} style={{
                       display: "flex", alignItems: "center", gap: 16, padding: "18px 20px",
                       background: item.done ? "var(--green-bg)" : "var(--cream)",

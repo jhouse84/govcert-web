@@ -281,7 +281,7 @@ export default function PortalPage() {
                       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 4 }}>{tool.name}</div>
                       <div style={{ fontSize: 11, color: "var(--ink4)", marginBottom: 12, lineHeight: 1.4 }}>{tool.desc}</div>
                       <button onClick={() => {
-                        if (tool.id === "sam") { router.push("/portal/eligibility"); return; }
+                        if (tool.id === "sam") { router.push("/portal/integrations"); return; }
                         const token = localStorage.getItem("token");
                         if (clientId) window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/oauth/${tool.id}/start?clientId=${clientId}&token=${token}`;
                       }} style={{ padding: "7px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>

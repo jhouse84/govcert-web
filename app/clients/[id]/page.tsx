@@ -234,6 +234,19 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 </p>
               </div>
             </div>
+        {/* ── INVITE CLIENT ── */}
+        <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Portal Access</div>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400 }}>Invite Client to Portal</h2>
+            <p style={{ fontSize: 13, color: "var(--ink3)", marginTop: 4, lineHeight: 1.5 }}>
+                Send an invitation email so your client can access their certification workspace, review AI drafts, and upload documents.
+            </p>
+            </div>
+        </div>
+        <InviteForm clientId={clientId} clientName={client?.businessName} />
+        </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               {INTEGRATIONS.map(integration => {
@@ -338,4 +351,66 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       </div>
     </div>
   );
+  function InviteForm({ clientId, clientName }: { clientId: string; clientName: string }) {
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  async function sendInvite() {
+    if (!email) return setError("Email is required.");
+    setSending(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/invites`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email, clientId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSent(true);
+        setEmail("");
+      } else {
+        setError(data.error || "Failed to send invite.");
+      }
+    } catch {
+      setError("Something went wrong.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (sent) return (
+    <div style={{ padding: "12px 16px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 13, color: "var(--green)", fontWeight: 500, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <span>✓ Invitation sent successfully</span>
+      <button onClick={() => setSent(false)} style={{ background: "none", border: "none", color: "var(--green)", cursor: "pointer", fontSize: 12 }}>Send another</button>
+    </div>
+  );
+
+  return (
+    <div>
+      {error && (
+        <div style={{ padding: "10px 14px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 13, color: "var(--red)", marginBottom: 12 }}>
+          {error}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 10 }}>
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && sendInvite()}
+          placeholder={`e.g. tricia@${clientName?.split(" ")[0]?.toLowerCase() || "company"}.com`}
+          style={{ flex: 1, padding: "10px 14px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", fontFamily: "'DM Sans', sans-serif" }}
+        />
+        <button onClick={sendInvite} disabled={sending}
+          style={{ padding: "10px 22px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: sending ? "not-allowed" : "pointer", opacity: sending ? 0.7 : 1, whiteSpace: "nowrap" as const, boxShadow: "0 4px 12px rgba(200,155,60,.3)" }}>
+          {sending ? "Sending..." : "Send Invite →"}
+        </button>
+      </div>
+    </div>
+  );
+}
 }

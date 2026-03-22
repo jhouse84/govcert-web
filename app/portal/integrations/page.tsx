@@ -33,18 +33,40 @@ export default function PortalIntegrationsPage() {
 
   async function fetchClientId() {
     try {
-      const data = await apiRequest("/api/certifications");
-      if (data && data.length > 0 && data[0].clientId) {
-        setClientId(data[0].clientId);
-        fetchOAuthStatus(data[0].clientId);
-      } else {
+      let cId: string | null = null;
+
+      // Try certifications first
+      try {
+        const data = await apiRequest("/api/certifications");
+        if (data && data.length > 0 && data[0].clientId) cId = data[0].clientId;
+      } catch {}
+
+      // Try clients
+      if (!cId) {
         try {
           const clients = await apiRequest("/api/clients");
-          if (clients && clients.length > 0) {
-            setClientId(clients[0].id);
-            fetchOAuthStatus(clients[0].id);
-          }
+          if (clients && clients.length > 0) cId = clients[0].id;
         } catch {}
+      }
+
+      // Auto-create client if none exists
+      if (!cId) {
+        try {
+          const userData = JSON.parse(localStorage.getItem("user") || "{}");
+          const newClient = await apiRequest("/api/clients", {
+            method: "POST",
+            body: JSON.stringify({
+              name: `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || "My Business",
+              email: userData.email || "",
+            }),
+          });
+          cId = newClient.id;
+        } catch (err) { console.error("Could not create client:", err); }
+      }
+
+      if (cId) {
+        setClientId(cId);
+        fetchOAuthStatus(cId);
       }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -59,9 +81,11 @@ export default function PortalIntegrationsPage() {
 
   function connectOAuth(provider: string) {
     const token = localStorage.getItem("token");
-    if (clientId) {
-      window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/oauth/${provider}/start?clientId=${clientId}&token=${token}`;
+    if (!clientId) {
+      alert("Please wait — setting up your account. Try again in a moment.");
+      return;
     }
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/oauth/${provider}/start?clientId=${clientId}&token=${token}`;
   }
 
   async function lookupSam() {
@@ -143,7 +167,7 @@ export default function PortalIntegrationsPage() {
         <nav style={{ padding: "16px 12px", flex: 1 }}>
           <div style={{ fontSize: 9.5, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 8, fontWeight: 600 }}>My Portal</div>
           <a href="/portal" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
-            <span>{"\uD83C\uDFE0"}</span> My Applications
+            <span>{"\uD83C\uDFE0"}</span> Home
           </a>
           <a href="/portal/eligibility" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
             <span>{"\u2705"}</span> Eligibility

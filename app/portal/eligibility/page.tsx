@@ -444,7 +444,7 @@ function PortalEligibilityPageInner() {
         <nav style={{ padding: "16px 12px", flex: 1 }}>
           <div style={{ fontSize: 9.5, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 8, fontWeight: 600 }}>My Portal</div>
           <a href="/portal" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
-            <span>{"\uD83C\uDFE0"}</span> My Applications
+            <span>{"\uD83C\uDFE0"}</span> Home
           </a>
           <a href="/portal/documents" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
             <span>{"\uD83D\uDCC4"}</span> My Documents

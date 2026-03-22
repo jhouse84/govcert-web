@@ -307,14 +307,30 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               </div>
             ) : (
               client?.certifications?.map((cert: any) => (
-                <a key={cert.id} href={`/certifications/${cert.id}`} style={{ display: "flex", padding: "12px 0", borderBottom: "1px solid var(--border)", justifyContent: "space-between", alignItems: "center", textDecoration: "none" }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{cert.type}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: "var(--amber-bg)", color: "var(--amber)", fontWeight: 500 }}>{cert.status}</span>
-                    <span style={{ fontSize: 13, color: "var(--gold)" }}>→</span>
-                  </div>
-                </a>
-              ))
+  <div key={cert.id} style={{ display: "flex", padding: "12px 0", borderBottom: "1px solid var(--border)", justifyContent: "space-between", alignItems: "center" }}>
+    <a href={`/certifications/${cert.id}`} style={{ flex: 1, textDecoration: "none" }}>
+      <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{cert.type.replace(/_/g, " ")}</div>
+      <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>{cert.status.replace(/_/g, " ")}</div>
+    </a>
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: "var(--amber-bg)", color: "var(--amber)", fontWeight: 500 }}>{cert.status.replace(/_/g, " ")}</span>
+      <a href={`/certifications/${cert.id}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none" }}>→</a>
+      <button
+        onClick={async () => {
+          if (!confirm(`Delete ${cert.type.replace(/_/g, " ")} certification? This cannot be undone.`)) return;
+          try {
+            await apiRequest(`/api/certifications/${cert.id}`, { method: "DELETE" });
+            setClient((prev: any) => ({ ...prev, certifications: prev.certifications.filter((c: any) => c.id !== cert.id) }));
+          } catch (err) {
+            alert("Failed to delete certification.");
+          }
+        }}
+        style={{ padding: "4px 10px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", color: "var(--red)", fontSize: 11, cursor: "pointer" }}>
+        Delete
+      </button>
+    </div>
+  </div>
+))
             )}
           </div>
 

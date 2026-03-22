@@ -1,8 +1,8 @@
 "use client";
-import React from "react";
+import React, { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function OAuthErrorPage() {
+function OAuthErrorContent() {
   const searchParams = useSearchParams();
   const provider = searchParams.get("provider") || "provider";
   const error = searchParams.get("error") || "unknown_error";
@@ -33,5 +33,17 @@ export default function OAuthErrorPage() {
         </a>
       </div>
     </div>
+  );
+}
+
+export default function OAuthErrorPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>
+        Loading...
+      </div>
+    }>
+      <OAuthErrorContent />
+    </Suspense>
   );
 }

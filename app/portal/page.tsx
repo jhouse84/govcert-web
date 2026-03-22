@@ -251,6 +251,84 @@ export default function PortalPage() {
                 </div>
               </div>
 
+              {/* Connect Your Tools */}
+              <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px 28px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>Integrations</div>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>Connect your tools</h3>
+                <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.5 }}>Link your financial and business tools so GovCert can pull data directly into your applications.</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                  {[
+                    { id: "quickbooks", name: "QuickBooks", icon: "📗", desc: "P&L, Balance Sheet, revenue data", color: "#2CA01C" },
+                    { id: "gusto", name: "Gusto", icon: "🟡", desc: "Payroll totals, employee roster", color: "#F45D48" },
+                    { id: "sam", name: "SAM.gov", icon: "🏛️", desc: "Entity registration, NAICS codes", color: "#1A3F7A" },
+                  ].map(tool => (
+                    <div key={tool.id} style={{ padding: "16px", border: "1px solid var(--border)", borderRadius: "var(--r)", textAlign: "center" as const }}>
+                      <div style={{ fontSize: 24, marginBottom: 8 }}>{tool.icon}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 4 }}>{tool.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--ink4)", marginBottom: 12, lineHeight: 1.4 }}>{tool.desc}</div>
+                      <button onClick={() => {
+                        if (tool.id === "sam") { router.push("/portal/eligibility"); return; }
+                        const token = localStorage.getItem("token");
+                        if (clientId) window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/oauth/${tool.id}/start?clientId=${clientId}&token=${token}`;
+                      }} style={{ padding: "7px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+                        Connect →
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Start an Application */}
+              <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px 28px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>Applications</div>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>Start a certification application</h3>
+                <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.5 }}>Choose a certification type to begin. We recommend completing the eligibility assessment first.</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  {[
+                    { type: "GSA_MAS", label: "GSA Multiple Award Schedule", badge: "GSA", badgeColor: "#1A6644", badgeBg: "#E6F4EE", desc: "Pre-negotiated federal contracts. The fastest path to government revenue.", available: true },
+                    { type: "EIGHT_A", label: "8(a) Business Development", badge: "SBA", badgeColor: "#1A3F7A", badgeBg: "#E8EEF8", desc: "Nine-year program for socially and economically disadvantaged businesses.", available: true },
+                    { type: "WOSB", label: "WOSB / EDWOSB", badge: "SBA", badgeColor: "#8A5E10", badgeBg: "#FBF0DC", desc: "Women-Owned Small Business certification for set-aside contracts.", available: false },
+                    { type: "HUBZONE", label: "HUBZone", badge: "SBA", badgeColor: "#1A3F7A", badgeBg: "#E8EEF8", desc: "10% price evaluation preference for businesses in underutilized zones.", available: false },
+                    { type: "SDVOSB", label: "SDVOSB / VOSB", badge: "VA", badgeColor: "#5A1A6A", badgeBg: "#F0E8F8", desc: "Service-Disabled Veteran-Owned Small Business certification.", available: false },
+                    { type: "MBE", label: "State MBE / DBE", badge: "State", badgeColor: "#5A1A6A", badgeBg: "#F0E8F8", desc: "Minority and Disadvantaged Business Enterprise for state contracts.", available: false },
+                  ].map(cert => (
+                    <div key={cert.type} style={{ padding: "18px", border: `1px solid ${cert.available ? "var(--border)" : "var(--border)"}`, borderRadius: "var(--r)", position: "relative", opacity: cert.available ? 1 : 0.6 }}>
+                      {!cert.available && (
+                        <div style={{ position: "absolute", top: 12, right: 12, padding: "3px 8px", borderRadius: 100, fontSize: 9, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".06em", background: "var(--cream2)", color: "var(--ink4)", border: "1px solid var(--border)" }}>
+                          Coming Soon
+                        </div>
+                      )}
+                      <span style={{ display: "inline-flex", alignItems: "center", fontSize: 10, fontWeight: 500, padding: "2px 8px", borderRadius: 100, marginBottom: 10, color: cert.badgeColor, background: cert.badgeBg }}>{cert.badge}</span>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>{cert.label}</div>
+                      <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.5, marginBottom: 14 }}>{cert.desc}</div>
+                      {cert.available ? (
+                        <button onClick={async () => {
+                          if (!clientId) return;
+                          try {
+                            const newCert = await apiRequest("/api/certifications", {
+                              method: "POST",
+                              body: JSON.stringify({ clientId, type: cert.type, status: "IN_PROGRESS" }),
+                            });
+                            const wizardBase = cert.type === "EIGHT_A" ? `/certifications/${newCert.id}/8a/social-disadvantage` : `/certifications/${newCert.id}/corporate`;
+                            router.push(wizardBase);
+                          } catch (err: any) {
+                            if (err.message?.includes("already has")) {
+                              alert(err.message);
+                            } else {
+                              console.error(err);
+                            }
+                          }
+                        }} style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer", boxShadow: "0 2px 12px rgba(200,155,60,.3)" }}>
+                          Start Application →
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 12, color: "var(--ink4)" }}>Under development</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Managed Service CTA */}
               {user?.subscriptionTier === "PLATFORM" && (
                 <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 20, display: "flex", gap: 20, alignItems: "center" }}>

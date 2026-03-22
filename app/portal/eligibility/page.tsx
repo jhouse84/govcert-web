@@ -138,13 +138,44 @@ function PortalEligibilityPageInner() {
 
   async function fetchClientAndData() {
     try {
-      // Get clientId from certifications
-      const certs = await apiRequest("/api/certifications");
-      if (!certs || certs.length === 0) {
-        setLoading(false);
-        return;
+      // Try to get clientId from certifications first
+      let cId: string | null = null;
+      try {
+        const certs = await apiRequest("/api/certifications");
+        if (certs && certs.length > 0) {
+          cId = certs[0].clientId;
+        }
+      } catch {}
+
+      // If no cert exists, try to get clients directly
+      if (!cId) {
+        try {
+          const clients = await apiRequest("/api/clients");
+          if (clients && clients.length > 0) {
+            cId = clients[0].id;
+          }
+        } catch {}
       }
-      const cId = certs[0].clientId;
+
+      // If still no client, create one from user info
+      if (!cId) {
+        try {
+          const userData = JSON.parse(localStorage.getItem("user") || "{}");
+          const newClient = await apiRequest("/api/clients", {
+            method: "POST",
+            body: JSON.stringify({
+              name: `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || "My Business",
+              email: userData.email || "",
+            }),
+          });
+          cId = newClient.id;
+        } catch (err) {
+          console.error("Could not create client:", err);
+          setLoading(false);
+          return;
+        }
+      }
+
       setClientId(cId);
 
       const clientData = await apiRequest(`/api/clients/${cId}`);

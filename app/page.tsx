@@ -200,7 +200,11 @@ export default function LandingPage() {
         <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "#fff", fontWeight: 500 }}>
           Gov<em style={{ color: "var(--gold2)", fontStyle: "normal" }}>Cert</em>
         </span>
-        <span style={{ fontSize: 12, color: "rgba(255,255,255,.3)" }}>© 2026 GovCert. All rights reserved.</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,.3)" }}>© 2026 GovCert. All rights reserved.</span>
+          <a href="/privacy" style={{ fontSize: 12, color: "rgba(255,255,255,.35)", textDecoration: "none" }}>Privacy Policy</a>
+          <a href="/terms" style={{ fontSize: 12, color: "rgba(255,255,255,.35)", textDecoration: "none" }}>Terms of Service</a>
+        </div>
       </div>
 
     </div>

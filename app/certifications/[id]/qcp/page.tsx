@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
@@ -59,8 +59,11 @@ const QC_ATTRIBUTES = [
   },
 ];
 
-export default function QCPPage({ params }: { params: { id: string } }) {
+export default function QCPPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { id } = React.use(params);
+  const certId = String(id);
+
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -92,7 +95,7 @@ export default function QCPPage({ params }: { params: { id: string } }) {
 
   async function fetchCert() {
     try {
-      const data = await apiRequest(`/api/certifications/${params.id}`);
+      const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
       if (data.application?.narrativeQCP) {
         try {
@@ -124,10 +127,7 @@ export default function QCPPage({ params }: { params: { id: string } }) {
   }
 
   function setClarification(attrId: string, fieldId: string, value: string) {
-    setClarifications(prev => ({
-      ...prev,
-      [attrId]: { ...(prev[attrId] || {}), [fieldId]: value }
-    }));
+    setClarifications(prev => ({ ...prev, [attrId]: { ...(prev[attrId] || {}), [fieldId]: value } }));
   }
 
   function getAttributeSummary() {
@@ -163,7 +163,7 @@ export default function QCPPage({ params }: { params: { id: string } }) {
     await apiRequest("/api/applications", {
       method: "POST",
       body: JSON.stringify({
-        certificationId: params.id,
+        certificationId: certId,
         clientId: cert.clientId,
         certType: cert.type,
         currentStep: cert.application?.currentStep || 1,
@@ -320,6 +320,9 @@ export default function QCPPage({ params }: { params: { id: string } }) {
               )}
             </div>
           )}
+          <a href={`/certifications/${certId}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", borderRadius: "var(--r)", marginBottom: 2, textDecoration: "none", color: "rgba(255,255,255,.4)", fontSize: 12, marginTop: 16 }}>
+            ← Back to Dashboard
+          </a>
         </div>
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ padding: "10px 12px", marginBottom: 8 }}>
@@ -335,8 +338,8 @@ export default function QCPPage({ params }: { params: { id: string } }) {
       {/* Main */}
       <div style={{ flex: 1, overflow: "auto" }}>
         <div style={{ padding: "40px 48px" }}>
-          <a href={`/certifications/${params.id}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
-            Back to Application Dashboard
+          <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
+            ← Back to Application Dashboard
           </a>
 
           <div style={{ marginTop: 20, marginBottom: 24 }}>
@@ -351,15 +354,14 @@ export default function QCPPage({ params }: { params: { id: string } }) {
             </p>
           </div>
 
-          {/* HOW IT WORKS — only shown in gather mode */}
           {mode === "gather" && (
             <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 28 }}>
               <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold2)", marginBottom: 12 }}>How This Works</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginBottom: 16 }}>
                 {[
-                  { step: "1", icon: "☑️", title: "Select all that apply", body: "Check every QC attribute, certification, or practice your company actually has. There are no wrong answers — only check what is genuinely true for your company." },
-                  { step: "2", icon: "✏️", title: "Add optional details", body: "After selecting an attribute, click 'Add details' to provide specifics — like how many PMP-certified staff you have, or which tools you use. Details make the narrative sharper, but nothing is required." },
-                  { step: "3", icon: "✦", title: "Generate your QCP", body: "GovCert combines your selections, any details you provided, your uploaded document, and your Corporate Experience narrative to produce a complete, GSA-compliant Quality Control Plan." },
+                  { step: "1", title: "Select all that apply", body: "Check every QC attribute, certification, or practice your company actually has. Only check what is genuinely true." },
+                  { step: "2", title: "Add optional details", body: "After selecting an attribute, click 'Add details' to provide specifics like staff counts or tools used." },
+                  { step: "3", title: "Generate your QCP", body: "GovCert combines your selections, any details, your uploaded document, and Corporate Experience to produce a complete GSA-compliant QCP." },
                 ].map(item => (
                   <div key={item.step} style={{ display: "flex", gap: 12 }}>
                     <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(200,155,60,.2)", border: "1px solid rgba(200,155,60,.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 12, color: "var(--gold2)", fontWeight: 700 }}>
@@ -374,9 +376,9 @@ export default function QCPPage({ params }: { params: { id: string } }) {
               </div>
               <div style={{ borderTop: "1px solid rgba(255,255,255,.08)", paddingTop: 14, display: "flex", gap: 24 }}>
                 {[
-                  { icon: "📄", text: "Upload a capability statement, QMS manual, or past proposal on the right — GovCert extracts relevant QC content automatically." },
-                  { icon: "🎤", text: "Prefer to speak? Use voice input on the right to describe your QC approach out loud instead of typing." },
-                  { icon: "🔄", text: "After generating, every section is fully editable. You can regenerate any individual section or the entire plan at any time." },
+                  { icon: "📄", text: "Upload a QMS manual, capability statement, or past proposal — GovCert extracts relevant QC content automatically." },
+                  { icon: "🎤", text: "Use voice input on the right to describe your QC approach out loud instead of typing." },
+                  { icon: "🔄", text: "After generating, every section is fully editable. Regenerate any individual section or the entire plan." },
                 ].map((tip, i) => (
                   <div key={i} style={{ display: "flex", gap: 8, flex: 1 }}>
                     <span style={{ fontSize: 14, flexShrink: 0 }}>{tip.icon}</span>
@@ -392,13 +394,12 @@ export default function QCPPage({ params }: { params: { id: string } }) {
 
               {/* LEFT — Attribute checklist */}
               <div>
-                {/* Instruction callout above checklist */}
                 <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "18px 22px", marginBottom: 20, boxShadow: "var(--shadow)", display: "flex", gap: 14, alignItems: "flex-start" }}>
                   <div style={{ fontSize: 22, flexShrink: 0 }}>☑️</div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Select everything that applies to your company</div>
                     <div style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6 }}>
-                      Check every certification, practice, or tool your company genuinely has. Each description explains what it is and why GSA values it. After selecting, click <strong style={{ color: "var(--gold)" }}>"Add details"</strong> to optionally provide specifics that make your narrative more precise — but you can always skip that step and let GovCert fill in the gaps intelligently.
+                      Check every certification, practice, or tool your company genuinely has. After selecting, click <strong style={{ color: "var(--gold)" }}>"Add details"</strong> to optionally provide specifics.
                     </div>
                   </div>
                 </div>
@@ -430,25 +431,22 @@ export default function QCPPage({ params }: { params: { id: string } }) {
                                 </div>
                               )}
                             </div>
-
                             {isExpanded && item.clarifications.length > 0 && (
                               <div style={{ padding: "12px 14px 14px 44px", borderTop: "1px solid rgba(200,155,60,.15)", background: "rgba(200,155,60,.02)" }}>
                                 <div style={{ fontSize: 12, color: "var(--ink4)", marginBottom: 10, fontStyle: "italic" }}>
-                                  Optional — these details help produce a more specific narrative. Leave any field blank to skip it.
+                                  Optional — these details help produce a more specific narrative.
                                 </div>
                                 <div style={{ display: "grid", gridTemplateColumns: item.clarifications.length > 1 ? "1fr 1fr" : "1fr", gap: 10 }}>
                                   {item.clarifications.map(field => (
                                     <div key={field.id}>
-                                      <label style={{ display: "block", fontSize: 12, color: "var(--ink3)", marginBottom: 4, fontWeight: 500 }}>
-                                        {field.label}
-                                      </label>
+                                      <label style={{ display: "block", fontSize: 12, color: "var(--ink3)", marginBottom: 4, fontWeight: 500 }}>{field.label}</label>
                                       <input
                                         type="text"
                                         value={clarifications[item.id]?.[field.id] || ""}
                                         onChange={e => setClarification(item.id, field.id, e.target.value)}
                                         onClick={e => e.stopPropagation()}
                                         placeholder="Leave blank to skip"
-                                        style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", boxSizing: "border-box" as const, color: "var(--ink)", background: "#fff", fontFamily: "'DM Sans', sans-serif" }}
+                                        style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", boxSizing: "border-box" as const, background: "#fff", fontFamily: "'DM Sans', sans-serif" }}
                                       />
                                     </div>
                                   ))}
@@ -466,16 +464,12 @@ export default function QCPPage({ params }: { params: { id: string } }) {
               {/* RIGHT — Context panel */}
               <div style={{ position: "sticky", top: 24 }}>
                 <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
-
-                  {/* Header */}
                   <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", background: "var(--cream)" }}>
                     <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Additional Context</div>
                     <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.5 }}>
-                      Describe your QC approach or upload a document. Either, both, or neither — whatever you have. GovCert uses everything available to draft the strongest possible narrative.
+                      Describe your QC approach or upload a document. Either, both, or neither — GovCert uses everything available.
                     </div>
                   </div>
-
-                  {/* Tab switcher */}
                   <div style={{ display: "flex", borderBottom: "1px solid var(--border)" }}>
                     {[{ id: "describe", label: "Describe / Speak" }, { id: "upload", label: "Upload Document" }].map(tab => (
                       <button key={tab.id} onClick={() => setRightMode(tab.id as any)}
@@ -484,17 +478,16 @@ export default function QCPPage({ params }: { params: { id: string } }) {
                       </button>
                     ))}
                   </div>
-
                   <div style={{ padding: "18px 20px" }}>
                     {rightMode === "describe" && (
                       <div>
                         <p style={{ fontSize: 12.5, color: "var(--ink3)", marginBottom: 12, lineHeight: 1.6 }}>
-                          Describe your QC approach in a few sentences, or speak it out loud using the button below. Mention specific processes, staff, or tools if you can — but anything helps.
+                          Describe your QC approach in a few sentences, or speak it out loud using the button below.
                         </p>
                         <textarea
                           value={userDescription}
                           onChange={e => setUserDescription(e.target.value)}
-                          placeholder="e.g. We have a dedicated QA manager with 15 years of federal contracting experience. Every deliverable goes through peer review before submission. We conduct weekly project status meetings with clients and document all issues in Jira..."
+                          placeholder="e.g. We have a dedicated QA manager with 15 years of federal contracting experience. Every deliverable goes through peer review before submission..."
                           style={{ width: "100%", minHeight: 150, padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }}
                         />
                         <button
@@ -504,18 +497,17 @@ export default function QCPPage({ params }: { params: { id: string } }) {
                         </button>
                       </div>
                     )}
-
                     {rightMode === "upload" && (
                       <div>
                         <p style={{ fontSize: 12.5, color: "var(--ink3)", marginBottom: 12, lineHeight: 1.6 }}>
-                          Upload a QMS manual, capability statement, past proposal, or any document that describes your quality processes. GovCert extracts the relevant content automatically.
+                          Upload a QMS manual, capability statement, past proposal, or any document describing your quality processes.
                         </p>
                         <input ref={fileInputRef} type="file" accept=".pdf,.docx,.txt" style={{ display: "none" }}
                           onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
                         {!uploadedFile ? (
                           <div
                             onClick={() => fileInputRef.current?.click()}
-                            style={{ border: "2px dashed var(--border2)", borderRadius: "var(--r)", padding: "28px 16px", textAlign: "center", cursor: "pointer", transition: "border-color .15s" }}
+                            style={{ border: "2px dashed var(--border2)", borderRadius: "var(--r)", padding: "28px 16px", textAlign: "center" as const, cursor: "pointer", transition: "border-color .15s" }}
                             onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--gold)")}
                             onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border2)")}>
                             <div style={{ fontSize: 28, marginBottom: 8 }}>📄</div>
@@ -534,24 +526,15 @@ export default function QCPPage({ params }: { params: { id: string } }) {
                             </button>
                           </div>
                         )}
-                        {uploadedText && (
-                          <div style={{ marginTop: 10, padding: "10px 12px", background: "var(--cream)", borderRadius: "var(--r)", fontSize: 11, color: "var(--ink3)", lineHeight: 1.5, maxHeight: 80, overflow: "hidden" }}>
-                            {uploadedText.substring(0, 200)}...
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
-
-                  {/* Corporate Experience context indicator */}
                   {cert?.application?.narrativeCorp && (
                     <div style={{ padding: "10px 20px", borderTop: "1px solid var(--border)", background: "rgba(26,102,68,.04)", display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 12, color: "var(--green)" }}>✓</span>
                       <span style={{ fontSize: 12, color: "var(--green)", fontWeight: 500 }}>Corporate Experience narrative included automatically</span>
                     </div>
                   )}
-
-                  {/* Generate button */}
                   <div style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }}>
                     <button
                       onClick={generateAll}
@@ -563,7 +546,7 @@ export default function QCPPage({ params }: { params: { id: string } }) {
                     </button>
                     <div style={{ marginTop: 10, padding: "10px 12px", background: "var(--cream)", borderRadius: "var(--r)" }}>
                       <div style={{ fontSize: 11, color: "var(--ink4)", lineHeight: 1.6 }}>
-                        <strong style={{ color: "var(--ink3)" }}>What gets used:</strong> Your selected attributes and any details you added, your description or uploaded document, your Corporate Experience narrative, and your company profile. You can edit every section after generation.
+                        <strong style={{ color: "var(--ink3)" }}>What gets used:</strong> Your selected attributes, description or document, Corporate Experience, and company profile.
                       </div>
                     </div>
                     <button onClick={() => setMode("refine")}
@@ -593,15 +576,13 @@ export default function QCPPage({ params }: { params: { id: string } }) {
                 </div>
               )}
 
-              {/* Refine mode instructions */}
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "16px 22px", marginBottom: 20, boxShadow: "var(--shadow)", display: "flex", gap: 14, alignItems: "flex-start" }}>
                 <div style={{ fontSize: 20, flexShrink: 0 }}>✏️</div>
                 <div style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6 }}>
-                  <strong style={{ color: "var(--navy)" }}>Review and refine your draft.</strong> Every section is fully editable — read through each one and adjust the language to match your voice and reflect your actual practices accurately. Use <strong style={{ color: "var(--navy)" }}>Redraft</strong> to regenerate any individual section, or <strong style={{ color: "var(--navy)" }}>Speak</strong> to dictate changes by voice. When you are satisfied, click <strong style={{ color: "var(--gold)" }}>Save {"&"} Continue</strong> to move to the next section.
+                  <strong style={{ color: "var(--navy)" }}>Review and refine your draft.</strong> Every section is fully editable. Use <strong style={{ color: "var(--navy)" }}>Redraft</strong> to regenerate any section, or <strong style={{ color: "var(--navy)" }}>Speak</strong> to dictate changes. When satisfied, click <strong style={{ color: "var(--gold)" }}>Save & Continue</strong>.
                 </div>
               </div>
 
-              {/* Sticky char counter */}
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "16px 20px", marginBottom: 24, boxShadow: "var(--shadow)", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                   <div>
@@ -611,7 +592,7 @@ export default function QCPPage({ params }: { params: { id: string } }) {
                     <span style={{ fontSize: 14, color: "var(--ink3)" }}> / {charLimit.toLocaleString()} chars</span>
                   </div>
                   <div style={{ height: 6, width: 160, background: "var(--cream2)", borderRadius: 100, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${Math.min(100, totalChars / charLimit * 100)}%`, background: totalChars > charLimit ? "var(--red)" : totalChars > charLimit * 0.8 ? "var(--gold)" : "var(--green)", borderRadius: 100, transition: "width .3s" }} />
+                    <div style={{ height: "100%", width: `${Math.min(100, totalChars / charLimit * 100)}%`, background: totalChars > charLimit ? "var(--red)" : totalChars > charLimit * 0.8 ? "var(--gold)" : "var(--green)", borderRadius: 100 }} />
                   </div>
                   <span style={{ fontSize: 12, color: "var(--ink4)" }}>eOffer limit: 10,000 chars total</span>
                 </div>
@@ -628,7 +609,6 @@ export default function QCPPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
-              {/* Section cards */}
               {PROMPTS.map((prompt, i) => (
                 <div key={prompt.id} id={prompt.id}
                   style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
@@ -659,12 +639,12 @@ export default function QCPPage({ params }: { params: { id: string } }) {
                   <textarea
                     value={answers[prompt.id] || ""}
                     onChange={e => setAnswers(prev => ({ ...prev, [prompt.id]: e.target.value }))}
-                    placeholder="Your drafted content will appear here. You can also type or speak directly into this field."
+                    placeholder="Your drafted content will appear here. You can also type or speak directly."
                     style={{ width: "100%", minHeight: 140, padding: "12px 14px", border: `1px solid ${(answers[prompt.id]?.length || 0) > prompt.maxChars ? "var(--red)" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 13.5, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }}
                   />
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, alignItems: "center" }}>
                     {(answers[prompt.id]?.length || 0) > prompt.maxChars
-                      ? <span style={{ fontSize: 11, color: "var(--red)" }}>Over recommended limit — consider trimming this section</span>
+                      ? <span style={{ fontSize: 11, color: "var(--red)" }}>Over recommended limit — consider trimming</span>
                       : <span />}
                     <span style={{ fontSize: 11, color: (answers[prompt.id]?.length || 0) > prompt.maxChars ? "var(--red)" : "var(--ink4)", fontFamily: "monospace" }}>
                       {(answers[prompt.id]?.length || 0).toLocaleString()} / {prompt.maxChars.toLocaleString()}
@@ -674,8 +654,8 @@ export default function QCPPage({ params }: { params: { id: string } }) {
               ))}
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 20 }}>
-                <a href={`/certifications/${params.id}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>
-                  Back to Dashboard
+                <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>
+                  ← Back to Dashboard
                 </a>
                 <button onClick={saveAnswers} disabled={saving}
                   style={{ padding: "12px 28px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 16px rgba(200,155,60,.35)" }}>

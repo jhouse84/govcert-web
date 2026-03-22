@@ -312,7 +312,22 @@ export default function PortalPage() {
                           Coming Soon
                         </div>
                       )}
-                      <span style={{ display: "inline-flex", alignItems: "center", fontSize: 10, fontWeight: 500, padding: "2px 8px", borderRadius: 100, marginBottom: 10, color: cert.badgeColor, background: cert.badgeBg }}>{cert.badge}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, flexWrap: "wrap" as const }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", fontSize: 10, fontWeight: 500, padding: "2px 8px", borderRadius: 100, color: cert.badgeColor, background: cert.badgeBg }}>{cert.badge}</span>
+                        {(() => {
+                          const match = eligibility?.assessments?.find((a: any) => a.certType === cert.type) || eligibility?.stateCerts?.find((a: any) => a.certType === cert.type);
+                          if (!match) return null;
+                          const colors: Record<string, { bg: string; color: string; label: string }> = {
+                            ELIGIBLE: { bg: "rgba(39,174,96,.1)", color: "#27ae60", label: "Eligible" },
+                            LIKELY_ELIGIBLE: { bg: "rgba(39,174,96,.08)", color: "#2ecc71", label: "Likely Eligible" },
+                            NEEDS_REVIEW: { bg: "rgba(243,156,18,.1)", color: "#f39c12", label: "Needs Review" },
+                            NOT_ELIGIBLE: { bg: "rgba(231,76,60,.08)", color: "#e74c3c", label: "Not Eligible" },
+                            INSUFFICIENT_DATA: { bg: "rgba(149,165,166,.1)", color: "#95a5a6", label: "More Info Needed" },
+                          };
+                          const c = colors[match.status] || colors.INSUFFICIENT_DATA;
+                          return <span style={{ fontSize: 10, fontWeight: 500, padding: "2px 8px", borderRadius: 100, background: c.bg, color: c.color }}>{c.label} · {match.score}%</span>;
+                        })()}
+                      </div>
                       <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>{cert.label}</div>
                       <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.5, marginBottom: 14 }}>{cert.desc}</div>
                       {cert.available ? (

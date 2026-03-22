@@ -44,9 +44,14 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
       });
       const data = await res.json();
       if (res.ok) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        router.push("/dashboard");
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      // ADVISOR must sign NDA before accessing dashboard
+      if (data.user.role === "ADVISOR") {
+        router.push("/nda");
+      } else {
+        router.push("/portal");
+      }
       } else {
         setFormError(data.error || "Failed to create account.");
       }

@@ -51,6 +51,7 @@ export default function DashboardPage() {
             { label: "Documents", icon: "📄", href: "/documents" },
             { label: "Calendar", icon: "📅", href: "/calendar" },
             { label: "Integrations", icon: "🔗", href: "/integrations" },
+            { label: "Team & Advisors", icon: "👤", href: "/settings/team" },
           ].map(item => (
             <a key={item.label} href={item.href} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)",

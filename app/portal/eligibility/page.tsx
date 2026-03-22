@@ -351,18 +351,7 @@ function PortalEligibilityPageInner() {
               position: "relative", width: "100%", paddingBottom: "56.25%",
               background: "#0B1929",
             }}>
-              {/* Replace with: <iframe src="YOUR_HEYGEN_VIDEO_URL" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} allow="autoplay" allowFullScreen /> */}
-              <div style={{
-                position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                color: "rgba(255,255,255,0.5)", gap: 12,
-              }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3" fill="rgba(200,155,60,0.6)" stroke="rgba(200,155,60,0.8)" />
-                </svg>
-                <span style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>Welcome video loading...</span>
-              </div>
-              {/* Video URL config: set YOUR_HEYGEN_VIDEO_URL above to embed the welcome video */}
+              <iframe src="https://www.youtube.com/embed/DHH112pNJJM?autoplay=1" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
             </div>
 
             {/* Modal content below video */}

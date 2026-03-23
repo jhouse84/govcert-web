@@ -6,6 +6,7 @@ import { apiRequest } from "@/lib/api";
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
   EIGHT_A: "8(a) Business Development",
+  OASIS_PLUS: "GSA OASIS+",
   WOSB: "Women-Owned Small Business",
   HUBZONE: "HUBZone",
   MBE: "Minority Business Enterprise",
@@ -60,7 +61,7 @@ const STATUS_MESSAGES: Record<string, string> = {
   INSUFFICIENT_DATA: "We need more information to assess your eligibility. Complete the eligibility questionnaire to get an accurate assessment.",
 };
 
-const AVAILABLE_CERTS = ["GSA_MAS", "EIGHT_A"];
+const AVAILABLE_CERTS = ["GSA_MAS", "EIGHT_A", "OASIS_PLUS"];
 
 const CERT_REQUIREMENTS: Record<string, { documents: string[]; data: string[] }> = {
   EIGHT_A: {
@@ -529,6 +530,13 @@ export default function EligibilityResultsPage() {
                 "Prepare a commercial price list or rate card for all labor categories",
                 "Gather 3+ past performance references with contract details",
                 "Document your quality control processes and procedures",
+              ],
+              OASIS_PLUS: [
+                "Identify your strongest OASIS+ domains (13 available across professional services)",
+                "Prepare up to 5 Qualifying Projects per domain with $500K+ average annual value",
+                "Gather past performance documentation (CPARS ratings preferred)",
+                "Compile business system certifications (accounting, ISO, CMMI if applicable)",
+                "Self-score against the OASIS+ Qualifications Matrix — target 36+ credits (SB) or 42+ (Unrestricted)",
               ],
               WOSB: [
                 "Gather proof of woman ownership showing 51%+ stake",

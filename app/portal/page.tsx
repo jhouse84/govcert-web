@@ -521,6 +521,35 @@ export default function PortalPage() {
             </div>
           )}
 
+          {/* Start Another Application */}
+          {certs.length > 0 && (
+            <div style={{ marginTop: 20, padding: "20px 24px", background: "#fff", border: "1px solid rgba(200,155,60,.12)", borderRadius: 12, boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 3 }}>Start another certification</div>
+                  <div style={{ fontSize: 13, color: "var(--ink3)" }}>Add GSA MAS, 8(a), OASIS+, or other certifications to your portfolio.</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[
+                    { type: "GSA_MAS", label: "GSA MAS", path: "corporate" },
+                    { type: "EIGHT_A", label: "8(a)", path: "8a/social-disadvantage" },
+                    { type: "OASIS_PLUS", label: "OASIS+", path: "oasis-plus/domains" },
+                  ].filter(c => !certs.some((existing: any) => existing.type === c.type)).map(cert => (
+                    <button key={cert.type} onClick={async () => {
+                      if (!clientId) return;
+                      try {
+                        const newCert = await apiRequest("/api/certifications", { method: "POST", body: JSON.stringify({ clientId, type: cert.type, status: "IN_PROGRESS" }) });
+                        router.push(`/certifications/${newCert.id}/${cert.path}`);
+                      } catch (err: any) { alert(err.message); }
+                    }} style={{ padding: "8px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+                      + {cert.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div style={{ marginTop: 28, padding: "20px 24px", background: "#fff", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", display: "flex", gap: 16, alignItems: "center" }}>
             <span style={{ fontSize: 28, flexShrink: 0 }}>💬</span>
             <div style={{ flex: 1 }}>

@@ -234,7 +234,7 @@ export default function AdminDocumentsPage() {
             { label: "Documents", icon: "\u{1F4C4}", href: "/documents", active: true },
             { label: "Calendar", icon: "\u{1F4C5}", href: "/calendar" },
             { label: "Integrations", icon: "\u{1F517}", href: "/integrations" },
-            { label: "Team & Advisors", icon: "\u{1F464}", href: "/settings/team" },
+            { label: "Team & Users", icon: "\u{1F464}", href: "/settings/team" },
           ].map(item => (
             <a key={item.label} href={item.href} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)",

@@ -152,7 +152,7 @@ export default function DashboardPage() {
             { label: "Documents", icon: "📄", href: "/documents" },
             { label: "Calendar", icon: "📅", href: "/calendar" },
             { label: "Integrations", icon: "🔗", href: "/integrations" },
-            { label: "Team & Advisors", icon: "👤", href: "/settings/team" },
+            { label: "Team & Users", icon: "👤", href: "/settings/team" },
             { label: "Usage & Costs", icon: "📊", href: "/usage" },
             { label: "Pricing", icon: "💰", href: "/settings/pricing" },
           ].map(item => (

@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { label: "Documents", icon: "\uD83D\uDCC4", href: "/documents" },
   { label: "Calendar", icon: "\uD83D\uDCC5", href: "/calendar", active: true },
   { label: "Integrations", icon: "\uD83D\uDD17", href: "/integrations" },
-  { label: "Team & Advisors", icon: "\uD83D\uDC64", href: "/settings/team" },
+  { label: "Team & Users", icon: "\uD83D\uDC64", href: "/settings/team" },
   { label: "Usage & Costs", icon: "\uD83D\uDCCA", href: "/usage" },
 ];
 

@@ -131,32 +131,73 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
     setUploadedTexts(prev => prev.filter((_, i) => i !== index));
   }
 
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [extractionFailed, setExtractionFailed] = useState<{ message: string; suggestions: string[] } | null>(null);
+
   // ── AI: Pre-fill guided questions from uploaded files ──
   async function prefillFromDocuments() {
     if (uploadedTexts.length === 0) return;
     setGeneratingFromGuided(true);
+    setExtractionFailed(null);
     try {
       const combined = uploadedTexts.map(t => `--- ${t.name} ---\n${t.text}`).join("\n\n").substring(0, 8000);
-      const data = await apiRequest("/api/applications/ai/draft", {
+      const data = await apiRequest("/api/applications/ai/extract", {
         method: "POST",
         body: JSON.stringify({
-          section: "Corporate Experience Guided Questions Pre-fill",
-          prompt: `Read these company documents and extract answers to fill in the following questions. Return ONLY a valid JSON object with these keys: yearsInBusiness, coreServices, customerBase, differentiators, teamCapacity, certifications, revenueStability, toolsMethodologies, managementTeam, additionalContext. Write each answer as a natural paragraph (not bullet points) suitable for a GSA Schedule application. If information is not found, return empty string for that key.`,
-          context: {
-            businessName: cert?.client?.businessName,
-            otherSections: combined,
-          },
+          proposalText: combined,
+          businessName: cert?.client?.businessName || "the company",
+          certType: cert?.type || "GSA_MAS",
         }),
       });
-      try {
-        const clean = data.text.replace(/```json|```/g, "").trim();
-        const parsed = JSON.parse(clean);
-        setGuidedAnswers(parsed);
-      } catch {
-        setError("Could not auto-fill from documents — please fill in the questions manually.");
+
+      if (data.error && data.suggestedDocuments) {
+        setExtractionFailed({ message: data.error, suggestions: data.suggestedDocuments || [] });
+        return;
       }
-    } catch (err) { setError("Failed to process documents."); }
-    finally { setGeneratingFromGuided(false); }
+
+      // Map extracted business info to guided answers
+      const bi = data.businessInfo || {};
+      const sections = data.extracted || {};
+      const mapped: any = {};
+      if (bi.yearsInBusiness || bi.foundedYear) mapped.yearsInBusiness = bi.yearsInBusiness || `Founded ${bi.foundedYear}`;
+      if (bi.coreServiceAreas?.length) mapped.coreServices = bi.coreServiceAreas.join(", ");
+      if (bi.employeeCount) mapped.teamCapacity = String(bi.employeeCount) + " employees";
+      if (bi.keyDifferentiators?.length) mapped.differentiators = bi.keyDifferentiators.join(". ");
+      if (bi.annualRevenue) mapped.revenueStability = String(bi.annualRevenue);
+      if (bi.naicsCodes?.length) mapped.certifications = "NAICS: " + bi.naicsCodes.join(", ");
+      if (sections.overview) mapped.additionalContext = sections.overview;
+      if (sections.past_projects) mapped.customerBase = sections.past_projects;
+      if (sections.resources) mapped.toolsMethodologies = sections.resources;
+      if (sections.employees) mapped.managementTeam = sections.employees;
+
+      // Fill any remaining empty fields from sections
+      if (!mapped.coreServices && sections.capabilities) mapped.coreServices = sections.capabilities;
+      if (!mapped.differentiators && sections.overview) mapped.differentiators = sections.overview;
+
+      setGuidedAnswers((prev: Record<string, string>) => {
+        const merged = { ...prev };
+        for (const [key, val] of Object.entries(mapped)) {
+          const strVal = typeof val === "string" ? val : Array.isArray(val) ? val.join(", ") : String(val || "");
+          if (strVal && (!merged[key] || (merged[key] as string).trim() === "")) merged[key] = strVal;
+        }
+        return merged;
+      });
+
+      // Show disclaimer popup
+      setShowDisclaimer(true);
+    } catch (err: any) {
+      setExtractionFailed({
+        message: err.message || "Could not extract information from the uploaded documents.",
+        suggestions: [
+          "Capability Statement — typically has company overview, core competencies, and past performance",
+          "Past Proposal or SOW — contains detailed service descriptions and project experience",
+          "Business Plan — includes market analysis, service offerings, and growth strategy",
+          "Company website 'About' page content",
+        ],
+      });
+    } finally {
+      setGeneratingFromGuided(false);
+    }
   }
 
   // ── AI: Generate all 8 narrative sections ──
@@ -287,6 +328,50 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
+
+      {/* AI Disclaimer Popup */}
+      {showDisclaimer && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(11,25,41,.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowDisclaimer(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, maxWidth: 520, width: "100%", padding: "32px 28px", boxShadow: "0 12px 40px rgba(0,0,0,.2)" }}>
+            <div style={{ fontSize: 32, textAlign: "center", marginBottom: 12 }}>⚠️</div>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "var(--navy)", fontWeight: 400, textAlign: "center", marginBottom: 12 }}>AI-Generated Content — Review Required</h3>
+            <p style={{ fontSize: 14, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 16, textAlign: "center" }}>
+              The information below was extracted by AI from your uploaded documents. Some answers may be <strong>inferred or estimated</strong> and are marked with <em>[AI Estimate]</em>.
+            </p>
+            <div style={{ background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.2)", borderRadius: 8, padding: "14px 16px", marginBottom: 20, fontSize: 13, color: "var(--ink)", lineHeight: 1.6 }}>
+              <strong>You must review and verify all pre-filled answers</strong> before generating your draft narrative sections. Incorrect information will produce inaccurate application content that could delay or jeopardize your certification.
+            </div>
+            <button onClick={() => setShowDisclaimer(false)} style={{ width: "100%", padding: "13px", background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)", border: "none", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+              I Understand — Review My Answers
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Extraction Failed Popup */}
+      {extractionFailed && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(11,25,41,.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setExtractionFailed(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, maxWidth: 520, width: "100%", padding: "32px 28px", boxShadow: "0 12px 40px rgba(0,0,0,.2)" }}>
+            <div style={{ fontSize: 32, textAlign: "center", marginBottom: 12 }}>📄</div>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "var(--navy)", fontWeight: 400, textAlign: "center", marginBottom: 12 }}>We Need More to Work With</h3>
+            <p style={{ fontSize: 14, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 16, textAlign: "center" }}>
+              {extractionFailed.message}
+            </p>
+            <div style={{ background: "var(--cream)", borderRadius: 8, padding: "16px", marginBottom: 20 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--gold)", marginBottom: 10 }}>Try uploading one of these:</div>
+              {extractionFailed.suggestions.map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+                  <span style={{ color: "var(--gold)", flexShrink: 0, marginTop: 2 }}>→</span>
+                  <span style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.5 }}>{s}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setExtractionFailed(null)} style={{ width: "100%", padding: "13px", background: "var(--navy)", border: "none", borderRadius: 8, color: "var(--gold2)", fontSize: 15, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+              Got It — I'll Upload More Documents
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sidebar */}
       <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>

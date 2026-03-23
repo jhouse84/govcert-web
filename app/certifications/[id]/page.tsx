@@ -323,20 +323,17 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
               )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20, maxHeight: 400, overflowY: "auto" }}>
                 {filteredSINs.map(({ code, label, category }) => {
-                  const isSelected = selectedSINsPicker.includes(code) || (!sinPickerOpen && selectedSINs.includes(code));
+                  const isSelected = selectedSINsPicker.includes(code);
                   return (
-                    <label key={code} onClick={() => {
-                      if (!sinPickerOpen && selectedSINs.length > 0) {
-                        setSinPickerOpen(true);
-                        setSelectedSINsPicker([...selectedSINs]);
-                        return;
-                      }
+                    <div key={code} onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       setSelectedSINsPicker(prev => prev.includes(code) ? prev.filter(s => s !== code) : [...prev, code]);
                     }} style={{
                       display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: "var(--r)",
                       border: `1.5px solid ${isSelected ? "var(--gold)" : "var(--border)"}`,
                       background: isSelected ? "rgba(200,155,60,.06)" : "#fff",
-                      cursor: "pointer", transition: "all .12s",
+                      cursor: "pointer", transition: "all .12s", userSelect: "none",
                     }}>
                       <input type="checkbox" checked={isSelected} readOnly style={{ accentColor: "var(--gold)", pointerEvents: "none", flexShrink: 0 }} />
                       <div style={{ minWidth: 0 }}>
@@ -344,7 +341,7 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
                         <div style={{ fontSize: 11, color: "var(--ink3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{label}</div>
                         <div style={{ fontSize: 10, color: "var(--ink4)" }}>{category}</div>
                       </div>
-                    </label>
+                    </div>
                   );
                 })}
                 {filteredSINs.length === 0 && (

@@ -171,6 +171,47 @@ export default function EligibilityScorecard({ clientId, compact = false }: Elig
 
   if (!hasAssessment && dismissed) return null;
 
+  // Ultra-compact mode for portal home — just badges
+  if (hasAssessment && compact) {
+    const topCerts = assessments.slice(0, 6);
+    return (
+      <div style={{ background: "#fff", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "#C89B3C", marginBottom: 4 }}>Eligibility Overview</div>
+            <div style={{ fontSize: 16, fontWeight: 500, color: "#0B1929", fontFamily: "'Cormorant Garamond', serif" }}>Your Certification Eligibility</div>
+          </div>
+          <a href={isCustomer ? "/portal/eligibility/results" : `/clients/${clientId}/eligibility`} style={{ fontSize: 12, color: "#C89B3C", textDecoration: "none", fontWeight: 500 }}>
+            View Full Results →
+          </a>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+          {topCerts.map((cert: any, i: number) => {
+            const statusColors: Record<string, { bg: string; color: string }> = {
+              ELIGIBLE: { bg: "rgba(39,174,96,.1)", color: "#27ae60" },
+              LIKELY_ELIGIBLE: { bg: "rgba(39,174,96,.08)", color: "#2ecc71" },
+              NEEDS_REVIEW: { bg: "rgba(243,156,18,.1)", color: "#f39c12" },
+              NOT_ELIGIBLE: { bg: "rgba(231,76,60,.08)", color: "#e74c3c" },
+              INSUFFICIENT_DATA: { bg: "rgba(149,165,166,.1)", color: "#95a5a6" },
+            };
+            const sc = statusColors[cert.status] || statusColors.INSUFFICIENT_DATA;
+            const statusLabel: Record<string, string> = { ELIGIBLE: "Eligible", LIKELY_ELIGIBLE: "Likely", NEEDS_REVIEW: "Review", NOT_ELIGIBLE: "Unlikely", INSUFFICIENT_DATA: "?" };
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: sc.bg, borderRadius: 8, border: `1px solid ${sc.color}22` }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: sc.color }}>{cert.score}%</span>
+                <span style={{ fontSize: 11, color: "#0B1929", fontWeight: 500 }}>{cert.certName || cert.label}</span>
+                <span style={{ fontSize: 9, fontWeight: 600, color: sc.color, textTransform: "uppercase" as const, letterSpacing: ".04em" }}>{statusLabel[cert.status] || "?"}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 12, display: "flex", gap: 12 }}>
+          <a href="/portal/eligibility" style={{ fontSize: 12, color: "rgba(11,25,41,.5)", textDecoration: "none" }}>Update Assessment →</a>
+        </div>
+      </div>
+    );
+  }
+
   const federalCerts = assessments.filter(a => a.category === "federal");
   const stateCerts = assessments.filter(a => a.category === "state");
 

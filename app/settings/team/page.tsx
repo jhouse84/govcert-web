@@ -345,14 +345,7 @@ export default function TeamPage() {
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>All Registered Users</h2>
             <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20 }}>Manage all platform users and assign roles. Set a user to <strong>ADVISOR</strong> here, then assign them to specific clients in the Advisors section above. Advisors can review applications, provide feedback, and manage their assigned clients.</p>
 
-            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 100px", padding: "10px 20px", borderBottom: "1px solid var(--border)", background: "var(--cream)", fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".06em", color: "var(--ink4)" }}>
-                <div>Name</div>
-                <div>Email</div>
-                <div>Role</div>
-                <div>Joined</div>
-                <div>Actions</div>
-              </div>
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
               {allUsers.map((u: any) => {
                 const roleColors: Record<string, { color: string; bg: string }> = {
                   ADMIN: { color: "#7C3AED", bg: "rgba(124,58,237,.08)" },
@@ -361,57 +354,77 @@ export default function TeamPage() {
                 };
                 const rc = roleColors[u.role] || roleColors.CUSTOMER;
                 const isMe = u.id === user?.id;
+                const a = u.activity || {};
                 return (
-                  <div key={u.id} style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 100px", padding: "12px 20px", borderBottom: "1px solid var(--border)", alignItems: "center", fontSize: 13 }}>
-                    <div>
-                      <div style={{ fontWeight: 500, color: "var(--navy)" }}>{u.firstName} {u.lastName} {isMe && <span style={{ fontSize: 10, color: "var(--ink4)" }}>(you)</span>}</div>
-                      {!u.emailVerified && <span style={{ fontSize: 10, color: "var(--amber)" }}>Unverified</span>}
+                  <div key={u.id} style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
+                    {/* Header row */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: rc.bg, border: `1.5px solid ${rc.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: rc.color }}>
+                          {(u.firstName?.[0] || "?").toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>
+                            {u.firstName} {u.lastName} {isMe && <span style={{ fontSize: 10, color: "var(--ink4)", fontWeight: 400 }}>(you)</span>}
+                          </div>
+                          <div style={{ fontSize: 12, color: "var(--ink3)" }}>{u.email}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {!u.emailVerified && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 100, background: "rgba(245,127,23,.1)", color: "#F57F17", fontWeight: 600 }}>Unverified</span>}
+                        {isMe ? (
+                          <span style={{ padding: "4px 12px", borderRadius: 100, fontSize: 11, fontWeight: 600, color: rc.color, background: rc.bg }}>{u.role}</span>
+                        ) : (
+                          <select value={u.role} disabled={changingRole === u.id}
+                            onChange={async (e) => {
+                              const newRole = e.target.value;
+                              if (!confirm(`Change ${u.firstName} ${u.lastName} to ${newRole}?`)) return;
+                              setChangingRole(u.id);
+                              try {
+                                await apiRequest(`/api/team/users/${u.id}/role`, { method: "PUT", body: JSON.stringify({ role: newRole }) });
+                                setAllUsers(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x));
+                                if (newRole === "ADVISOR" || u.role === "ADVISOR") { const d = await apiRequest("/api/team"); setAdvisors(d); }
+                              } catch (err: any) { alert("Failed: " + err.message); }
+                              finally { setChangingRole(null); }
+                            }}
+                            style={{ padding: "4px 10px", border: `1.5px solid ${rc.color}40`, borderRadius: "var(--r)", fontSize: 11, color: rc.color, background: rc.bg, cursor: "pointer", fontWeight: 600 }}>
+                            <option value="CUSTOMER">CUSTOMER</option>
+                            <option value="ADVISOR">ADVISOR</option>
+                            <option value="ADMIN">ADMIN</option>
+                          </select>
+                        )}
+                        {!isMe && (
+                          <button onClick={async () => {
+                            if (!confirm(`Delete ${u.firstName} ${u.lastName}'s account? This cannot be undone.`)) return;
+                            try { await apiRequest(`/api/team/users/${u.id}`, { method: "DELETE" }); setAllUsers(prev => prev.filter(x => x.id !== u.id)); }
+                            catch (err: any) { alert("Failed: " + err.message); }
+                          }} style={{ fontSize: 11, color: "var(--red)", background: "none", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "4px 8px", cursor: "pointer" }}>
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ color: "var(--ink3)", fontSize: 12 }}>{u.email}</div>
-                    <div>
-                      {isMe ? (
-                        <span style={{ display: "inline-flex", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600, color: rc.color, background: rc.bg }}>{u.role}</span>
-                      ) : (
-                        <select value={u.role} disabled={changingRole === u.id}
-                          onChange={async (e) => {
-                            const newRole = e.target.value;
-                            if (!confirm(`Change ${u.firstName} ${u.lastName} to ${newRole}?`)) return;
-                            setChangingRole(u.id);
-                            try {
-                              await apiRequest(`/api/team/users/${u.id}/role`, {
-                                method: "PUT",
-                                body: JSON.stringify({ role: newRole }),
-                              });
-                              setAllUsers(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x));
-                              // Refresh advisors list if role changed to/from ADVISOR
-                              if (newRole === "ADVISOR" || u.role === "ADVISOR") {
-                                const advisorData = await apiRequest("/api/team");
-                                setAdvisors(advisorData);
-                              }
-                            } catch (err: any) { alert("Failed: " + err.message); }
-                            finally { setChangingRole(null); }
-                          }}
-                          style={{ padding: "4px 8px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, color: rc.color, background: rc.bg, cursor: "pointer", fontWeight: 600 }}>
-                          <option value="CUSTOMER">CUSTOMER</option>
-                          <option value="ADVISOR">ADVISOR</option>
-                          <option value="ADMIN">ADMIN</option>
-                        </select>
-                      )}
+                    {/* Activity row */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 1, background: "var(--border)" }}>
+                      {[
+                        { label: "Company", value: a.businessName || "Not set", color: a.businessName ? "var(--navy)" : "var(--ink4)" },
+                        { label: "Eligibility", value: a.eligibilityCompleted ? "Complete" : a.eligibilitySteps > 0 ? `Step ${a.eligibilitySteps}/5` : "Not started", color: a.eligibilityCompleted ? "var(--green)" : a.eligibilitySteps > 0 ? "var(--gold)" : "var(--ink4)" },
+                        { label: "Applications", value: a.certificationsStarted > 0 ? `${a.certificationsStarted} (${a.certTypes?.join(", ") || ""})` : "None", color: a.certificationsStarted > 0 ? "var(--navy)" : "var(--ink4)" },
+                        { label: "Sections Done", value: a.sectionsCompleted > 0 ? String(a.sectionsCompleted) : "0", color: a.sectionsCompleted > 3 ? "var(--green)" : a.sectionsCompleted > 0 ? "var(--gold)" : "var(--ink4)" },
+                        { label: "Documents", value: a.documentsUploaded > 0 ? String(a.documentsUploaded) : "0", color: a.documentsUploaded > 0 ? "var(--navy)" : "var(--ink4)" },
+                        { label: "Review Score", value: a.latestReviewScore ? `${a.latestReviewScore}/100` : "No review", color: a.latestReviewScore >= 70 ? "var(--green)" : a.latestReviewScore ? "var(--gold)" : "var(--ink4)" },
+                      ].map(stat => (
+                        <div key={stat.label} style={{ background: "#fff", padding: "10px 14px", textAlign: "center" as const }}>
+                          <div style={{ fontSize: 10, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em", marginBottom: 3 }}>{stat.label}</div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: stat.color }}>{stat.value}</div>
+                        </div>
+                      ))}
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--ink4)" }}>{new Date(u.createdAt).toLocaleDateString()}</div>
-                    <div>
-                      {!isMe && (
-                        <button onClick={async () => {
-                          if (!confirm(`Delete ${u.firstName} ${u.lastName}'s account? This cannot be undone.`)) return;
-                          try {
-                            await apiRequest(`/api/team/users/${u.id}`, { method: "DELETE" });
-                            setAllUsers(prev => prev.filter(x => x.id !== u.id));
-                          } catch (err: any) { alert("Failed: " + err.message); }
-                        }}
-                          style={{ fontSize: 11, color: "var(--red)", background: "none", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "3px 8px", cursor: "pointer" }}>
-                          Delete
-                        </button>
-                      )}
+                    {/* Footer */}
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 20px", background: "var(--cream)", fontSize: 11, color: "var(--ink4)" }}>
+                      <span>Joined {new Date(u.createdAt).toLocaleDateString()}</span>
+                      <span>{u.lastLogin ? `Last login: ${new Date(u.lastLogin).toLocaleDateString()}` : "Never logged in"}</span>
+                      <span>Tier: {u.subscriptionTier}{u.maintenanceTier ? ` + ${u.maintenanceTier}` : ""}</span>
                     </div>
                   </div>
                 );

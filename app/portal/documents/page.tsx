@@ -67,39 +67,48 @@ interface RecommendedDoc {
   name: string;
   why: string;
   category: string;
+  mandatory: boolean;
   certTypes?: string[]; // undefined = universal
 }
 
 const RECOMMENDED_DOCS: RecommendedDoc[] = [
-  // ── Universal (all certifications) ──
-  { name: "Financial Statements (P&L, Balance Sheet) \u2014 last 3 years", why: "Revenue verification, size standard calculation, financial capability assessment.", category: "FINANCIAL_STATEMENT" },
-  { name: "Business Tax Returns \u2014 last 3 years", why: "Revenue history, business structure verification, size standard compliance.", category: "TAX_RETURN" },
-  { name: "Personal Tax Returns (owner) \u2014 last 3 years", why: "Economic disadvantage assessment, owner income verification.", category: "TAX_RETURN" },
-  { name: "Capability Statement", why: "Company overview, core competencies, past performance summary.", category: "CAPABILITY_STATEMENT" },
-  { name: "Organizational Chart", why: "Management structure, key personnel, reporting hierarchy.", category: "ORG_CHART" },
-  { name: "Business Licenses & Registrations", why: "Legal entity verification, state registrations, good standing proof.", category: "CERTIFICATION_DOCUMENT" },
-  { name: "Invoices (recent projects)", why: "Rate card development, pricing justification, service descriptions.", category: "OTHER" },
-  { name: "Contracts (government or commercial)", why: "Past performance evidence, contract values, scope of work.", category: "CONTRACT" },
-  { name: "Employee Resumes (key personnel)", why: "Staff qualifications, certifications, experience documentation.", category: "OTHER" },
-  { name: "Company Website / Marketing Materials", why: "Service descriptions, client testimonials, market positioning.", category: "OTHER" },
-  { name: "Insurance Certificates", why: "Business insurance, liability coverage verification.", category: "CERTIFICATION_DOCUMENT" },
-  { name: "Bank Statements", why: "Financial stability, cash flow evidence, working capital verification.", category: "FINANCIAL_STATEMENT" },
+  // ── Universal MANDATORY ──
+  { name: "Financial Statements (P&L, Balance Sheet) — last 3 years", why: "Required for size standard calculation and financial capability verification.", category: "FINANCIAL_STATEMENT", mandatory: true },
+  { name: "Business Tax Returns — last 3 years", why: "Required to verify revenue history and business structure.", category: "TAX_RETURN", mandatory: true },
+  { name: "Capability Statement", why: "Required as the foundation for your corporate experience narrative.", category: "CAPABILITY_STATEMENT", mandatory: true },
+  { name: "Organizational Chart", why: "Required to demonstrate management structure and key personnel.", category: "ORG_CHART", mandatory: true },
 
-  // ── GSA MAS ──
-  { name: "Commercial Price List / Rate Card", why: "GSA pricing baseline, labor category rates for CSP-1.", category: "RATE_CARD", certTypes: ["GSA_MAS"] },
-  { name: "Past Proposals or SOWs", why: "Technical writing samples, scope of work examples, proposal quality.", category: "PAST_PROPOSAL", certTypes: ["GSA_MAS"] },
-  { name: "CPARS Reports", why: "Government performance ratings, past performance verification.", category: "CPARS_REPORT", certTypes: ["GSA_MAS"] },
-  { name: "QMS Manual or SOPs", why: "Quality control plan evidence, ISO/CMMI documentation.", category: "QMS_MANUAL", certTypes: ["GSA_MAS"] },
-  { name: "Subcontractor Agreements", why: "Teaming arrangements, subcontractor management documentation.", category: "CONTRACT", certTypes: ["GSA_MAS"] },
+  // ── Universal USEFUL ──
+  { name: "Personal Tax Returns (owner) — last 3 years", why: "Strengthens economic disadvantage assessment and owner income verification.", category: "TAX_RETURN", mandatory: false },
+  { name: "Business Licenses & Registrations", why: "Provides legal entity verification and good standing proof.", category: "CERTIFICATION_DOCUMENT", mandatory: false },
+  { name: "Invoices (recent projects)", why: "Excellent for rate card development, pricing justification, and service documentation.", category: "OTHER", mandatory: false },
+  { name: "Contracts (government or commercial)", why: "Strong past performance evidence with contract values and scope of work.", category: "CONTRACT", mandatory: false },
+  { name: "Employee Resumes (key personnel)", why: "Documents staff qualifications, certifications, and relevant experience.", category: "OTHER", mandatory: false },
+  { name: "Company Website / Marketing Materials", why: "Helps AI extract service descriptions, client testimonials, and market positioning.", category: "OTHER", mandatory: false },
+  { name: "Insurance Certificates", why: "Verifies business insurance and liability coverage.", category: "CERTIFICATION_DOCUMENT", mandatory: false },
+  { name: "Bank Statements", why: "Demonstrates financial stability, cash flow, and working capital.", category: "FINANCIAL_STATEMENT", mandatory: false },
+  { name: "Letters of Recommendation / Client References", why: "Adds credibility to past performance claims and client relationships.", category: "OTHER", mandatory: false },
+  { name: "Project Photos / Deliverable Samples", why: "Visual evidence of completed work quality and project scope.", category: "OTHER", mandatory: false },
 
-  // ── 8(a) ──
-  { name: "Personal Financial Statement (SBA Form 413)", why: "Net worth calculation, economic disadvantage determination.", category: "FINANCIAL_STATEMENT", certTypes: ["SBA_8A"] },
-  { name: "Social Disadvantage Narrative drafts", why: "Personal narrative supporting evidence for social disadvantage claim.", category: "CERTIFICATION_DOCUMENT", certTypes: ["SBA_8A"] },
-  { name: "Business Plan", why: "Growth strategy, market analysis, 5-year projections.", category: "OTHER", certTypes: ["SBA_8A"] },
-  { name: "Resumes of ALL owners", why: "Owner qualifications, management capability demonstration.", category: "OTHER", certTypes: ["SBA_8A"] },
-  { name: "Proof of Citizenship", why: "US citizenship verification for all disadvantaged owners.", category: "CERTIFICATION_DOCUMENT", certTypes: ["SBA_8A"] },
-  { name: "Corporate Meeting Minutes", why: "Evidence of owner control and decision-making authority.", category: "OTHER", certTypes: ["SBA_8A"] },
-  { name: "Operating Agreement / Bylaws", why: "Ownership structure, control provisions, governance documentation.", category: "CERTIFICATION_DOCUMENT", certTypes: ["SBA_8A"] },
+  // ── GSA MAS MANDATORY ──
+  { name: "Commercial Price List / Rate Card", why: "Required as the pricing baseline for your GSA Schedule CSP-1.", category: "RATE_CARD", mandatory: true, certTypes: ["GSA_MAS"] },
+  { name: "Past Performance References (3+ contracts)", why: "Required — GSA requires documented past performance for evaluation.", category: "CONTRACT", mandatory: true, certTypes: ["GSA_MAS"] },
+  // ── GSA MAS USEFUL ──
+  { name: "Past Proposals or SOWs", why: "Technical writing samples and scope of work examples strengthen your narrative.", category: "PAST_PROPOSAL", mandatory: false, certTypes: ["GSA_MAS"] },
+  { name: "CPARS Reports", why: "Government performance ratings provide strong verified past performance.", category: "CPARS_REPORT", mandatory: false, certTypes: ["GSA_MAS"] },
+  { name: "QMS Manual or SOPs", why: "Supports your Quality Control Plan with documented processes.", category: "QMS_MANUAL", mandatory: false, certTypes: ["GSA_MAS"] },
+  { name: "Subcontractor Agreements", why: "Documents teaming arrangements and subcontractor management.", category: "CONTRACT", mandatory: false, certTypes: ["GSA_MAS"] },
+
+  // ── 8(a) MANDATORY ──
+  { name: "Personal Financial Statement (SBA Form 413)", why: "Required — SBA uses this to determine economic disadvantage.", category: "FINANCIAL_STATEMENT", mandatory: true, certTypes: ["SBA_8A"] },
+  { name: "Proof of Citizenship", why: "Required — US citizenship verification for all disadvantaged owners.", category: "CERTIFICATION_DOCUMENT", mandatory: true, certTypes: ["SBA_8A"] },
+  { name: "Operating Agreement / Bylaws", why: "Required — must demonstrate 51%+ ownership and control by disadvantaged individual.", category: "CERTIFICATION_DOCUMENT", mandatory: true, certTypes: ["SBA_8A"] },
+  // ── 8(a) USEFUL ──
+  { name: "Social Disadvantage Narrative drafts", why: "Supporting evidence strengthens your personal narrative significantly.", category: "CERTIFICATION_DOCUMENT", mandatory: false, certTypes: ["SBA_8A"] },
+  { name: "Business Plan", why: "SBA expects growth projections and market analysis for 8(a) applicants.", category: "OTHER", mandatory: false, certTypes: ["SBA_8A"] },
+  { name: "Resumes of ALL owners", why: "Demonstrates owner qualifications and management capability.", category: "OTHER", mandatory: false, certTypes: ["SBA_8A"] },
+  { name: "Corporate Meeting Minutes", why: "Shows evidence of owner control and decision-making authority.", category: "OTHER", mandatory: false, certTypes: ["SBA_8A"] },
+  { name: "Personal Tax Returns (owner) — last 3 years", why: "Verifies AGI for economic disadvantage threshold.", category: "TAX_RETURN", mandatory: false, certTypes: ["SBA_8A"] },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -265,6 +274,17 @@ export default function PortalDocumentsPage() {
     setUploadFiles(prev => prev.filter((_, i) => i !== idx));
   }
 
+  /* ── Documents disclaimer popup ── */
+  const [showDocsDisclaimer, setShowDocsDisclaimer] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("govcert_docs_disclaimer_dismissed") !== "true";
+  });
+
+  function dismissDocsDisclaimer(neverAgain: boolean) {
+    if (neverAgain) localStorage.setItem("govcert_docs_disclaimer_dismissed", "true");
+    setShowDocsDisclaimer(false);
+  }
+
   /* ── Recommended docs logic ── */
   const activeCertTypes = certifications.map((c: any) => c.type || c.certificationType);
   const hasActiveCerts = activeCertTypes.length > 0;
@@ -273,9 +293,34 @@ export default function PortalDocumentsPage() {
     return documents.some(d => d.category === category);
   }
 
-  const universalDocs = RECOMMENDED_DOCS.filter(d => !d.certTypes);
-  const gsaDocs = RECOMMENDED_DOCS.filter(d => d.certTypes?.includes("GSA_MAS"));
-  const eightADocs = RECOMMENDED_DOCS.filter(d => d.certTypes?.includes("SBA_8A"));
+  const universalMandatory = RECOMMENDED_DOCS.filter(d => !d.certTypes && d.mandatory);
+  const universalUseful = RECOMMENDED_DOCS.filter(d => !d.certTypes && !d.mandatory);
+  const gsaMandatory = RECOMMENDED_DOCS.filter(d => d.certTypes?.includes("GSA_MAS") && d.mandatory);
+  const gsaUseful = RECOMMENDED_DOCS.filter(d => d.certTypes?.includes("GSA_MAS") && !d.mandatory);
+  const eightAMandatory = RECOMMENDED_DOCS.filter(d => d.certTypes?.includes("SBA_8A") && d.mandatory);
+  const eightAUseful = RECOMMENDED_DOCS.filter(d => d.certTypes?.includes("SBA_8A") && !d.mandatory);
+
+  function renderDocItem(doc: RecommendedDoc, i: number, total: number) {
+    const uploaded = isDocUploaded(doc.category);
+    return (
+      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < total - 1 ? "1px solid rgba(11,25,41,.04)" : "none" }}>
+        <span style={{ fontSize: 16, color: uploaded ? "#27ae60" : doc.mandatory ? "#e74c3c" : "var(--ink4)", flexShrink: 0 }}>{uploaded ? "✓" : doc.mandatory ? "●" : "○"}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>
+            {doc.name}
+            {doc.mandatory && !uploaded && <span style={{ fontSize: 10, fontWeight: 600, color: "#e74c3c", marginLeft: 6, textTransform: "uppercase" as const, letterSpacing: ".04em" }}>Required</span>}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--ink4)", lineHeight: 1.4, marginTop: 2 }}>{doc.why}</div>
+        </div>
+        {!uploaded && (
+          <button onClick={() => { setUploadCategory(doc.category); fileInputRef.current?.click(); }}
+            style={{ padding: "5px 14px", background: doc.mandatory ? "linear-gradient(135deg, #C89B3C, #E8B84B)" : "var(--cream)", border: doc.mandatory ? "none" : "1px solid var(--border)", borderRadius: 6, fontSize: 11, fontWeight: 500, color: doc.mandatory ? "#fff" : "var(--ink3)", cursor: "pointer", flexShrink: 0 }}>
+            Upload
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const showGsa = !hasActiveCerts || activeCertTypes.some((t: string) => t?.includes("GSA"));
   const show8a = !hasActiveCerts || activeCertTypes.some((t: string) => t?.includes("8A") || t?.includes("8a"));
@@ -309,6 +354,44 @@ export default function PortalDocumentsPage() {
      ═══════════════════════════════════════════════════════════════════════════ */
   return (
     <div style={{ minHeight: "100vh", background: "#F5F1E8", display: "flex", fontFamily: "'DM Sans', sans-serif" }}>
+
+      {/* Documents Disclaimer Popup */}
+      {showDocsDisclaimer && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(11,25,41,.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#fff", borderRadius: 16, maxWidth: 540, width: "100%", padding: "32px 28px", boxShadow: "0 12px 40px rgba(0,0,0,.2)" }}>
+            <div style={{ fontSize: 32, textAlign: "center", marginBottom: 12 }}>📄</div>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "var(--navy)", fontWeight: 400, textAlign: "center", marginBottom: 12 }}>About Your Documents</h3>
+            <p style={{ fontSize: 14, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 16, textAlign: "center" }}>
+              Your documents are the foundation of your certification applications. The more you provide, the stronger your application will be.
+            </p>
+            <div style={{ background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.2)", borderRadius: 8, padding: "16px", marginBottom: 16 }}>
+              <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                <span style={{ color: "#e74c3c", fontWeight: 700, fontSize: 16 }}>●</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>Mandatory Documents</div>
+                  <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.5 }}>These are <strong>required</strong> to fully complete your application. Without them, your application cannot be submitted.</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <span style={{ color: "var(--ink4)", fontSize: 16 }}>○</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>Recommended Documents</div>
+                  <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.5 }}>These are optional but <strong>significantly strengthen</strong> your application. Our AI uses them to generate more detailed, accurate narratives.</div>
+                </div>
+              </div>
+            </div>
+            <p style={{ fontSize: 12, color: "var(--ink4)", lineHeight: 1.6, marginBottom: 20, textAlign: "center", fontStyle: "italic" }}>
+              Tip: Invoices, contracts, and past proposals are especially valuable — they contain pricing data, service descriptions, and performance evidence that directly feeds into your application sections.
+            </p>
+            <button onClick={() => dismissDocsDisclaimer(false)} style={{ width: "100%", padding: "13px", background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)", border: "none", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 500, cursor: "pointer", marginBottom: 10 }}>
+              Got It
+            </button>
+            <button onClick={() => dismissDocsDisclaimer(true)} style={{ width: "100%", padding: "10px", background: "transparent", border: "none", color: "var(--ink4)", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
+              Don't show this again
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Sidebar ── */}
       <div style={{
@@ -429,141 +512,71 @@ export default function PortalDocumentsPage() {
               Based on your active certifications, these documents will strengthen your applications.
             </p>
 
-            {/* Universal */}
-            <div style={{ marginBottom: 24 }}>
-              <div style={{
-                fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const,
-                letterSpacing: ".1em", color: "#C89B3C", marginBottom: 12,
-                paddingBottom: 6, borderBottom: "1px solid rgba(200,155,60,.15)",
-              }}>
-                Always Recommended (all certifications)
+            {/* Legend */}
+            <div style={{ display: "flex", gap: 16, marginBottom: 20, fontSize: 11, color: "var(--ink4)" }}>
+              <span><span style={{ color: "#e74c3c", fontWeight: 700 }}>●</span> Mandatory — required to complete your application</span>
+              <span><span style={{ color: "var(--ink4)" }}>○</span> Useful — strengthens your application</span>
+              <span><span style={{ color: "#27ae60", fontWeight: 700 }}>✓</span> Uploaded</span>
+            </div>
+
+            {/* Universal Mandatory */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "#e74c3c", marginBottom: 10, paddingBottom: 6, borderBottom: "2px solid rgba(231,76,60,.2)" }}>
+                Mandatory Documents (all certifications)
               </div>
-              {universalDocs.map((doc, i) => {
-                const uploaded = isDocUploaded(doc.category);
-                return (
-                  <div key={i} style={{
-                    display: "flex", alignItems: "center", gap: 14,
-                    padding: "10px 0", borderBottom: i < universalDocs.length - 1 ? "1px solid rgba(11,25,41,.04)" : "none",
-                  }}>
-                    <div style={{
-                      width: 24, height: 24, borderRadius: 6, flexShrink: 0,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      background: uploaded ? "rgba(34,139,34,.08)" : "rgba(11,25,41,.03)",
-                      color: uploaded ? "#228B22" : "rgba(11,25,41,.25)",
-                      fontSize: 13, fontWeight: 700,
-                    }}>
-                      {uploaded ? "\u2713" : ""}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, color: "#0B1929", fontWeight: 500 }}>{doc.name}</div>
-                      <div style={{ fontSize: 12, color: "rgba(11,25,41,.4)", marginTop: 2 }}>{doc.why}</div>
-                    </div>
-                    {!uploaded && (
-                      <button onClick={() => startUploadForCategory(doc.category)} style={{
-                        padding: "5px 14px", fontSize: 12, fontWeight: 500,
-                        background: "linear-gradient(135deg, #C89B3C, #E8B84B)",
-                        border: "none", borderRadius: 6, color: "#fff", cursor: "pointer",
-                        boxShadow: "0 2px 6px rgba(200,155,60,.25)",
-                        transition: "all .15s ease",
-                      }}>
-                        Upload
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+              {universalMandatory.map((doc, i) => renderDocItem(doc, i, universalMandatory.length))}
+            </div>
+
+            {/* Universal Useful */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "#C89B3C", marginBottom: 10, paddingBottom: 6, borderBottom: "1px solid rgba(200,155,60,.15)" }}>
+                Recommended Documents (all certifications)
+              </div>
+              {universalUseful.map((doc, i) => renderDocItem(doc, i, universalUseful.length))}
             </div>
 
             {/* GSA MAS */}
             {showGsa && (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{
-                  fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const,
-                  letterSpacing: ".1em", color: "#C89B3C", marginBottom: 12,
-                  paddingBottom: 6, borderBottom: "1px solid rgba(200,155,60,.15)",
-                }}>
-                  For GSA MAS Applications
-                </div>
-                {gsaDocs.map((doc, i) => {
-                  const uploaded = isDocUploaded(doc.category);
-                  return (
-                    <div key={i} style={{
-                      display: "flex", alignItems: "center", gap: 14,
-                      padding: "10px 0", borderBottom: i < gsaDocs.length - 1 ? "1px solid rgba(11,25,41,.04)" : "none",
-                    }}>
-                      <div style={{
-                        width: 24, height: 24, borderRadius: 6, flexShrink: 0,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        background: uploaded ? "rgba(34,139,34,.08)" : "rgba(11,25,41,.03)",
-                        color: uploaded ? "#228B22" : "rgba(11,25,41,.25)",
-                        fontSize: 13, fontWeight: 700,
-                      }}>
-                        {uploaded ? "\u2713" : ""}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13.5, color: "#0B1929", fontWeight: 500 }}>{doc.name}</div>
-                        <div style={{ fontSize: 12, color: "rgba(11,25,41,.4)", marginTop: 2 }}>{doc.why}</div>
-                      </div>
-                      {!uploaded && (
-                        <button onClick={() => startUploadForCategory(doc.category)} style={{
-                          padding: "5px 14px", fontSize: 12, fontWeight: 500,
-                          background: "linear-gradient(135deg, #C89B3C, #E8B84B)",
-                          border: "none", borderRadius: 6, color: "#fff", cursor: "pointer",
-                          boxShadow: "0 2px 6px rgba(200,155,60,.25)",
-                        }}>
-                          Upload
-                        </button>
-                      )}
+              <>
+                {gsaMandatory.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "#e74c3c", marginBottom: 10, paddingBottom: 6, borderBottom: "2px solid rgba(231,76,60,.2)" }}>
+                      Mandatory for GSA MAS
                     </div>
-                  );
-                })}
-              </div>
+                    {gsaMandatory.map((doc, i) => renderDocItem(doc, i, gsaMandatory.length))}
+                  </div>
+                )}
+                {gsaUseful.length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "#C89B3C", marginBottom: 10, paddingBottom: 6, borderBottom: "1px solid rgba(200,155,60,.15)" }}>
+                      Recommended for GSA MAS
+                    </div>
+                    {gsaUseful.map((doc, i) => renderDocItem(doc, i, gsaUseful.length))}
+                  </div>
+                )}
+              </>
             )}
 
             {/* 8(a) */}
             {show8a && (
-              <div>
-                <div style={{
-                  fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const,
-                  letterSpacing: ".1em", color: "#C89B3C", marginBottom: 12,
-                  paddingBottom: 6, borderBottom: "1px solid rgba(200,155,60,.15)",
-                }}>
-                  For 8(a) Applications
-                </div>
-                {eightADocs.map((doc, i) => {
-                  const uploaded = isDocUploaded(doc.category);
-                  return (
-                    <div key={i} style={{
-                      display: "flex", alignItems: "center", gap: 14,
-                      padding: "10px 0", borderBottom: i < eightADocs.length - 1 ? "1px solid rgba(11,25,41,.04)" : "none",
-                    }}>
-                      <div style={{
-                        width: 24, height: 24, borderRadius: 6, flexShrink: 0,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        background: uploaded ? "rgba(34,139,34,.08)" : "rgba(11,25,41,.03)",
-                        color: uploaded ? "#228B22" : "rgba(11,25,41,.25)",
-                        fontSize: 13, fontWeight: 700,
-                      }}>
-                        {uploaded ? "\u2713" : ""}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13.5, color: "#0B1929", fontWeight: 500 }}>{doc.name}</div>
-                        <div style={{ fontSize: 12, color: "rgba(11,25,41,.4)", marginTop: 2 }}>{doc.why}</div>
-                      </div>
-                      {!uploaded && (
-                        <button onClick={() => startUploadForCategory(doc.category)} style={{
-                          padding: "5px 14px", fontSize: 12, fontWeight: 500,
-                          background: "linear-gradient(135deg, #C89B3C, #E8B84B)",
-                          border: "none", borderRadius: 6, color: "#fff", cursor: "pointer",
-                          boxShadow: "0 2px 6px rgba(200,155,60,.25)",
-                        }}>
-                          Upload
-                        </button>
-                      )}
+              <>
+                {eightAMandatory.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "#e74c3c", marginBottom: 10, paddingBottom: 6, borderBottom: "2px solid rgba(231,76,60,.2)" }}>
+                      Mandatory for 8(a)
                     </div>
-                  );
-                })}
-              </div>
+                    {eightAMandatory.map((doc, i) => renderDocItem(doc, i, eightAMandatory.length))}
+                  </div>
+                )}
+                {eightAUseful.length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "#C89B3C", marginBottom: 10, paddingBottom: 6, borderBottom: "1px solid rgba(200,155,60,.15)" }}>
+                      Recommended for 8(a)
+                    </div>
+                    {eightAUseful.map((doc, i) => renderDocItem(doc, i, eightAUseful.length))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 

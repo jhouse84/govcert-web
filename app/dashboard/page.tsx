@@ -11,6 +11,9 @@ export default function DashboardPage() {
   const [reviewStats, setReviewStats] = useState({ total: 0, avgScore: 0, notReady: 0, competitive: 0, strong: 0, needsWork: 0 });
   const [invites, setInvites] = useState<any[]>([]);
   const [inviteStats, setInviteStats] = useState({ total: 0, accepted: 0, registered: 0, pending: 0, expired: 0 });
+  const [newInviteEmail, setNewInviteEmail] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteSent, setInviteSent] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -289,6 +292,36 @@ export default function DashboardPage() {
                   <div style={{ fontSize: 16, fontWeight: 600, color: "var(--navy)" }}>Invitation Tracking</div>
                   <div style={{ fontSize: 12, color: "var(--ink3)" }}>Monitor who has been invited and whether they have registered</div>
                 </div>
+              </div>
+              {/* Invite new user */}
+              <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "center" }}>
+                <input type="email" value={newInviteEmail} onChange={e => setNewInviteEmail(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && newInviteEmail.includes("@")) {
+                    setSendingInvite(true); setInviteSent("");
+                    apiRequest("/api/invites", { method: "POST", body: JSON.stringify({ email: newInviteEmail }) })
+                      .then(() => { setInviteSent(newInviteEmail); setNewInviteEmail(""); fetchInvites(); })
+                      .catch((err: any) => setInviteSent("Error: " + (err.message || "Failed")))
+                      .finally(() => setSendingInvite(false));
+                  }}}
+                  placeholder="Enter email address to invite..."
+                  style={{ flex: 1, padding: "9px 14px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
+                <button onClick={() => {
+                  if (!newInviteEmail.includes("@")) return;
+                  setSendingInvite(true); setInviteSent("");
+                  apiRequest("/api/invites", { method: "POST", body: JSON.stringify({ email: newInviteEmail }) })
+                    .then(() => { setInviteSent(newInviteEmail); setNewInviteEmail(""); fetchInvites(); })
+                    .catch((err: any) => setInviteSent("Error: " + (err.message || "Failed")))
+                    .finally(() => setSendingInvite(false));
+                }} disabled={sendingInvite || !newInviteEmail.includes("@")}
+                  style={{ padding: "9px 20px", background: newInviteEmail.includes("@") ? "var(--gold)" : "var(--cream2)", border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: newInviteEmail.includes("@") ? "#fff" : "var(--ink4)", cursor: newInviteEmail.includes("@") ? "pointer" : "not-allowed", boxShadow: newInviteEmail.includes("@") ? "0 2px 10px rgba(200,155,60,.3)" : "none", whiteSpace: "nowrap" as const }}>
+                  {sendingInvite ? "Sending..." : "Send Invite"}
+                </button>
+                {inviteSent && !inviteSent.startsWith("Error") && (
+                  <span style={{ fontSize: 12, color: "var(--green)", fontWeight: 500 }}>✓ Sent to {inviteSent}</span>
+                )}
+                {inviteSent && inviteSent.startsWith("Error") && (
+                  <span style={{ fontSize: 12, color: "var(--red)", fontWeight: 500 }}>{inviteSent}</span>
+                )}
               </div>
               {/* Stats */}
               <div style={{ display: "flex", gap: 16, marginTop: 16 }}>

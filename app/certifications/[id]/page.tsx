@@ -258,7 +258,7 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
                     <div style={{ fontSize: 20, marginBottom: 6 }}>{int.icon}</div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>{int.name}</div>
                     <div style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 8 }}>{int.desc}</div>
-                    <a href={`/clients/${cert?.client?.id}`} style={{ fontSize: 11, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>Connect</a>
+                    <a href={isCustomer ? "/portal/integrations" : `/clients/${cert?.client?.id}`} style={{ fontSize: 11, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>Connect</a>
                   </div>
                 ))}
               </div>

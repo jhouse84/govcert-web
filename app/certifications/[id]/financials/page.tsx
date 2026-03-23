@@ -368,10 +368,14 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
                     <div style={{ padding: "10px 14px", background: "var(--cream2)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, color: "var(--ink3)", marginBottom: 14 }}>
                       QuickBooks not connected
                     </div>
-                    <a href={`/clients/${cert?.clientId}`}
-                      style={{ display: "block", width: "100%", padding: "12px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 14, fontWeight: 500, cursor: "pointer", textAlign: "center" as const, textDecoration: "none", boxSizing: "border-box" as const }}>
+                    <button onClick={() => {
+                      const token = localStorage.getItem("token");
+                      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
+                      window.location.href = `${apiUrl}/api/oauth/quickbooks/start?clientId=${cert?.clientId}&token=${token}`;
+                    }}
+                      style={{ display: "block", width: "100%", padding: "12px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 14, fontWeight: 500, cursor: "pointer", textAlign: "center" as const, boxSizing: "border-box" as const }}>
                       Connect QuickBooks First →
-                    </a>
+                    </button>
                   </div>
                 )}
               </div>

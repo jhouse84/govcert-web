@@ -93,7 +93,8 @@ export default function ProjectExperiencePage({ params }: { params: Promise<{ id
       const formData = new FormData();
       formData.append("file", file);
       const token = localStorage.getItem("token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/extract-text`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
+      const res = await fetch(`${apiUrl}/api/upload/extract-text`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

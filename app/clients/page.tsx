@@ -9,6 +9,13 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
+  // Invite modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: "", firstName: "", lastName: "", businessName: "" });
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState("");
+  const [inviteError, setInviteError] = useState("");
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -32,6 +39,25 @@ export default function ClientsPage() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     router.push("/login");
+  }
+
+  async function sendInvite() {
+    if (!inviteForm.email) { setInviteError("Email address is required."); return; }
+    setInviteSending(true);
+    setInviteError("");
+    setInviteSuccess("");
+    try {
+      await apiRequest("/api/auth/invite", {
+        method: "POST",
+        body: JSON.stringify({ email: inviteForm.email, clientId: null }),
+      });
+      setInviteSuccess(`Invitation sent to ${inviteForm.email}`);
+      setInviteForm({ email: "", firstName: "", lastName: "", businessName: "" });
+    } catch (err: any) {
+      setInviteError(err?.message || "Failed to send invitation.");
+    } finally {
+      setInviteSending(false);
+    }
   }
 
   const navItems = [
@@ -93,9 +119,14 @@ export default function ClientsPage() {
               <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Clients</h1>
               <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>{clients.length} client{clients.length !== 1 ? "s" : ""} in your workspace</p>
             </div>
-            <a href="/clients/new" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, textDecoration: "none", boxShadow: "0 4px 16px rgba(200,155,60,.35)", transition: "all .2s" }}>
-              + Add New Client
-            </a>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => { setShowInviteModal(true); setInviteSuccess(""); setInviteError(""); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: "transparent", border: "1px solid var(--gold)", borderRadius: "var(--r)", color: "var(--gold)", fontSize: 14, fontWeight: 500, cursor: "pointer", transition: "all .2s" }}>
+                Invite Client
+              </button>
+              <a href="/clients/new" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, textDecoration: "none", boxShadow: "0 4px 16px rgba(200,155,60,.35)", transition: "all .2s" }}>
+                + Add New Client
+              </a>
+            </div>
           </div>
 
           {loading ? (
@@ -138,6 +169,98 @@ export default function ClientsPage() {
           )}
         </div>
       </div>
+
+      {/* Invite Client Modal */}
+      {showInviteModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {/* Backdrop */}
+          <div onClick={() => setShowInviteModal(false)} style={{ position: "absolute", inset: 0, background: "rgba(11,25,41,.6)", backdropFilter: "blur(4px)" }} />
+          {/* Modal */}
+          <div style={{ position: "relative", width: 480, background: "#F5F1E8", borderRadius: 16, overflow: "hidden", boxShadow: "0 24px 80px rgba(11,25,41,.35), 0 8px 24px rgba(11,25,41,.15)" }}>
+            {/* Navy header */}
+            <div style={{ background: "linear-gradient(135deg, #0B1929 0%, #142a42 100%)", padding: "24px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "#C89B3C", marginBottom: 4 }}>New Invitation</div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "#fff", fontWeight: 400, margin: 0 }}>Invite Client</h2>
+              </div>
+              <button onClick={() => setShowInviteModal(false)} style={{ background: "rgba(255,255,255,.1)", border: "none", borderRadius: 8, width: 32, height: 32, color: "rgba(255,255,255,.6)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                ✕
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: "28px" }}>
+              <div style={{ background: "rgba(255,255,255,.7)", border: "1px solid rgba(200,155,60,.15)", borderRadius: 12, padding: "24px", backdropFilter: "blur(8px)", boxShadow: "0 2px 12px rgba(11,25,41,.06)" }}>
+                {inviteSuccess && (
+                  <div style={{ padding: "12px 16px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: 8, fontSize: 13, color: "var(--green)", fontWeight: 500, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>&#10003;</span> {inviteSuccess}
+                  </div>
+                )}
+                {inviteError && (
+                  <div style={{ padding: "12px 16px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: 8, fontSize: 13, color: "var(--red)", marginBottom: 16 }}>
+                    {inviteError}
+                  </div>
+                )}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#0B1929", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Email Address *</label>
+                  <input
+                    type="email"
+                    value={inviteForm.email}
+                    onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))}
+                    placeholder="client@company.com"
+                    style={{ width: "100%", padding: "11px 14px", border: "1px solid rgba(11,25,41,.15)", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none", background: "#fff", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#0B1929", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>First Name</label>
+                    <input
+                      type="text"
+                      value={inviteForm.firstName}
+                      onChange={e => setInviteForm(f => ({ ...f, firstName: e.target.value }))}
+                      placeholder="Jane"
+                      style={{ width: "100%", padding: "11px 14px", border: "1px solid rgba(11,25,41,.15)", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none", background: "#fff", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#0B1929", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Last Name</label>
+                    <input
+                      type="text"
+                      value={inviteForm.lastName}
+                      onChange={e => setInviteForm(f => ({ ...f, lastName: e.target.value }))}
+                      placeholder="Smith"
+                      style={{ width: "100%", padding: "11px 14px", border: "1px solid rgba(11,25,41,.15)", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none", background: "#fff", boxSizing: "border-box" }}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#0B1929", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Business Name <span style={{ fontWeight: 400, color: "var(--ink4)", textTransform: "none" }}>(optional)</span></label>
+                  <input
+                    type="text"
+                    value={inviteForm.businessName}
+                    onChange={e => setInviteForm(f => ({ ...f, businessName: e.target.value }))}
+                    placeholder="Acme Corp"
+                    style={{ width: "100%", padding: "11px 14px", border: "1px solid rgba(11,25,41,.15)", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none", background: "#fff", boxSizing: "border-box" }}
+                  />
+                </div>
+                <button
+                  onClick={sendInvite}
+                  disabled={inviteSending}
+                  style={{
+                    width: "100%", padding: "13px 24px",
+                    background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
+                    border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 600, cursor: inviteSending ? "not-allowed" : "pointer",
+                    opacity: inviteSending ? 0.7 : 1,
+                    boxShadow: "0 4px 16px rgba(200,155,60,.35), 0 1px 3px rgba(200,155,60,.2)",
+                    fontFamily: "'DM Sans', sans-serif", transition: "all .2s"
+                  }}
+                >
+                  {inviteSending ? "Sending..." : "Send Invitation \u2192"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

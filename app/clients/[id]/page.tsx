@@ -71,6 +71,13 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [sbaLoading, setSbaLoading] = useState(false);
   const [sbaError, setSbaError] = useState<string | null>(null);
 
+  // Eligibility assessment state
+  const [eligibility, setEligibility] = useState<any>(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(true);
+  const [eligibilityError, setEligibilityError] = useState<string | null>(null);
+  const [reassessing, setReassessing] = useState(false);
+  const [expandedCerts, setExpandedCerts] = useState<Record<number, boolean>>({});
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -78,6 +85,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     if (userData) setUser(JSON.parse(userData));
     fetchClient();
     fetchOAuthStatus();
+    fetchEligibility();
 
     // Show success banner if redirected back from OAuth
     const connected = searchParams.get("connected");
@@ -181,6 +189,62 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     } finally {
       setSbaLoading(false);
     }
+  }
+
+  async function fetchEligibility() {
+    setEligibilityLoading(true);
+    setEligibilityError(null);
+    try {
+      const data = await apiRequest(`/api/eligibility/${clientId}`);
+      setEligibility(data);
+    } catch (err: any) {
+      if (err?.status === 404 || err?.message?.includes("not found")) {
+        setEligibility(null);
+      } else {
+        setEligibilityError(err?.message || "Failed to load eligibility data.");
+      }
+    } finally {
+      setEligibilityLoading(false);
+    }
+  }
+
+  async function runAssessment() {
+    setReassessing(true);
+    setEligibilityError(null);
+    try {
+      await apiRequest(`/api/eligibility/${clientId}/assess`, { method: "POST" });
+      await fetchEligibility();
+    } catch (err: any) {
+      setEligibilityError(err?.message || "Failed to run assessment.");
+    } finally {
+      setReassessing(false);
+    }
+  }
+
+  function getStatusBadgeStyle(status: string) {
+    const s = status?.toUpperCase();
+    if (s === "ELIGIBLE" || s === "LIKELY_ELIGIBLE") {
+      return { background: "var(--green-bg)", color: "var(--green)", border: "1px solid var(--green-b)" };
+    } else if (s === "NEEDS_REVIEW") {
+      return { background: "var(--amber-bg)", color: "var(--amber)", border: "1px solid var(--amber-b)" };
+    } else if (s === "NOT_ELIGIBLE") {
+      return { background: "var(--red-bg)", color: "var(--red)", border: "1px solid var(--red-b)" };
+    }
+    return { background: "var(--cream)", color: "var(--ink3)", border: "1px solid var(--border)" };
+  }
+
+  function getCriterionIcon(result: string) {
+    const r = result?.toUpperCase();
+    if (r === "PASS" || r === "MET" || r === "YES" || r === "TRUE") return "\u2713";
+    if (r === "FAIL" || r === "NOT_MET" || r === "NO" || r === "FALSE") return "\u2717";
+    return "?";
+  }
+
+  function getCriterionColor(result: string) {
+    const r = result?.toUpperCase();
+    if (r === "PASS" || r === "MET" || r === "YES" || r === "TRUE") return "var(--green)";
+    if (r === "FAIL" || r === "NOT_MET" || r === "NO" || r === "FALSE") return "var(--red)";
+    return "var(--amber)";
   }
 
   function logout() {
@@ -618,6 +682,174 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   </div>
 ))
             )}
+          </div>
+
+          {/* ── ELIGIBILITY ASSESSMENT ── */}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Assessment</div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400 }}>Eligibility Assessment</h2>
+              </div>
+              <a href={`/clients/${clientId}/eligibility`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
+                View Eligibility Wizard &rarr;
+              </a>
+            </div>
+
+            {eligibilityLoading ? (
+              <div style={{ textAlign: "center", padding: "32px 0", color: "var(--ink4)", fontSize: 13 }}>Loading eligibility data...</div>
+            ) : eligibilityError ? (
+              <div style={{ padding: "12px 16px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 13, color: "var(--red)" }}>
+                {eligibilityError}
+              </div>
+            ) : !eligibility || !eligibility.assessmentResults ? (
+              <div style={{ textAlign: "center", padding: "40px 0" }}>
+                <div style={{ fontSize: 24, marginBottom: 12 }}>&#128203;</div>
+                <div style={{ fontSize: 14, color: "var(--ink3)", marginBottom: 20 }}>No eligibility assessment has been completed for this client yet.</div>
+                <a href={`/clients/${clientId}/eligibility`} style={{
+                  display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 24px",
+                  background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
+                  border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none",
+                  boxShadow: "0 4px 16px rgba(200,155,60,.35)"
+                }}>
+                  Run Assessment &rarr;
+                </a>
+              </div>
+            ) : (() => {
+              const results = eligibility.assessmentResults;
+              const assessments = results.assessments || [];
+              const recommendedNext = results.recommendedNext;
+              return (
+                <div>
+                  {/* Recommended Next */}
+                  {recommendedNext && (
+                    <div style={{ padding: "12px 16px", background: "linear-gradient(135deg, rgba(200,155,60,.08) 0%, rgba(232,184,75,.06) 100%)", border: "1px solid rgba(200,155,60,.2)", borderRadius: 8, marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 16 }}>&#11088;</span>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 2 }}>Recommended Next</div>
+                        <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500 }}>{recommendedNext}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Assessment cards */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {assessments.map((assessment: any, idx: number) => {
+                      const criteria = assessment.criteria || [];
+                      const previewCriteria = criteria.slice(0, 3);
+                      const isExpanded = !!expandedCerts[idx];
+                      const badgeStyle = getStatusBadgeStyle(assessment.status);
+                      return (
+                        <div key={idx} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                          {/* Cert header row */}
+                          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", alignItems: "center", padding: "14px 18px", background: "var(--cream)", gap: 16 }}>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>{(assessment.certType || assessment.type || "").replace(/_/g, " ")}</div>
+                              {assessment.name && assessment.name !== assessment.certType && (
+                                <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 2 }}>{assessment.name}</div>
+                              )}
+                            </div>
+                            <div>
+                              <span style={{ display: "inline-flex", padding: "4px 12px", borderRadius: 100, fontSize: 11, fontWeight: 600, ...badgeStyle }}>
+                                {(assessment.status || "").replace(/_/g, " ")}
+                              </span>
+                            </div>
+                            <div>
+                              {assessment.score != null && (
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <div style={{ flex: 1, height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
+                                    <div style={{ width: `${Math.round(assessment.score * 100)}%`, height: "100%", background: assessment.score >= 0.7 ? "var(--green)" : assessment.score >= 0.4 ? "var(--amber)" : "var(--red)", borderRadius: 3, transition: "width .3s" }} />
+                                  </div>
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink2)", minWidth: 36 }}>{Math.round(assessment.score * 100)}%</span>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => setExpandedCerts(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "6px 12px", fontSize: 12, color: "var(--gold)", cursor: "pointer", fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+                              {isExpanded ? "Hide Details" : "View Full Results"}
+                            </button>
+                          </div>
+
+                          {/* Preview criteria (always shown) */}
+                          {previewCriteria.length > 0 && !isExpanded && (
+                            <div style={{ padding: "10px 18px", borderTop: "1px solid var(--border)" }}>
+                              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                                {previewCriteria.map((c: any, ci: number) => (
+                                  <div key={ci} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--ink3)" }}>
+                                    <span style={{ color: getCriterionColor(c.result || c.status), fontWeight: 700, fontSize: 14 }}>{getCriterionIcon(c.result || c.status)}</span>
+                                    {c.name || c.label || c.criterion}
+                                  </div>
+                                ))}
+                                {criteria.length > 3 && (
+                                  <span style={{ fontSize: 11, color: "var(--ink4)" }}>+{criteria.length - 3} more</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Expanded full criteria */}
+                          {isExpanded && criteria.length > 0 && (
+                            <div style={{ borderTop: "1px solid var(--border)", padding: "16px 18px" }}>
+                              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 12 }}>All Criteria</div>
+                              {criteria.map((c: any, ci: number) => (
+                                <div key={ci} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", borderBottom: ci < criteria.length - 1 ? "1px solid var(--border)" : "none" }}>
+                                  <span style={{ color: getCriterionColor(c.result || c.status), fontWeight: 700, fontSize: 16, lineHeight: "20px", flexShrink: 0 }}>{getCriterionIcon(c.result || c.status)}</span>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{c.name || c.label || c.criterion}</div>
+                                    {c.details && <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 3, lineHeight: 1.5 }}>{c.details}</div>}
+                                  </div>
+                                  <span style={{ fontSize: 11, fontWeight: 500, color: getCriterionColor(c.result || c.status), flexShrink: 0, textTransform: "uppercase" }}>
+                                    {(c.result || c.status || "").replace(/_/g, " ")}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* State certs */}
+                  {results.stateCerts && results.stateCerts.length > 0 && (
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink4)", marginBottom: 8 }}>State Certifications</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {results.stateCerts.map((sc: any, i: number) => (
+                          <span key={i} style={{ padding: "4px 12px", borderRadius: 100, fontSize: 12, fontWeight: 500, background: "var(--cream)", border: "1px solid var(--border)", color: "var(--ink2)" }}>
+                            {typeof sc === "string" ? sc : sc.name || sc.type}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer: timestamp + actions */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: 12, color: "var(--ink4)" }}>
+                      {eligibility.assessedAt || eligibility.createdAt
+                        ? `Assessed on: ${new Date(eligibility.assessedAt || eligibility.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`
+                        : ""}
+                    </div>
+                    <button
+                      onClick={runAssessment}
+                      disabled={reassessing}
+                      style={{
+                        padding: "9px 20px",
+                        background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
+                        border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500,
+                        cursor: reassessing ? "not-allowed" : "pointer",
+                        opacity: reassessing ? 0.7 : 1,
+                        boxShadow: "0 4px 12px rgba(200,155,60,.3)",
+                        fontFamily: "'DM Sans', sans-serif"
+                      }}>
+                      {reassessing ? "Assessing..." : "Re-run Assessment"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
         </div>

@@ -125,6 +125,9 @@ export default function PortalUpgradePage() {
           <a href="/portal" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
             <span>{"\uD83C\uDFE0"}</span> Home
           </a>
+          <a href="/portal/profile" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
+            <span>{"\uD83C\uDFE2"}</span> Company Profile
+          </a>
           <a href="/portal/applications" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
             <span>{"\uD83D\uDCCB"}</span> My Applications
           </a>

@@ -143,6 +143,7 @@ function getCategoryLabel(value: string) {
 
 const SIDEBAR_LINKS = [
   { href: "/portal", icon: "\u{1F3E0}", label: "Home" },
+  { href: "/portal/profile", icon: "\u{1F3E2}", label: "Company Profile" },
   { href: "/portal/applications", icon: "\u{1F4CB}", label: "My Applications" },
   { href: "/portal/eligibility", icon: "\u2705", label: "Eligibility" },
   { href: "/portal/integrations", icon: "\u{1F517}", label: "Integrations" },

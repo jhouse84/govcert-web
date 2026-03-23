@@ -126,8 +126,8 @@ export default function OASISPastPerformancePage({ params }: { params: Promise<{
     setSendingPPQ(entry.qpId);
     setError(null);
     try {
-      // First ensure we have an application record
-      const appData = await apiRequest("/api/applications", {
+      // Save current data first
+      await apiRequest("/api/applications", {
         method: "POST",
         body: JSON.stringify({
           certificationId: certId,
@@ -137,32 +137,19 @@ export default function OASISPastPerformancePage({ params }: { params: Promise<{
         }),
       });
 
-      // Create a PastPerformance record (the PPQ system needs one)
-      const pp = await apiRequest(`/api/applications/${appData.id}/past-performance`, {
-        method: "POST",
-        body: JSON.stringify({
-          agencyName: entry.contractNumber || "OASIS+ Reference",
-          contractNumber: entry.contractNumber,
-          description: entry.narrative,
-          referenceFirstName: entry.refName?.split(" ")[0] || "",
-          referenceLastName: entry.refName?.split(" ").slice(1).join(" ") || "",
-          referenceEmail: entry.refEmail,
-          referencePhone: entry.refPhone,
-          referenceTitle: entry.refTitle,
-          performanceType: "CORPORATE",
-        }),
-      });
-
-      // Now send the PPQ
+      // Send PPQ — backend auto-creates PastPerformance record when certificationId is provided
       const referenceName = entry.refName || "Reference";
       await apiRequest("/api/ppq", {
         method: "POST",
         body: JSON.stringify({
-          pastPerformanceId: pp.id,
+          certificationId: certId,
+          clientId: cert?.clientId,
           referenceEmail: entry.refEmail,
           referenceName,
           referenceTitle: entry.refTitle || "",
           referenceAgency: entry.contractNumber || "",
+          contractNumber: entry.contractNumber || "",
+          narrative: entry.narrative || "",
           contractorName: cert?.client?.businessName || "",
         }),
       });

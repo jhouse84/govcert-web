@@ -9,6 +9,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ clients: 0, certifications: 0, pending: 0, expiring: 0 });
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewStats, setReviewStats] = useState({ total: 0, avgScore: 0, notReady: 0, competitive: 0, strong: 0, needsWork: 0 });
+  const [invites, setInvites] = useState<any[]>([]);
+  const [inviteStats, setInviteStats] = useState({ total: 0, accepted: 0, registered: 0, pending: 0, expired: 0 });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -24,6 +26,7 @@ export default function DashboardPage() {
     }
     fetchStats();
     fetchReviews();
+    fetchInvites();
   }, []);
 
   async function fetchStats() {
@@ -58,6 +61,16 @@ export default function DashboardPage() {
       setReviewStats({ total, avgScore, notReady, competitive, strong, needsWork });
     } catch (err) {
       console.error("Failed to fetch reviews:", err);
+    }
+  }
+
+  async function fetchInvites() {
+    try {
+      const data = await apiRequest("/api/invites");
+      setInvites(data.invites || []);
+      setInviteStats(data.stats || { total: 0, accepted: 0, registered: 0, pending: 0, expired: 0 });
+    } catch (err) {
+      console.error("Failed to fetch invites:", err);
     }
   }
 
@@ -266,6 +279,81 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Invitation Tracking */}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", boxShadow: "var(--shadow)", marginTop: 24 }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "var(--navy)" }}>Invitation Tracking</div>
+                  <div style={{ fontSize: 12, color: "var(--ink3)" }}>Monitor who has been invited and whether they have registered</div>
+                </div>
+              </div>
+              {/* Stats */}
+              <div style={{ display: "flex", gap: 16, marginTop: 16 }}>
+                {[
+                  { label: "Total Invited", val: inviteStats.total, color: "var(--navy)" },
+                  { label: "Accepted", val: inviteStats.accepted, color: "#27ae60" },
+                  { label: "Registered", val: inviteStats.registered, color: "#2563EB" },
+                  { label: "Pending", val: inviteStats.pending, color: "#C89B3C" },
+                  { label: "Expired", val: inviteStats.expired, color: "#e74c3c" },
+                ].map(s => (
+                  <div key={s.label} style={{ flex: 1, padding: "12px 16px", background: `${s.color}08`, border: `1px solid ${s.color}20`, borderRadius: "var(--r)", textAlign: "center" as const }}>
+                    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: s.color, fontWeight: 400 }}>{s.val}</div>
+                    <div style={{ fontSize: 10, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Table */}
+            {invites.length > 0 && (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px", gap: 12, padding: "10px 24px", borderBottom: "1px solid var(--border)", fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".06em", color: "var(--ink4)" }}>
+                  <div>Email</div>
+                  <div>Status</div>
+                  <div>Invited</div>
+                  <div>Registered As</div>
+                  <div>Action</div>
+                </div>
+                {invites.slice(0, 30).map((inv: any, idx: number) => {
+                  const statusColors: Record<string, { color: string; bg: string }> = {
+                    ACCEPTED: { color: "#27ae60", bg: "rgba(39,174,96,.08)" },
+                    REGISTERED: { color: "#2563EB", bg: "rgba(37,99,235,.08)" },
+                    PENDING: { color: "#C89B3C", bg: "rgba(200,155,60,.08)" },
+                    EXPIRED: { color: "#e74c3c", bg: "rgba(231,76,60,.08)" },
+                  };
+                  const sc = statusColors[inv.status] || statusColors.PENDING;
+                  return (
+                    <div key={inv.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px", gap: 12, padding: "10px 24px", borderBottom: "1px solid var(--border)", alignItems: "center", fontSize: 13 }}>
+                      <div style={{ fontWeight: 500, color: "var(--navy)" }}>{inv.email}</div>
+                      <div>
+                        <span style={{ display: "inline-flex", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600, color: sc.color, background: sc.bg }}>
+                          {inv.status}
+                        </span>
+                      </div>
+                      <div style={{ color: "var(--ink4)", fontSize: 12 }}>{new Date(inv.invitedAt).toLocaleDateString()}</div>
+                      <div style={{ fontSize: 12, color: "var(--ink3)" }}>
+                        {inv.registeredUser ? `${inv.registeredUser.firstName || ""} ${inv.registeredUser.lastName || ""}`.trim() : "\u2014"}
+                      </div>
+                      <div>
+                        {(inv.status === "PENDING" || inv.status === "EXPIRED") && (
+                          <button onClick={async () => {
+                            try {
+                              await apiRequest("/api/invites", { method: "POST", body: JSON.stringify({ email: inv.email }) });
+                              fetchInvites();
+                            } catch (err: any) { console.error(err); }
+                          }}
+                            style={{ padding: "4px 10px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 500, color: "#fff", cursor: "pointer" }}>
+                            Resend
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

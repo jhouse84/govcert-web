@@ -91,6 +91,15 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   const [pricingData, setPricingData] = useState<any>(null);
   const [unlocking, setUnlocking] = useState(false);
 
+  // Editable company info
+  const [editingCompany, setEditingCompany] = useState(false);
+  const [companyEdits, setCompanyEdits] = useState<Record<string, string>>({});
+  const [savingCompany, setSavingCompany] = useState(false);
+  const [companySaved, setCompanySaved] = useState(false);
+
+  // CSP-1 / pricing LCATs
+  const [lcats, setLcats] = useState<any[]>([]);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -137,8 +146,69 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     try {
       const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
+      // Parse LCATs from pricingData
+      if (data.application?.pricingData) {
+        try {
+          const pd = JSON.parse(data.application.pricingData);
+          if (Array.isArray(pd)) setLcats(pd);
+          else if (pd.lcats && Array.isArray(pd.lcats)) setLcats(pd.lcats);
+        } catch {}
+      }
+      // Init company edits
+      if (data.client) {
+        setCompanyEdits({
+          businessName: data.client.businessName || "",
+          ein: data.client.ein || "",
+          uei: data.client.uei || "",
+          cageCode: data.client.cageCode || "",
+          address: data.client.address || "",
+          city: data.client.city || "",
+          state: data.client.state || "",
+          zip: data.client.zip || "",
+          phone: data.client.phone || "",
+          email: data.client.email || "",
+          website: data.client.website || "",
+        });
+      }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
+  }
+
+  async function saveCompanyEdits() {
+    if (!cert?.client?.id) return;
+    setSavingCompany(true);
+    try {
+      await apiRequest(`/api/clients/${cert.client.id}`, {
+        method: "PUT",
+        body: JSON.stringify(companyEdits),
+      });
+      // Update local cert state
+      setCert((prev: any) => ({ ...prev, client: { ...prev.client, ...companyEdits } }));
+      setCompanySaved(true);
+      setEditingCompany(false);
+      setTimeout(() => setCompanySaved(false), 3000);
+    } catch (err: any) {
+      alert("Failed to save: " + (err.message || "Unknown error"));
+    } finally {
+      setSavingCompany(false);
+    }
+  }
+
+  function downloadCSP1() {
+    if (lcats.length === 0) return;
+    const headers = ["Labor Category Title", "Description", "Education", "Min Years Experience", "MFC Rate", "GSA Rate"];
+    const rows = lcats.map((l: any) => [
+      l.title || "", (l.description || "").replace(/"/g, '""'), l.education || "", l.experience || "",
+      l.mfcRate || l.baseRate || "", l.gsaRate || "",
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.map((v: any) => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `CSP-1_${cert?.client?.businessName?.replace(/\s+/g, "_") || "pricing"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function getFieldValue(field: any): string {
@@ -492,6 +562,108 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
               </div>
             );
           })}
+
+          {/* Edit Company Info */}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 12, boxShadow: "var(--shadow)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: editingCompany ? 16 : 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 18 }}>&#x270F;&#xFE0F;</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Company Information</div>
+                  <div style={{ fontSize: 12, color: "var(--ink3)" }}>Update your business details before submitting to eOffer</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {companySaved && <span style={{ fontSize: 12, color: "var(--green)", fontWeight: 500 }}>Saved</span>}
+                <button onClick={() => setEditingCompany(!editingCompany)}
+                  style={{ padding: "7px 16px", background: editingCompany ? "var(--cream2)" : "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 500, color: editingCompany ? "var(--ink3)" : "var(--gold2)", cursor: "pointer" }}>
+                  {editingCompany ? "Cancel" : "Edit Fields"}
+                </button>
+              </div>
+            </div>
+            {editingCompany && (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                  {[
+                    { key: "businessName", label: "Legal Business Name" },
+                    { key: "ein", label: "EIN / Tax ID" },
+                    { key: "uei", label: "UEI" },
+                    { key: "cageCode", label: "CAGE Code" },
+                    { key: "address", label: "Address" },
+                    { key: "city", label: "City" },
+                    { key: "state", label: "State" },
+                    { key: "zip", label: "ZIP" },
+                    { key: "phone", label: "Phone" },
+                    { key: "email", label: "Email" },
+                    { key: "website", label: "Website" },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label style={{ fontSize: 11, fontWeight: 500, color: "var(--ink3)", textTransform: "uppercase" as const, letterSpacing: ".06em", marginBottom: 4, display: "block" }}>{f.label}</label>
+                      <input value={companyEdits[f.key] || ""} onChange={e => setCompanyEdits(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        style={{ width: "100%", padding: "8px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button onClick={saveCompanyEdits} disabled={savingCompany}
+                    style={{ padding: "8px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
+                    {savingCompany ? "Saving..." : "Save Company Info"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* CSP-1 Download */}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: lcats.length > 0 ? 16 : 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 18 }}>&#x1F4CA;</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>CSP-1 Commercial Supplier Pricelist</div>
+                  <div style={{ fontSize: 12, color: "var(--ink3)" }}>
+                    {lcats.length > 0 ? `${lcats.length} labor categor${lcats.length === 1 ? "y" : "ies"} configured` : "No labor categories configured yet"}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <a href={`/certifications/${certId}/pricing`}
+                  style={{ padding: "7px 16px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, color: "var(--ink3)", textDecoration: "none", cursor: "pointer" }}>
+                  {lcats.length > 0 ? "Edit LCATs" : "Set Up Pricing"}
+                </a>
+                {lcats.length > 0 && (
+                  <button onClick={downloadCSP1}
+                    style={{ padding: "7px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 500, color: "var(--gold2)", cursor: "pointer" }}>
+                    Download CSP-1 (CSV)
+                  </button>
+                )}
+              </div>
+            </div>
+            {lcats.length > 0 && (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid var(--border)" }}>
+                      {["Labor Category", "Education", "Exp.", "MFC Rate", "GSA Rate"].map(h => (
+                        <th key={h} style={{ textAlign: "left" as const, padding: "8px 10px", fontWeight: 600, color: "var(--ink3)", textTransform: "uppercase" as const, letterSpacing: ".06em", fontSize: 10 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lcats.map((l: any, i: number) => (
+                      <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                        <td style={{ padding: "8px 10px", fontWeight: 500, color: "var(--navy)" }}>{l.title || "Untitled"}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--ink3)" }}>{l.education || "-"}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--ink3)" }}>{l.experience || "-"}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--ink3)" }}>${l.mfcRate || l.baseRate || "0"}</td>
+                        <td style={{ padding: "8px 10px", fontWeight: 600, color: "var(--green)" }}>${l.gsaRate || "0"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
 
           {/* Bottom actions */}
           <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "28px 32px", marginTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>

@@ -33,6 +33,9 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
   const [cert, setCert] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [sinPickerOpen, setSinPickerOpen] = useState(false);
+  const [selectedSINsPicker, setSelectedSINsPicker] = useState<string[]>([]);
+  const [savingSINs, setSavingSINs] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -48,6 +51,31 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
       setCert(data);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
+  }
+
+  async function saveSINs() {
+    if (selectedSINsPicker.length === 0) return;
+    setSavingSINs(true);
+    try {
+      await apiRequest("/api/applications", {
+        method: "POST",
+        body: JSON.stringify({
+          certificationId: certId,
+          clientId: cert.clientId,
+          certType: cert.type,
+          currentStep: cert?.application?.currentStep || 1,
+          selectedSINs: selectedSINsPicker.join(","),
+        }),
+      });
+      // Refresh cert to pick up new SINs
+      const data = await apiRequest(`/api/certifications/${certId}`);
+      setCert(data);
+      setSinPickerOpen(false);
+    } catch (err: any) {
+      alert("Failed to save SINs: " + (err.message || "Unknown error"));
+    } finally {
+      setSavingSINs(false);
+    }
   }
 
   function logout() {
@@ -262,6 +290,65 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* SIN Selection — show if GSA_MAS and no SINs selected */}
+          {cert?.type === "GSA_MAS" && (selectedSINs.length === 0 || sinPickerOpen) && (
+            <div style={{ background: "#fff", border: "2px solid var(--gold)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 20, boxShadow: "var(--shadow-lg)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div>
+                  <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>
+                    {selectedSINs.length === 0 ? "Select Your SIN Codes" : "Edit SIN Codes"}
+                  </h3>
+                  <p style={{ fontSize: 13, color: "var(--ink3)" }}>Choose the Special Item Numbers (SINs) you want to offer under your GSA Schedule.</p>
+                </div>
+                {sinPickerOpen && selectedSINs.length > 0 && (
+                  <button onClick={() => setSinPickerOpen(false)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "var(--ink4)" }}>&#x2715;</button>
+                )}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+                {Object.entries(SIN_LABELS).map(([code, label]) => {
+                  const isSelected = selectedSINsPicker.includes(code) || (!sinPickerOpen && selectedSINs.includes(code));
+                  return (
+                    <label key={code} onClick={() => {
+                      if (!sinPickerOpen && selectedSINs.length > 0) {
+                        setSinPickerOpen(true);
+                        setSelectedSINsPicker([...selectedSINs]);
+                        return;
+                      }
+                      setSelectedSINsPicker(prev => prev.includes(code) ? prev.filter(s => s !== code) : [...prev, code]);
+                    }} style={{
+                      display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: "var(--r)",
+                      border: `1.5px solid ${isSelected ? "var(--gold)" : "var(--border)"}`,
+                      background: isSelected ? "rgba(200,155,60,.06)" : "#fff",
+                      cursor: "pointer", transition: "all .12s",
+                    }}>
+                      <input type="checkbox" checked={isSelected} readOnly style={{ accentColor: "var(--gold)", pointerEvents: "none" }} />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: isSelected ? "var(--gold)" : "var(--navy)" }}>{code}</div>
+                        <div style={{ fontSize: 11, color: "var(--ink3)" }}>{label}</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <button onClick={saveSINs} disabled={savingSINs || selectedSINsPicker.length === 0}
+                  style={{ padding: "10px 28px", background: selectedSINsPicker.length > 0 ? "var(--gold)" : "var(--cream2)", border: "none", borderRadius: "var(--r)", fontSize: 14, fontWeight: 600, color: selectedSINsPicker.length > 0 ? "#fff" : "var(--ink4)", cursor: selectedSINsPicker.length > 0 ? "pointer" : "not-allowed", boxShadow: selectedSINsPicker.length > 0 ? "0 4px 16px rgba(200,155,60,.3)" : "none" }}>
+                  {savingSINs ? "Saving..." : `Save ${selectedSINsPicker.length} SIN${selectedSINsPicker.length !== 1 ? "s" : ""}`}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Edit SINs link */}
+          {cert?.type === "GSA_MAS" && selectedSINs.length > 0 && !sinPickerOpen && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button onClick={() => { setSinPickerOpen(true); setSelectedSINsPicker([...selectedSINs]); }}
+                style={{ background: "none", border: "none", fontSize: 12, color: "var(--gold)", cursor: "pointer", textDecoration: "underline" }}>
+                Edit SIN codes
+              </button>
             </div>
           )}
 

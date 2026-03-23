@@ -17,6 +17,8 @@ export default function TeamPage() {
   const [selectedClient, setSelectedClient] = useState<Record<string, string>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expandedAdvisor, setExpandedAdvisor] = useState<string | null>(null);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [changingRole, setChangingRole] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -32,12 +34,14 @@ export default function TeamPage() {
 
   async function fetchData() {
     try {
-      const [advisorData, clientData] = await Promise.all([
+      const [advisorData, clientData, usersData] = await Promise.all([
         apiRequest("/api/team"),
         apiRequest("/api/clients"),
+        apiRequest("/api/team/users"),
       ]);
       setAdvisors(advisorData);
       setClients(clientData);
+      setAllUsers(usersData);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }
@@ -139,7 +143,7 @@ export default function TeamPage() {
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,.07)" }}>
             <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 6, fontWeight: 600 }}>Settings</div>
             <a href="/settings/team" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", background: "rgba(200,155,60,.15)", border: "1px solid rgba(200,155,60,.25)", color: "var(--gold2)", textDecoration: "none", fontSize: 13.5, fontWeight: 500, marginBottom: 2 }}>
-              <span>👤</span> Team & Advisors
+              <span>👤</span> Team & Users
             </a>
           </div>
         </nav>
@@ -161,7 +165,7 @@ export default function TeamPage() {
 
           <div style={{ marginBottom: 32 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Admin Settings</div>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Team & Advisors</h1>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Team & Users</h1>
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Invite advisors, manage NDA status, and control client access.</p>
           </div>
 
@@ -335,6 +339,85 @@ export default function TeamPage() {
               })}
             </div>
           )}
+          {/* ALL REGISTERED USERS */}
+          <div style={{ marginTop: 32 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>User Management</div>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>All Registered Users</h2>
+            <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20 }}>Manage all platform users and assign roles. Set a user to <strong>ADVISOR</strong> here, then assign them to specific clients in the Advisors section above. Advisors can review applications, provide feedback, and manage their assigned clients.</p>
+
+            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 100px", padding: "10px 20px", borderBottom: "1px solid var(--border)", background: "var(--cream)", fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".06em", color: "var(--ink4)" }}>
+                <div>Name</div>
+                <div>Email</div>
+                <div>Role</div>
+                <div>Joined</div>
+                <div>Actions</div>
+              </div>
+              {allUsers.map((u: any) => {
+                const roleColors: Record<string, { color: string; bg: string }> = {
+                  ADMIN: { color: "#7C3AED", bg: "rgba(124,58,237,.08)" },
+                  ADVISOR: { color: "#2563EB", bg: "rgba(37,99,235,.08)" },
+                  CUSTOMER: { color: "var(--green)", bg: "var(--green-bg)" },
+                };
+                const rc = roleColors[u.role] || roleColors.CUSTOMER;
+                const isMe = u.id === user?.id;
+                return (
+                  <div key={u.id} style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 100px", padding: "12px 20px", borderBottom: "1px solid var(--border)", alignItems: "center", fontSize: 13 }}>
+                    <div>
+                      <div style={{ fontWeight: 500, color: "var(--navy)" }}>{u.firstName} {u.lastName} {isMe && <span style={{ fontSize: 10, color: "var(--ink4)" }}>(you)</span>}</div>
+                      {!u.emailVerified && <span style={{ fontSize: 10, color: "var(--amber)" }}>Unverified</span>}
+                    </div>
+                    <div style={{ color: "var(--ink3)", fontSize: 12 }}>{u.email}</div>
+                    <div>
+                      {isMe ? (
+                        <span style={{ display: "inline-flex", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600, color: rc.color, background: rc.bg }}>{u.role}</span>
+                      ) : (
+                        <select value={u.role} disabled={changingRole === u.id}
+                          onChange={async (e) => {
+                            const newRole = e.target.value;
+                            if (!confirm(`Change ${u.firstName} ${u.lastName} to ${newRole}?`)) return;
+                            setChangingRole(u.id);
+                            try {
+                              await apiRequest(`/api/team/users/${u.id}/role`, {
+                                method: "PUT",
+                                body: JSON.stringify({ role: newRole }),
+                              });
+                              setAllUsers(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x));
+                              // Refresh advisors list if role changed to/from ADVISOR
+                              if (newRole === "ADVISOR" || u.role === "ADVISOR") {
+                                const advisorData = await apiRequest("/api/team");
+                                setAdvisors(advisorData);
+                              }
+                            } catch (err: any) { alert("Failed: " + err.message); }
+                            finally { setChangingRole(null); }
+                          }}
+                          style={{ padding: "4px 8px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, color: rc.color, background: rc.bg, cursor: "pointer", fontWeight: 600 }}>
+                          <option value="CUSTOMER">CUSTOMER</option>
+                          <option value="ADVISOR">ADVISOR</option>
+                          <option value="ADMIN">ADMIN</option>
+                        </select>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--ink4)" }}>{new Date(u.createdAt).toLocaleDateString()}</div>
+                    <div>
+                      {!isMe && (
+                        <button onClick={async () => {
+                          if (!confirm(`Delete ${u.firstName} ${u.lastName}'s account? This cannot be undone.`)) return;
+                          try {
+                            await apiRequest(`/api/team/users/${u.id}`, { method: "DELETE" });
+                            setAllUsers(prev => prev.filter(x => x.id !== u.id));
+                          } catch (err: any) { alert("Failed: " + err.message); }
+                        }}
+                          style={{ fontSize: 11, color: "var(--red)", background: "none", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "3px 8px", cursor: "pointer" }}>
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>

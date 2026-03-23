@@ -38,6 +38,12 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
     },
   });
 
+  // Handle 403 Forbidden — user doesn't have access
+  if (res.status === 403) {
+    const data = await res.json().catch(() => ({ error: 'Access denied' }));
+    throw new Error(data.error || 'You do not have permission to access this resource');
+  }
+
   // Auto-refresh on 401
   if (res.status === 401 && typeof window !== 'undefined') {
     if (!isRefreshing) {

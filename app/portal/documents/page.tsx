@@ -223,7 +223,8 @@ export default function PortalDocumentsPage() {
         formData.append("clientId", clientId);
         formData.append("category", uploadCategory);
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
+        const res = await fetch(`${apiUrl}/api/upload`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: formData,

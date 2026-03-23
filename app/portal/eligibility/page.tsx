@@ -420,7 +420,8 @@ function PortalEligibilityPageInner() {
   function connectQuickBooks() {
     if (!clientId) return;
     const token = localStorage.getItem("token");
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/oauth/quickbooks/start?clientId=${clientId}&token=${token}`;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
+    window.location.href = `${apiUrl}/api/oauth/quickbooks/start?clientId=${clientId}&token=${token}`;
   }
 
   function updateOwner(idx: number, field: string, value: any) {

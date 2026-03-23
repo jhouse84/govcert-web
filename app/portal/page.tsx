@@ -28,14 +28,12 @@ export default function PortalPage() {
     if (!token) { router.push("/login"); return; }
     if (userData) {
       const parsed = JSON.parse(userData);
-      if (parsed.role === "ADMIN" || parsed.role === "ADVISOR") {
-        router.push("/dashboard");
-        return;
-      }
       setUser(parsed);
 
-      // First-time customer: redirect to eligibility wizard with welcome video
-      const onboarded = localStorage.getItem("govcert_onboarded");
+      // First-time user: redirect to eligibility wizard with welcome video
+      // Use user-specific key so switching accounts doesn't skip onboarding
+      const onboardKey = `govcert_onboarded_${parsed.id || parsed.email}`;
+      const onboarded = localStorage.getItem(onboardKey);
       if (!onboarded) {
         router.push("/portal/eligibility?welcome=true");
         return;

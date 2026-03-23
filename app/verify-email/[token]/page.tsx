@@ -16,12 +16,12 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
         if (res.ok) {
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
-          // Clear onboarded flag for new customers so portal redirects to eligibility welcome
-          if (data.user.role === "CUSTOMER") {
-            localStorage.setItem("govcert_onboarded", "");
-          }
+          // Clear onboarded flag so portal redirects to eligibility welcome
+          const onboardKey = `govcert_onboarded_${data.user.id || data.user.email}`;
+          localStorage.removeItem(onboardKey);
+          localStorage.removeItem("govcert_onboarded"); // legacy
           setStatus("success");
-          const dest = data.user.role === "CUSTOMER" ? "/portal" : "/dashboard";
+          const dest = "/portal";
           setTimeout(() => router.push(dest), 2500);
         } else {
           setStatus("error");

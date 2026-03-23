@@ -63,7 +63,15 @@ function PortalEligibilityPageInner() {
   });
 
   function dismissWelcome() {
-    localStorage.setItem("govcert_onboarded", "true");
+    // Set user-specific onboarding flag
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        const parsed = JSON.parse(userData);
+        localStorage.setItem(`govcert_onboarded_${parsed.id || parsed.email}`, "true");
+      } catch {}
+    }
+    localStorage.setItem("govcert_onboarded", "true"); // legacy fallback
     setShowWelcome(false);
     window.history.replaceState({}, "", "/portal/eligibility");
   }

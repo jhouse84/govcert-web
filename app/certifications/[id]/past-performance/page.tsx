@@ -36,6 +36,9 @@ const EMPTY_CONTRACT = {
   ppqOpenedAt: "" as string,
   ppqCompletedAt: "" as string,
   narrative: "",
+  performanceType: "CORPORATE" as string,
+  personnelName: "",
+  personnelRole: "",
   id: "",
 };
 
@@ -116,6 +119,9 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
           ppqOpenedAt: pp.ppqs?.[0]?.openedAt || "",
           ppqCompletedAt: pp.ppqs?.[0]?.completedAt || "",
           narrative: pp.narrative || "",
+          performanceType: pp.performanceType || "CORPORATE",
+          personnelName: pp.personnelName || "",
+          personnelRole: pp.personnelRole || "",
         }));
         setContracts(mapped);
       }
@@ -179,6 +185,9 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
           referencePhone: newContract.referencePhone,
           referenceTitle: newContract.referenceTitle,
           narrative: newContract.narrative,
+          performanceType: newContract.performanceType,
+          personnelName: newContract.personnelName,
+          personnelRole: newContract.personnelRole,
         })
       });
       setContracts(prev => [...prev, { ...newContract, id: result.id }]);
@@ -213,6 +222,9 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         referencePhone: contract.referencePhone,
         referenceTitle: contract.referenceTitle,
         narrative: contract.narrative,
+        performanceType: contract.performanceType,
+        personnelName: contract.personnelName,
+        personnelRole: contract.personnelRole,
       };
       let result;
       if (contract.id) {
@@ -315,6 +327,8 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
           certType: cert?.type || "GSA_MAS",
           businessName: cert?.client?.businessName || "",
           senderName: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
+          personnelName: contract.performanceType === "KEY_PERSONNEL" ? contract.personnelName : undefined,
+          personnelRole: contract.performanceType === "KEY_PERSONNEL" ? contract.personnelRole : undefined,
         })
       });
       setPpqModal(prev => ({
@@ -569,6 +583,34 @@ Scope of Work: ${contract.sowDescription}`,
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "var(--navy)", fontWeight: 400 }}>Add Past Contract</h3>
                 <button onClick={() => { setAddingContract(false); setError(null); }} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--ink3)" }}>✕</button>
               </div>
+
+              {/* Performance Type Toggle */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--ink3)", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Performance Type</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[{ val: "CORPORATE", label: "Corporate" }, { val: "KEY_PERSONNEL", label: "Key Personnel" }].map(opt => (
+                    <button key={opt.val} type="button" onClick={() => setNewContract(prev => ({ ...prev, performanceType: opt.val }))}
+                      style={{ padding: "8px 20px", border: `1.5px solid ${newContract.performanceType === opt.val ? "var(--gold)" : "var(--border2)"}`, borderRadius: "var(--r)", background: newContract.performanceType === opt.val ? "rgba(200,155,60,.08)" : "#fff", color: newContract.performanceType === opt.val ? "var(--gold)" : "var(--ink3)", fontSize: 13, fontWeight: newContract.performanceType === opt.val ? 600 : 400, cursor: "pointer" }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {newContract.performanceType === "KEY_PERSONNEL" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--ink3)", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Personnel Name *</label>
+                      <input type="text" value={newContract.personnelName} onChange={e => setNewContract(prev => ({ ...prev, personnelName: e.target.value }))} placeholder="e.g. John Smith"
+                        style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--ink3)", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Role / Title</label>
+                      <input type="text" value={newContract.personnelRole} onChange={e => setNewContract(prev => ({ ...prev, personnelRole: e.target.value }))} placeholder="e.g. Lead Systems Engineer"
+                        style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                 {[
                   { label: "Agency / Client Name *", field: "agencyName", placeholder: "e.g. U.S. Department of Defense" },

@@ -495,10 +495,17 @@ export default function PPQRespondPage({ params }: { params: Promise<{ token: st
         {/* Intro */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 400, color: "#0B1929", marginBottom: 12 }}>
-            GSA MAS Past Performance Questionnaire
+            {ppq.performanceType === "KEY_PERSONNEL"
+              ? `Past Performance Questionnaire — ${ppq.personnelName || "Key Personnel"}`
+              : "Past Performance Questionnaire"}
           </h1>
+          {ppq.performanceType === "KEY_PERSONNEL" && ppq.personnelRole && (
+            <div style={{ fontSize: 14, fontWeight: 500, color: "#C89B3C", marginBottom: 8 }}>{ppq.personnelRole}</div>
+          )}
           <p style={{ fontSize: 15, color: "#6b7280", lineHeight: 1.7, maxWidth: 600, margin: "0 auto" }}>
-            This questionnaire is being completed in accordance with GSA Multiple Award Schedule requirements. Your candid assessment of the contractor's past performance is essential to the evaluation process.
+            {ppq.performanceType === "KEY_PERSONNEL"
+              ? `This questionnaire evaluates the performance of ${ppq.personnelName || "the individual"} on the referenced contract. Your candid assessment is essential to the evaluation process.`
+              : "This questionnaire is being completed in accordance with government certification requirements. Your candid assessment of the contractor's past performance is essential to the evaluation process."}
           </p>
         </div>
 
@@ -545,6 +552,18 @@ export default function PPQRespondPage({ params }: { params: Promise<{ token: st
                 <label style={labelStyle}>Description of Work / Services Provided</label>
                 <div style={readOnlyField}>{ppq.contractDescription || "\u2014"}</div>
               </div>
+              {ppq.performanceType === "KEY_PERSONNEL" && (
+                <>
+                  <div>
+                    <label style={labelStyle}>Performance Type</label>
+                    <div style={{ ...readOnlyField, background: "rgba(200,155,60,.08)", border: "1px solid rgba(200,155,60,.2)", fontWeight: 600 }}>Key Personnel</div>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Key Personnel Name &amp; Role</label>
+                    <div style={readOnlyField}>{ppq.personnelName || "\u2014"}{ppq.personnelRole ? `, ${ppq.personnelRole}` : ""}</div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

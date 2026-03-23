@@ -24,6 +24,8 @@ export default function OASISScorecardPage({ params }: { params: Promise<{ id: s
   // scorecardData: { [domainId]: { [categoryId]: number } }
   const [scorecardData, setScorecardData] = useState<Record<string, Record<string, number>>>({});
   const [completedSections, setCompletedSections] = useState<Record<string, boolean>>({});
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiAdvice, setAiAdvice] = useState<any>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -119,6 +121,40 @@ export default function OASISScorecardPage({ params }: { params: Promise<{ id: s
     }
   }
 
+  async function runAIScoreAdvisor() {
+    setAiAnalyzing(true);
+    setError(null);
+    try {
+      const data = await apiRequest("/api/applications/ai/oasis/score-advisor", {
+        method: "POST",
+        body: JSON.stringify({
+          clientId: cert?.clientId,
+          domains: selectedDomains,
+          solicitation,
+        }),
+      });
+      setAiAdvice(data);
+      // Auto-fill scorecard from AI recommendations
+      if (data.domains) {
+        const newScorecard = { ...scorecardData };
+        for (const [domId, domData] of Object.entries(data.domains) as any) {
+          if (!newScorecard[domId]) newScorecard[domId] = {};
+          for (const [catId, catData] of Object.entries(domData.categories || {}) as any) {
+            // Only fill if user hasn't already scored this category
+            if (!newScorecard[domId][catId] || newScorecard[domId][catId] === 0) {
+              newScorecard[domId][catId] = catData.recommended || 0;
+            }
+          }
+        }
+        setScorecardData(newScorecard);
+      }
+    } catch (err: any) {
+      setError("AI analysis failed: " + (err.message || "Please try again."));
+    } finally {
+      setAiAnalyzing(false);
+    }
+  }
+
   const threshold = getThreshold();
 
   if (loading) return (
@@ -170,6 +206,66 @@ export default function OASISScorecardPage({ params }: { params: Promise<{ id: s
               Estimate your score for each selected domain using the OASIS+ Qualifications Matrix. The scoring threshold for your pool ({OASIS_SOLICITATION_TYPES.find(s => s.id === solicitation)?.label || "Unrestricted"}) is <strong>{threshold} credits</strong>.
             </p>
           </div>
+
+          {/* AI Score Advisor */}
+          {selectedDomains.length > 0 && (
+            <div style={{ background: "linear-gradient(135deg, rgba(99,102,241,.06) 0%, rgba(200,155,60,.06) 100%)", border: "1px solid rgba(99,102,241,.15)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 14 }}>
+                <span style={{ fontSize: 28, flexShrink: 0 }}>🤖</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "var(--navy)", marginBottom: 4 }}>AI Score Advisor</div>
+                  <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 0 }}>
+                    Our AI will analyze your uploaded documents — contracts, proposals, CPARS, capability statements — against the OASIS+ Qualifications Matrix and recommend scores for each category. It tells you which credits you likely qualify for and which you&apos;re missing.
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <button onClick={runAIScoreAdvisor} disabled={aiAnalyzing}
+                  style={{
+                    padding: "10px 24px",
+                    background: aiAnalyzing ? "var(--ink4)" : "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+                    border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff",
+                    cursor: aiAnalyzing ? "wait" : "pointer",
+                    boxShadow: "0 4px 16px rgba(99,102,241,.3)",
+                  }}>
+                  {aiAnalyzing ? "Analyzing your documents..." : "Analyze Documents & Score"}
+                </button>
+                {aiAdvice && (
+                  <span style={{ fontSize: 12, color: "var(--green)", fontWeight: 500 }}>
+                    ✓ {aiAdvice.documentsAnalyzed || 0} documents analyzed — scores applied below
+                  </span>
+                )}
+              </div>
+              {/* AI Results */}
+              {aiAdvice && aiAdvice.domains && activeDomainTab && aiAdvice.domains[activeDomainTab] && (
+                <div style={{ marginTop: 16, padding: "14px 18px", background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--r)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>
+                      AI Recommendation: {aiAdvice.domains[activeDomainTab]?.recommendedScore || 0}/50 credits
+                    </div>
+                    <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 100, fontWeight: 600, background: aiAdvice.domains[activeDomainTab]?.meetsThreshold ? "var(--green-bg)" : "rgba(239,68,68,.08)", color: aiAdvice.domains[activeDomainTab]?.meetsThreshold ? "var(--green)" : "var(--red)", border: `1px solid ${aiAdvice.domains[activeDomainTab]?.meetsThreshold ? "var(--green-b)" : "rgba(239,68,68,.2)"}` }}>
+                      {aiAdvice.domains[activeDomainTab]?.meetsThreshold ? "Above Threshold" : "Below Threshold"}
+                    </span>
+                  </div>
+                  {aiAdvice.domains[activeDomainTab]?.gapAnalysis && !aiAdvice.domains[activeDomainTab]?.meetsThreshold && (
+                    <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 8, padding: "8px 12px", background: "rgba(239,68,68,.04)", borderRadius: "var(--r)" }}>
+                      <strong>Gap:</strong> {aiAdvice.domains[activeDomainTab].gapAnalysis}
+                    </div>
+                  )}
+                  {aiAdvice.domains[activeDomainTab]?.strengths?.length > 0 && (
+                    <div style={{ fontSize: 12, color: "var(--green)", marginBottom: 8 }}>
+                      <strong>Strengths:</strong> {aiAdvice.domains[activeDomainTab].strengths.join(" • ")}
+                    </div>
+                  )}
+                  {aiAdvice.missingDocuments?.length > 0 && (
+                    <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 6 }}>
+                      <strong>Missing docs that could help:</strong> {aiAdvice.missingDocuments.join(", ")}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {error && (
             <div style={{ padding: "12px 18px", background: "rgba(231,76,60,.08)", border: "1px solid rgba(231,76,60,.2)", borderRadius: "var(--r)", marginBottom: 20, fontSize: 13, color: "#e74c3c" }}>{error}</div>
@@ -259,6 +355,22 @@ export default function OASISScorecardPage({ params }: { params: Promise<{ id: s
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>{cat.label}</div>
                           <div style={{ fontSize: 12, color: "var(--ink3)" }}>{cat.description}</div>
+                          {/* AI confidence indicator */}
+                          {aiAdvice?.domains?.[activeDomainTab]?.categories?.[cat.id] && (() => {
+                            const advice = aiAdvice.domains[activeDomainTab].categories[cat.id];
+                            const confColors: Record<string, { color: string; bg: string }> = {
+                              high: { color: "var(--green)", bg: "var(--green-bg)" },
+                              medium: { color: "var(--gold)", bg: "rgba(200,155,60,.06)" },
+                              low: { color: "var(--ink4)", bg: "var(--cream2)" },
+                            };
+                            const cc = confColors[advice.confidence] || confColors.low;
+                            return (
+                              <div style={{ fontSize: 11, color: cc.color, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ padding: "1px 6px", borderRadius: 100, fontSize: 9, fontWeight: 600, background: cc.bg, textTransform: "uppercase" as const }}>{advice.confidence}</span>
+                                <span style={{ color: "var(--ink3)" }}>{advice.reasoning}</span>
+                              </div>
+                            );
+                          })()}
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                           <select

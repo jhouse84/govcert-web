@@ -437,14 +437,21 @@ export default function PortalPage() {
                       <div style={{ padding: "20px 28px" }}>
                         <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--ink3)", marginBottom: 14 }}>Application Sections</div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-                          {[
+                          {(cert.type === "EIGHT_A" ? [
+                            { key: "socialDisadvantage", label: "Social Disadvantage Narrative", icon: "👥", hasData: !!cert.application?.socialDisadvantage, href: `/certifications/${cert.id}/8a/social-disadvantage` },
+                            { key: "economicDisadvantage", label: "Economic Disadvantage", icon: "💵", hasData: !!cert.application?.economicDisadvantage, href: `/certifications/${cert.id}/8a/economic-disadvantage` },
+                            { key: "businessPlan", label: "Business Plan", icon: "📝", hasData: !!cert.application?.businessPlan, href: `/certifications/${cert.id}/8a/business-plan` },
+                            { key: "narrativeCorp", label: "Corporate Experience", icon: "🏢", hasData: !!cert.application?.narrativeCorp, href: `/certifications/${cert.id}/8a/corporate` },
+                            { key: "pp", label: "Past Performance", icon: "⭐", hasData: (cert.application?.pastPerformance?.length || 0) >= 3, count: cert.application?.pastPerformance?.length || 0, href: `/certifications/${cert.id}/8a/past-performance` },
+                            { key: "financialData", label: "Financials & Net Worth", icon: "📊", hasData: !!cert.application?.financialData, href: `/certifications/${cert.id}/8a/financials` },
+                          ] : [
                             { key: "narrativeCorp", label: "Corporate Experience", icon: "🏢", hasData: !!cert.application?.narrativeCorp, href: `/certifications/${cert.id}/corporate` },
                             { key: "narrativeQCP", label: "Quality Control Plan", icon: "✅", hasData: !!cert.application?.narrativeQCP, href: `/certifications/${cert.id}/qcp` },
                             { key: "pp", label: "Past Performance", icon: "⭐", hasData: (cert.application?.pastPerformance?.length || 0) >= 3, count: cert.application?.pastPerformance?.length || 0, href: `/certifications/${cert.id}/past-performance` },
                             { key: "narrativeExp", label: "Project Experience", icon: "📋", hasData: !!cert.application?.narrativeExp, href: `/certifications/${cert.id}/experience` },
                             { key: "financialData", label: "Financial Statements", icon: "📊", hasData: !!cert.application?.financialData, href: `/certifications/${cert.id}/financials` },
                             { key: "pricingData", label: "Pricing (CSP-1)", icon: "💰", hasData: !!cert.application?.pricingData, href: `/certifications/${cert.id}/pricing` },
-                          ].map(section => (
+                          ]).map(section => (
                             <a key={section.key} href={section.href} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: section.hasData ? "var(--green-bg)" : "var(--cream)", border: `1px solid ${section.hasData ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--r)", textDecoration: "none" }}
                               onMouseEnter={e => (e.currentTarget.style.boxShadow = "var(--shadow)")}
                               onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
@@ -466,9 +473,9 @@ export default function PortalPage() {
                             Open Full Application →
                           </a>
                           {progress.pct === 100 && (
-                            <a href={`/certifications/${cert.id}/submit`}
+                            <a href={cert.type === "EIGHT_A" ? `/certifications/${cert.id}/8a/submit` : `/certifications/${cert.id}/submit`}
                               style={{ flex: 1, padding: "12px", background: "var(--gold)", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, textDecoration: "none", textAlign: "center" as const, boxShadow: "0 4px 16px rgba(200,155,60,.3)" }}>
-                              View eOffer Package →
+                              {cert.type === "EIGHT_A" ? "View 8(a) Application Package →" : "View eOffer Package →"}
                             </a>
                           )}
                         </div>

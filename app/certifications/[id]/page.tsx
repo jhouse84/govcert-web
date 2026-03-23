@@ -103,7 +103,9 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
   const yearsInBusiness = parseFloat(app?.yearsInBusiness || "99");
   const needsSpringboard = yearsInBusiness < 2;
 
-  const sections = [
+  const isEightA = cert?.type === "EIGHT_A";
+
+  const gsaSections = [
     {
       id: "corporate",
       label: "Corporate Experience",
@@ -167,6 +169,73 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
       charLimit: null,
     },
   ];
+
+  const eightASections = [
+    {
+      id: "social-disadvantage",
+      label: "Social Disadvantage Narrative",
+      desc: "Personal narrative describing social disadvantage based on race, ethnicity, gender, or other qualifying factors",
+      icon: "👥",
+      href: `/certifications/${certId}/8a/social-disadvantage`,
+      complete: !!app?.socialDisadvantage,
+      chars: app?.socialDisadvantage?.length || 0,
+      charLimit: 8000,
+    },
+    {
+      id: "economic-disadvantage",
+      label: "Economic Disadvantage",
+      desc: "Personal financial statements, net worth analysis, and economic hardship documentation",
+      icon: "💵",
+      href: `/certifications/${certId}/8a/economic-disadvantage`,
+      complete: !!app?.economicDisadvantage,
+      chars: app?.economicDisadvantage?.length || 0,
+      charLimit: 6000,
+    },
+    {
+      id: "business-plan",
+      label: "Business Plan",
+      desc: "Strategic business plan including market analysis, growth targets, and management approach",
+      icon: "📝",
+      href: `/certifications/${certId}/8a/business-plan`,
+      complete: !!app?.businessPlan,
+      chars: app?.businessPlan?.length || 0,
+      charLimit: 15000,
+    },
+    {
+      id: "corporate-8a",
+      label: "Corporate Experience",
+      desc: "Company background, capabilities, and operational history",
+      icon: "🏢",
+      href: `/certifications/${certId}/8a/corporate`,
+      complete: !!app?.narrativeCorp,
+      chars: (() => { try { const p = JSON.parse(app?.narrativeCorp || "{}"); return Object.values(p.answers || p.narratives || p).join("").length; } catch { return app?.narrativeCorp?.length || 0; } })(),
+      charLimit: 10000,
+    },
+    {
+      id: "past-performance-8a",
+      label: "Past Performance",
+      desc: "Contract history, performance references, and project outcomes",
+      icon: "⭐",
+      href: `/certifications/${certId}/8a/past-performance`,
+      complete: (app?.pastPerformance?.length || 0) >= 3,
+      count: app?.pastPerformance?.length || 0,
+      needed: 3,
+      chars: null,
+      charLimit: null,
+    },
+    {
+      id: "financials-8a",
+      label: "Financials & Net Worth",
+      desc: "Personal financial statement, business tax returns, and SBA Form 413",
+      icon: "📊",
+      href: `/certifications/${certId}/8a/financials`,
+      complete: !!app?.financialData,
+      chars: null,
+      charLimit: null,
+    },
+  ];
+
+  const sections = isEightA ? eightASections : gsaSections;
 
   const completedCount = sections.filter(s => s.complete).length;
   const pct = Math.round(completedCount / sections.length * 100);

@@ -185,45 +185,61 @@ function PortalEligibilityPageInner() {
       setBusinessName(clientData.businessName || "");
       setEin(clientData.ein || "");
 
+      // Load business fields from client record
+      if (clientData.entityType) setEntityType(clientData.entityType);
+      if (clientData.address) setPrincipalAddress(clientData.address);
+      if (clientData.city) setCity(clientData.city);
+      if (clientData.state) setAddrState(clientData.state);
+      if (clientData.zip) setZip(clientData.zip);
+
+      // Load intake data
       try {
         const intake = await apiRequest(`/api/eligibility/${cId}`);
         if (intake) {
-          if (intake.entityType) setEntityType(intake.entityType);
-          if (intake.stateOfIncorporation) setStateOfIncorporation(intake.stateOfIncorporation);
-          if (intake.principalAddress) setPrincipalAddress(intake.principalAddress);
-          if (intake.city) setCity(intake.city);
-          if (intake.state) setAddrState(intake.state);
-          if (intake.zip) setZip(intake.zip);
           if (intake.yearEstablished) setYearEstablished(String(intake.yearEstablished));
-          if (intake.firstRevenueDate) setFirstRevenueDate(intake.firstRevenueDate);
+          if (intake.firstRevenueDate) setFirstRevenueDate(String(intake.firstRevenueDate).split("T")[0]);
           if (intake.naicsCodes) setNaicsCodes(intake.naicsCodes);
+
+          // Owners (JSON string from API)
           if (intake.owners) {
             try {
               const parsed = typeof intake.owners === "string" ? JSON.parse(intake.owners) : intake.owners;
               if (Array.isArray(parsed) && parsed.length > 0) setOwners(parsed);
             } catch {}
           }
-          if (intake.revenueYear1) setRevenueYear1(String(intake.revenueYear1));
-          if (intake.revenueYear2) setRevenueYear2(String(intake.revenueYear2));
-          if (intake.revenueYear3) setRevenueYear3(String(intake.revenueYear3));
+
+          // Revenue (stored as JSON array [yr1, yr2, yr3])
+          if (intake.revenue3Years) {
+            try {
+              const rev = typeof intake.revenue3Years === "string" ? JSON.parse(intake.revenue3Years) : intake.revenue3Years;
+              if (Array.isArray(rev)) {
+                if (rev[0]) setRevenueYear1(String(rev[0]));
+                if (rev[1]) setRevenueYear2(String(rev[1]));
+                if (rev[2]) setRevenueYear3(String(rev[2]));
+              }
+            } catch {}
+          }
+
           if (intake.employeeCount) setEmployeeCount(String(intake.employeeCount));
-          if (intake.netWorthRange) setNetWorthRange(intake.netWorthRange);
-          if (intake.agiRange) setAgiRange(intake.agiRange);
-          if (intake.totalAssetsRange) setTotalAssetsRange(intake.totalAssetsRange);
-          if (intake.hubzoneZip) setHubzoneZip(intake.hubzoneZip);
-          if (intake.hubzoneEmployeePct) setHubzoneEmployeePct(String(intake.hubzoneEmployeePct));
+          if (intake.ownerNetWorth) setNetWorthRange(intake.ownerNetWorth);
+          if (intake.ownerAGI) setAgiRange(intake.ownerAGI);
+          if (intake.ownerTotalAssets) setTotalAssetsRange(intake.ownerTotalAssets);
+          if (intake.principalZip) setHubzoneZip(intake.principalZip);
+          if (intake.hubZoneEmployeePct) setHubzoneEmployeePct(String(intake.hubZoneEmployeePct));
+          if (intake.isHubZone !== null && intake.isHubZone !== undefined) setHubzoneResult(intake.isHubZone);
           if (intake.samRegistered) setSamRegistered(intake.samRegistered);
-          if (intake.activeContracts) setActiveContracts(intake.activeContracts);
+          if (intake.activeFederalContracts !== null && intake.activeFederalContracts !== undefined) setActiveContracts(intake.activeFederalContracts);
           if (intake.completedContracts) setCompletedContracts(String(intake.completedContracts));
-          if (intake.cparsAvailable) setCparsAvailable(intake.cparsAvailable);
-          if (intake.pastPerfRefs) setPastPerfRefs(intake.pastPerfRefs);
+
+          // Existing certs (JSON string)
           if (intake.existingCerts) {
             try {
               const parsed = typeof intake.existingCerts === "string" ? JSON.parse(intake.existingCerts) : intake.existingCerts;
               if (Array.isArray(parsed)) setExistingCerts(parsed);
             } catch {}
           }
-          if (intake.currentStep) setStep(intake.currentStep);
+
+          if (intake.completedSteps && intake.completedSteps > 0) setStep(Math.min(intake.completedSteps + 1, 7) as any);
         }
       } catch { /* no existing intake */ }
     } catch (err) {

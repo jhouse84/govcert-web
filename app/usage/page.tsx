@@ -99,9 +99,37 @@ export default function UsagePage() {
         apiRequest("/api/usage/integrations"),
         apiRequest("/api/usage/per-user"),
       ]);
-      if (summaryRes.status === "fulfilled") setSummary(summaryRes.value);
-      if (historyRes.status === "fulfilled") setHistory(historyRes.value);
-      if (integrationsRes.status === "fulfilled") setIntegrations(integrationsRes.value);
+      if (summaryRes.status === "fulfilled") {
+        const raw = summaryRes.value;
+        // Map API response to expected interface shape
+        const aiCalls = (raw.breakdownByService || []).find((s: any) => s.service === "anthropic");
+        setSummary({
+          thisMonthCost: raw.currentMonthTotal || 0,
+          lastMonthCost: raw.previousMonthTotal || 0,
+          aiCallsThisMonth: aiCalls?.count || 0,
+          activeIntegrations: 0,
+          serviceBreakdown: (raw.breakdownByService || []).map((s: any) => ({
+            service: s.service, cost: s.totalCost || 0, calls: s.count || 0,
+          })),
+          clientBreakdown: (raw.breakdownByClient || []).map((c: any) => ({
+            clientId: c.clientId, clientName: c.clientName || "Unknown",
+            integrations: [], aiCalls: c.count || 0, estimatedCost: c.totalCost || 0,
+          })),
+        });
+      }
+      if (historyRes.status === "fulfilled") {
+        const raw = historyRes.value;
+        setHistory({ months: (Array.isArray(raw) ? raw : []).map((m: any) => ({ month: m.month, cost: m.totalCost || 0 })) });
+      }
+      if (integrationsRes.status === "fulfilled") {
+        const raw = integrationsRes.value;
+        setIntegrations(Array.isArray(raw) ? raw.map((c: any) => ({
+          clientId: c.clientId, clientName: c.clientName,
+          integrations: (c.integrations || []).map((i: any) => ({
+            provider: i.provider, connectedDate: i.connectedAt, lastRefreshed: i.lastUpdated, status: "connected" as const,
+          })),
+        })) : []);
+      }
       if (perUserRes.status === "fulfilled") setPerUserData(Array.isArray(perUserRes.value) ? perUserRes.value : []);
     } catch (err) {
       console.error("Failed to fetch usage data:", err);

@@ -267,29 +267,35 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
 
   async function sendPPQ(index: number) {
     const contract = contracts[index];
-    if (!contract.referenceEmail || !contract.id) return;
+    if (!contract.referenceEmail || !contract.id) {
+      setError("Reference email is required to send PPQ.");
+      return;
+    }
     setSendingPPQ(contract.id);
+    setError(null);
     try {
+      const referenceName = [contract.referenceFirstName, contract.referenceLastName].filter(Boolean).join(" ") || "Reference";
       await apiRequest(`/api/ppq`, {
         method: "POST",
         body: JSON.stringify({
           pastPerformanceId: contract.id,
           referenceEmail: contract.referenceEmail,
-          referenceFirstName: contract.referenceFirstName,
-          referenceLastName: contract.referenceLastName,
-          referenceTitle: contract.referenceTitle,
-          contractorName: cert?.client?.businessName,
-          agencyName: contract.agencyName,
-          contractNumber: contract.contractNumber,
-          periodStart: contract.periodStart,
-          periodEnd: contract.periodEnd,
+          referenceName,
+          referenceTitle: contract.referenceTitle || "",
+          referenceAgency: contract.agencyName || "",
+          contractorName: cert?.client?.businessName || "",
+          agencyName: contract.agencyName || "",
+          contractNumber: contract.contractNumber || "",
+          periodStart: contract.periodStart || "",
+          periodEnd: contract.periodEnd || "",
         })
       });
       const updated = [...contracts];
       updated[index] = { ...contract, ppqStatus: "SENT" };
       setContracts(updated);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("PPQ send error:", err);
+      setError("Failed to send PPQ: " + (err.message || "Please check the reference email and try again."));
     } finally {
       setSendingPPQ(null);
     }

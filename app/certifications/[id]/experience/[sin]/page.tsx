@@ -3,31 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
-const SIN_LABELS: Record<string, string> = {
-  "541511": "Custom Computer Programming Services",
-  "541512": "Computer Systems Design Services",
-  "541519": "Other Computer Related Services",
-  "541611": "Administrative Management & General Management Consulting",
-  "541613": "Marketing Consulting Services",
-  "541618": "Other Management Consulting Services",
-  "541690": "Scientific & Technical Consulting Services",
-  "561110": "Office Administrative Services",
-  "561210": "Facilities Support Services",
-  "611430": "Professional & Management Development Training",
-};
-
-const SIN_HINTS: Record<string, string> = {
-  "541511": "Describe custom software development, application development, or programming work you have delivered for clients.",
-  "541512": "Describe systems design, architecture, integration, or IT infrastructure projects you have completed.",
-  "541519": "Describe IT support, help desk, network administration, or other computer-related services you have provided.",
-  "541611": "Describe management consulting, organizational strategy, or business process improvement engagements.",
-  "541613": "Describe marketing strategy, campaign management, digital marketing, or brand consulting work.",
-  "541618": "Describe consulting engagements that improved operations, efficiency, or organizational performance.",
-  "541690": "Describe scientific, engineering, or technical advisory work you have performed.",
-  "561110": "Describe office administration, records management, or administrative support services delivered.",
-  "561210": "Describe facilities management, maintenance, or support services you have provided.",
-  "611430": "Describe training programs, curricula, workshops, or professional development you have delivered.",
-};
+import { SIN_LABELS } from "@/lib/sins";
 
 export default function ProjectExperiencePage({ params }: { params: Promise<{ id: string; sin: string }> }) {
   const router = useRouter();
@@ -52,7 +28,7 @@ export default function ProjectExperiencePage({ params }: { params: Promise<{ id
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sinLabel = SIN_LABELS[sinCode] || `SIN ${sinCode}`;
-  const sinHint = SIN_HINTS[sinCode] || "Describe relevant project experience for this SIN.";
+  const sinHint = `Describe relevant project experience for ${sinLabel || 'this SIN'}. Include specific projects, methodologies, outcomes, and how the work aligns with this service category.`;
   const charLimit = 10000;
 
   useEffect(() => {

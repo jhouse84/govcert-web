@@ -13,18 +13,7 @@ const CERT_LABELS: Record<string, string> = {
   VOSB: "Veteran-Owned Small Business",
 };
 
-const SIN_LABELS: Record<string, string> = {
-  "541511": "Custom Computer Programming",
-  "541512": "Computer Systems Design",
-  "541519": "Other Computer Related Services",
-  "541611": "Management Consulting",
-  "541613": "Marketing Consulting",
-  "541618": "Other Management Consulting",
-  "541690": "Scientific & Technical Consulting",
-  "561110": "Office Administrative Services",
-  "561210": "Facilities Support Services",
-  "611430": "Professional & Management Training",
-};
+import { GSA_SIN_LIST, SIN_LABELS, SIN_CATEGORIES } from "@/lib/sins";
 
 export default function CertificationDashboard({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -36,6 +25,8 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
   const [sinPickerOpen, setSinPickerOpen] = useState(false);
   const [selectedSINsPicker, setSelectedSINsPicker] = useState<string[]>([]);
   const [savingSINs, setSavingSINs] = useState(false);
+  const [sinSearch, setSinSearch] = useState("");
+  const [sinCategoryFilter, setSinCategoryFilter] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -294,21 +285,44 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
           )}
 
           {/* SIN Selection — show if GSA_MAS and no SINs selected */}
-          {cert?.type === "GSA_MAS" && (selectedSINs.length === 0 || sinPickerOpen) && (
+          {cert?.type === "GSA_MAS" && (selectedSINs.length === 0 || sinPickerOpen) && (() => {
+            const filteredSINs = GSA_SIN_LIST.filter(s =>
+              (!sinCategoryFilter || s.category === sinCategoryFilter) &&
+              (!sinSearch || s.code.toLowerCase().includes(sinSearch.toLowerCase()) || s.label.toLowerCase().includes(sinSearch.toLowerCase()) || s.category.toLowerCase().includes(sinSearch.toLowerCase()))
+            );
+            return (
             <div style={{ background: "#fff", border: "2px solid var(--gold)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 20, boxShadow: "var(--shadow-lg)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div>
                   <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>
                     {selectedSINs.length === 0 ? "Select Your SIN Codes" : "Edit SIN Codes"}
                   </h3>
-                  <p style={{ fontSize: 13, color: "var(--ink3)" }}>Choose the Special Item Numbers (SINs) you want to offer under your GSA Schedule.</p>
+                  <p style={{ fontSize: 13, color: "var(--ink3)" }}>Choose the Special Item Numbers (SINs) you want to offer under your GSA Schedule. Search or filter by category.</p>
                 </div>
                 {sinPickerOpen && selectedSINs.length > 0 && (
-                  <button onClick={() => setSinPickerOpen(false)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "var(--ink4)" }}>&#x2715;</button>
+                  <button onClick={() => { setSinPickerOpen(false); setSinSearch(""); setSinCategoryFilter(""); }} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "var(--ink4)" }}>&#x2715;</button>
                 )}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
-                {Object.entries(SIN_LABELS).map(([code, label]) => {
+              {/* Search + Category filter */}
+              <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                <input type="text" value={sinSearch} onChange={e => setSinSearch(e.target.value)} placeholder="Search SINs by code, name, or category..."
+                  style={{ flex: 1, padding: "9px 14px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                <select value={sinCategoryFilter} onChange={e => setSinCategoryFilter(e.target.value)}
+                  style={{ padding: "9px 14px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink)", background: "#fff", outline: "none", minWidth: 180 }}>
+                  <option value="">All Categories ({GSA_SIN_LIST.length} SINs)</option>
+                  {SIN_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat} ({GSA_SIN_LIST.filter(s => s.category === cat).length})</option>
+                  ))}
+                </select>
+              </div>
+              {/* Selected count */}
+              {selectedSINsPicker.length > 0 && (
+                <div style={{ padding: "8px 14px", background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.2)", borderRadius: "var(--r)", marginBottom: 12, fontSize: 13, color: "var(--gold)", fontWeight: 500 }}>
+                  {selectedSINsPicker.length} SIN{selectedSINsPicker.length !== 1 ? "s" : ""} selected: {selectedSINsPicker.join(", ")}
+                </div>
+              )}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20, maxHeight: 400, overflowY: "auto" }}>
+                {filteredSINs.map(({ code, label, category }) => {
                   const isSelected = selectedSINsPicker.includes(code) || (!sinPickerOpen && selectedSINs.includes(code));
                   return (
                     <label key={code} onClick={() => {
@@ -319,19 +333,23 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
                       }
                       setSelectedSINsPicker(prev => prev.includes(code) ? prev.filter(s => s !== code) : [...prev, code]);
                     }} style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: "var(--r)",
+                      display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: "var(--r)",
                       border: `1.5px solid ${isSelected ? "var(--gold)" : "var(--border)"}`,
                       background: isSelected ? "rgba(200,155,60,.06)" : "#fff",
                       cursor: "pointer", transition: "all .12s",
                     }}>
-                      <input type="checkbox" checked={isSelected} readOnly style={{ accentColor: "var(--gold)", pointerEvents: "none" }} />
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: isSelected ? "var(--gold)" : "var(--navy)" }}>{code}</div>
-                        <div style={{ fontSize: 11, color: "var(--ink3)" }}>{label}</div>
+                      <input type="checkbox" checked={isSelected} readOnly style={{ accentColor: "var(--gold)", pointerEvents: "none", flexShrink: 0 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: isSelected ? "var(--gold)" : "var(--navy)" }}>{code}</div>
+                        <div style={{ fontSize: 11, color: "var(--ink3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{label}</div>
+                        <div style={{ fontSize: 10, color: "var(--ink4)" }}>{category}</div>
                       </div>
                     </label>
                   );
                 })}
+                {filteredSINs.length === 0 && (
+                  <div style={{ gridColumn: "1 / -1", textAlign: "center" as const, padding: 20, color: "var(--ink4)", fontSize: 13 }}>No SINs match your search. Try a different term or clear filters.</div>
+                )}
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
                 <button onClick={saveSINs} disabled={savingSINs || selectedSINsPicker.length === 0}
@@ -340,7 +358,8 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
                 </button>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Edit SINs link */}
           {cert?.type === "GSA_MAS" && selectedSINs.length > 0 && !sinPickerOpen && (

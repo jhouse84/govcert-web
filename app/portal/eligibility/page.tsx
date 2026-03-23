@@ -83,6 +83,8 @@ function PortalEligibilityPageInner() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [assessing, setAssessing] = useState(false);
+  const [domainMatch, setDomainMatch] = useState<any>(null);
+  const [importing, setImporting] = useState(false);
 
   // Step 1
   const [businessName, setBusinessName] = useState("");
@@ -164,6 +166,16 @@ function PortalEligibilityPageInner() {
           const clients = await apiRequest("/api/clients");
           if (clients && clients.length > 0) {
             cId = clients[0].id;
+          }
+        } catch {}
+      }
+
+      // Check for domain-matched company data to offer import
+      if (cId) {
+        try {
+          const domainMatch = await apiRequest("/api/clients/domain-match");
+          if (domainMatch.found && domainMatch.clientData) {
+            setDomainMatch(domainMatch);
           }
         } catch {}
       }
@@ -520,6 +532,53 @@ function PortalEligibilityPageInner() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Domain match prompt — offer to import existing company data */}
+      {domainMatch && domainMatch.found && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(11,25,41,.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "36px 40px", maxWidth: 520, width: "100%", boxShadow: "0 24px 80px rgba(0,0,0,.25)" }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🏢</div>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>
+              We found existing company data
+            </h2>
+            <p style={{ fontSize: 14, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 16 }}>
+              Another user from <strong>@{domainMatch.domain}</strong> has already entered data for <strong>{domainMatch.companyName}</strong>. Would you like to import it to save time?
+            </p>
+            <div style={{ background: "var(--cream)", borderRadius: "var(--r)", padding: "14px 18px", marginBottom: 20 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--gold)", marginBottom: 8 }}>Available to import ({domainMatch.fieldsAvailable} fields):</div>
+              {domainMatch.clientData.businessName && <div style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 3 }}>Business Name: <strong>{domainMatch.clientData.businessName}</strong></div>}
+              {domainMatch.clientData.uei && <div style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 3 }}>UEI: {domainMatch.clientData.uei}</div>}
+              {domainMatch.clientData.cageCode && <div style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 3 }}>CAGE: {domainMatch.clientData.cageCode}</div>}
+              {domainMatch.clientData.address && <div style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 3 }}>Address: {[domainMatch.clientData.address, domainMatch.clientData.city, domainMatch.clientData.state].filter(Boolean).join(", ")}</div>}
+              {domainMatch.clientData.naicsCodes && <div style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 3 }}>NAICS: {domainMatch.clientData.naicsCodes}</div>}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={async () => {
+                setImporting(true);
+                try {
+                  await apiRequest(`/api/clients/${clientId}/import-domain`, {
+                    method: "POST",
+                    body: JSON.stringify({ sourceData: domainMatch.clientData }),
+                  });
+                  setDomainMatch(null);
+                  window.location.reload();
+                } catch { setDomainMatch(null); }
+                finally { setImporting(false); }
+              }}
+                style={{ flex: 1, padding: "12px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
+                {importing ? "Importing..." : "Yes, Import Data"}
+              </button>
+              <button onClick={() => setDomainMatch(null)}
+                style={{ flex: 1, padding: "12px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 14, color: "var(--ink3)", cursor: "pointer" }}>
+                No, Start Fresh
+              </button>
+            </div>
+            <p style={{ fontSize: 11, color: "var(--ink4)", textAlign: "center" as const, marginTop: 12 }}>
+              Imported data will only fill empty fields. You can always edit everything later.
+            </p>
           </div>
         </div>
       )}

@@ -363,7 +363,7 @@ function PortalEligibilityPageInner() {
       // Run assessment
       const result = await apiRequest(`/api/eligibility/${clientId}/assess`, { method: "POST" });
       console.log("Assessment result:", result);
-      router.push("/portal?assessed=true");
+      router.push("/portal/eligibility/results");
     } catch (err: any) {
       console.error("Assessment failed:", err);
       alert("Assessment failed: " + (err.message || "Unknown error. Please try again."));

@@ -47,9 +47,16 @@ export default function EligibilityScorecard({ clientId, compact = false }: Elig
   async function fetchEligibility() {
     try {
       const data = await apiRequest(`/api/eligibility/${clientId}`);
-      if (data.assessmentResults && data.assessmentResults.length > 0) {
-        setAssessments(data.assessmentResults);
-        setHasAssessment(true);
+      if (data.assessmentResults) {
+        const results = data.assessmentResults;
+        // assessmentResults is an object with { assessments, stateCerts, recommendedNext }
+        const allCerts = [...(results.assessments || []), ...(results.stateCerts || [])];
+        if (allCerts.length > 0) {
+          setAssessments(allCerts);
+          setHasAssessment(true);
+        } else {
+          setHasAssessment(false);
+        }
       } else {
         setHasAssessment(false);
       }

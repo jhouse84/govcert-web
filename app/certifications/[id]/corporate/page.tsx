@@ -103,22 +103,106 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
     finally { setLoading(false); }
   }
 
+  // ── AUTO-PREFILL from existing client data on load ──
+  useEffect(() => {
+    if (!cert?.clientId || Object.values(guidedAnswers).some(v => v && v.trim() !== "")) return;
+    // Only auto-prefill if guided answers are empty
+    (async () => {
+      try {
+        const clientId = cert.clientId || cert.client?.id;
+        if (!clientId) return;
+        // Fetch eligibility data
+        const eligData = await apiRequest(`/api/eligibility/${clientId}`).catch(() => null);
+        const clientData = cert.client || {};
+
+        const auto: Record<string, string> = {};
+
+        // Years in business
+        if (eligData?.yearEstablished) {
+          const years = new Date().getFullYear() - eligData.yearEstablished;
+          auto.yearsInBusiness = `${clientData.businessName || "Our company"} was established in ${eligData.yearEstablished}, giving us ${years} years of experience in the industry.`;
+        }
+
+        // NAICS / core services
+        if (eligData?.naicsCodes) {
+          auto.coreServices = `Our core service areas align with NAICS codes ${eligData.naicsCodes}. We specialize in delivering professional services to both government and commercial clients.`;
+        }
+
+        // Employees
+        if (eligData?.employeeCount) {
+          auto.teamCapacity = `Our team consists of ${eligData.employeeCount} professionals with expertise across our service areas.`;
+        }
+
+        // Revenue
+        let revenue3: any[] = [];
+        if (eligData?.revenue3Years) {
+          try { revenue3 = typeof eligData.revenue3Years === "string" ? JSON.parse(eligData.revenue3Years) : eligData.revenue3Years; } catch {}
+        }
+        if (revenue3.some(Boolean)) {
+          const revStr = revenue3.filter(Boolean).map((r: any) => "$" + Number(r).toLocaleString()).join(", ");
+          auto.revenueStability = `Our annual revenue over the past three years has been ${revStr}, demonstrating consistent financial stability and growth.`;
+        }
+
+        // SAM registration
+        if (eligData?.samRegistered === "Yes" || eligData?.samRegistered === "yes") {
+          auto.certifications = (auto.certifications || "") + " We are registered in SAM.gov and maintain active registration.";
+        }
+
+        // Past contracts
+        if (eligData?.completedContracts && eligData.completedContracts > 0) {
+          auto.customerBase = `We have successfully completed ${eligData.completedContracts} contracts spanning both government and commercial sectors.`;
+        }
+
+        // Location
+        if (clientData.city && clientData.state) {
+          auto.additionalContext = `Based in ${clientData.city}, ${clientData.state}, ${clientData.businessName || "our company"} serves clients across multiple regions.`;
+        }
+
+        if (Object.keys(auto).length > 0) {
+          setGuidedAnswers(prev => {
+            const merged = { ...prev };
+            for (const [k, v] of Object.entries(auto)) {
+              if (!merged[k] || merged[k].trim() === "") merged[k] = v;
+            }
+            return merged;
+          });
+        }
+      } catch {}
+    })();
+  }, [cert?.clientId]);
+
   // ── FILE UPLOAD ──
   async function handleFileUpload(files: File[]) {
     setUploading(true);
     const newTexts: { name: string; text: string }[] = [];
+    const token = localStorage.getItem("token");
+    const clientId = cert?.clientId || cert?.client?.id;
     try {
       for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/extract-text`, {
+        // 1. Extract text for AI use
+        const extractForm = new FormData();
+        extractForm.append("file", file);
+        const extractRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/upload/extract-text`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
-          body: formData,
+          body: extractForm,
         });
-        const data = await res.json();
-        if (data.text) newTexts.push({ name: file.name, text: data.text });
+        const extractData = await extractRes.json();
+        if (extractData.text) newTexts.push({ name: file.name, text: extractData.text });
+
+        // 2. Also save to document vault (so it appears in My Documents)
+        if (clientId) {
+          const saveForm = new FormData();
+          saveForm.append("file", file);
+          saveForm.append("clientId", clientId);
+          saveForm.append("category", "OTHER");
+          saveForm.append("description", `Uploaded during ${cert?.type || "certification"} application — Corporate Experience section`);
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/upload`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: saveForm,
+          }).catch(() => {}); // Fire and forget — don't block the wizard
+        }
       }
       setUploadedFiles(prev => [...prev, ...files]);
       setUploadedTexts(prev => [...prev, ...newTexts]);

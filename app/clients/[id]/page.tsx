@@ -71,6 +71,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [sbaLoading, setSbaLoading] = useState(false);
   const [sbaError, setSbaError] = useState<string | null>(null);
 
+  // Review history state
+  const [clientReviews, setClientReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+
   // Eligibility assessment state
   const [eligibility, setEligibility] = useState<any>(null);
   const [eligibilityLoading, setEligibilityLoading] = useState(true);
@@ -86,6 +90,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     fetchClient();
     fetchOAuthStatus();
     fetchEligibility();
+    fetchClientReviews();
 
     // Show success banner if redirected back from OAuth
     const connected = searchParams.get("connected");
@@ -219,6 +224,34 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     } finally {
       setReassessing(false);
     }
+  }
+
+  async function fetchClientReviews() {
+    setReviewsLoading(true);
+    try {
+      const data = await apiRequest(`/api/applications/ai/reviews?clientId=${clientId}`);
+      const list = Array.isArray(data) ? data : data.reviews || [];
+      setClientReviews(list);
+    } catch (err) {
+      console.error("Failed to fetch client reviews:", err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }
+
+  function getReviewScoreColor(score: number) {
+    if (score >= 80) return "#27ae60";
+    if (score >= 60) return "#C89B3C";
+    if (score >= 40) return "#e67e22";
+    return "#e74c3c";
+  }
+
+  function getReviewVerdictColor(verdict: string) {
+    if (verdict === "STRONG") return "#27ae60";
+    if (verdict === "COMPETITIVE") return "#2980b9";
+    if (verdict === "NEEDS_IMPROVEMENT" || verdict === "NEEDS_WORK") return "#C89B3C";
+    if (verdict === "NOT_READY") return "#e74c3c";
+    return "var(--ink3)";
   }
 
   function getStatusBadgeStyle(status: string) {
@@ -474,6 +507,90 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     </div>
   </div>
 ))
+            )}
+          </div>
+
+          {/* ── REVIEW HISTORY ── */}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>AI Reviews</div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400 }}>Review History</h2>
+              </div>
+            </div>
+
+            {reviewsLoading ? (
+              <div style={{ textAlign: "center", padding: "32px 0", color: "var(--ink4)", fontSize: 13 }}>Loading reviews...</div>
+            ) : clientReviews.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "var(--ink4)" }}>
+                <div style={{ fontSize: 28, marginBottom: 10 }}>📝</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink3)", marginBottom: 4 }}>No reviews yet</div>
+                <div style={{ fontSize: 12, color: "var(--ink4)" }}>AI reviews will appear here once generated for this client</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Score Timeline Bar */}
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 60, padding: "0 4px", marginBottom: 8 }}>
+                  {clientReviews.slice().reverse().map((review: any, idx: number) => {
+                    const score = review.overallScore || 0;
+                    const barHeight = Math.max(8, (score / 100) * 56);
+                    const date = review.createdAt ? new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+                    return (
+                      <div key={review.id || idx} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                        <div style={{ fontSize: 9, color: "var(--ink4)", fontWeight: 500 }}>{score}</div>
+                        <div style={{ width: "100%", maxWidth: 32, height: barHeight, background: getReviewScoreColor(score), borderRadius: "4px 4px 0 0", opacity: 0.85 }} />
+                        <div style={{ fontSize: 8, color: "var(--ink4)", whiteSpace: "nowrap" as const }}>{date}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Review Cards */}
+                {clientReviews.map((review: any, idx: number) => {
+                  const score = review.overallScore || 0;
+                  const verdict = review.overallVerdict || "";
+                  const verdictLabel = verdict.replace(/_/g, " ");
+                  const certType = (review.certType || "").replace(/_/g, " ");
+                  const date = review.createdAt ? new Date(review.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
+                  let criticalIssuesCount = 0;
+                  try {
+                    const parsed = typeof review.criticalIssues === "string" ? JSON.parse(review.criticalIssues) : review.criticalIssues;
+                    criticalIssuesCount = Array.isArray(parsed) ? parsed.length : 0;
+                  } catch { /* ignore */ }
+                  const reviewerId = review.reviewedBy ? `${review.reviewedBy.firstName || ""} ${review.reviewedBy.lastName || ""}`.trim() : "AI";
+
+                  return (
+                    <div key={review.id || idx} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
+                        {/* Score circle */}
+                        <div style={{ width: 48, height: 48, borderRadius: "50%", border: `3px solid ${getReviewScoreColor(score)}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: getReviewScoreColor(score) }}>{score}</span>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                            <span style={{ display: "inline-flex", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600, color: getReviewVerdictColor(verdict), background: `${getReviewVerdictColor(verdict)}15` }}>
+                              {verdictLabel}
+                            </span>
+                            {certType && <span style={{ fontSize: 12, color: "var(--ink3)" }}>{certType}</span>}
+                          </div>
+                          <div style={{ display: "flex", gap: 12, fontSize: 12, color: "var(--ink4)" }}>
+                            <span>{date}</span>
+                            {criticalIssuesCount > 0 && (
+                              <span style={{ color: "#e74c3c", fontWeight: 500 }}>{criticalIssuesCount} critical issue{criticalIssuesCount !== 1 ? "s" : ""}</span>
+                            )}
+                            {reviewerId && <span>by {reviewerId}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      {review.id && (
+                        <a href={`/reviews/${review.id}`} style={{ fontSize: 12, color: "var(--gold)", textDecoration: "none", fontWeight: 500, whiteSpace: "nowrap" as const }}>
+                          View Full Review →
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 

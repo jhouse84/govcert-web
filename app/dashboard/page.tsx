@@ -7,6 +7,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState({ clients: 0, certifications: 0, pending: 0, expiring: 0 });
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewStats, setReviewStats] = useState({ total: 0, avgScore: 0, notReady: 0, competitive: 0, strong: 0, needsWork: 0 });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -21,6 +23,7 @@ export default function DashboardPage() {
       setUser(parsed);
     }
     fetchStats();
+    fetchReviews();
   }, []);
 
   async function fetchStats() {
@@ -39,6 +42,38 @@ export default function DashboardPage() {
     } catch (err) {
       console.error("Failed to fetch stats:", err);
     }
+  }
+
+  async function fetchReviews() {
+    try {
+      const data = await apiRequest("/api/applications/ai/reviews");
+      const list = Array.isArray(data) ? data : data.reviews || [];
+      setReviews(list);
+      const total = list.length;
+      const avgScore = total > 0 ? Math.round(list.reduce((sum: number, r: any) => sum + (r.overallScore || 0), 0) / total) : 0;
+      const notReady = list.filter((r: any) => r.overallVerdict === "NOT_READY").length;
+      const competitive = list.filter((r: any) => r.overallVerdict === "COMPETITIVE").length;
+      const strong = list.filter((r: any) => r.overallVerdict === "STRONG").length;
+      const needsWork = list.filter((r: any) => r.overallVerdict === "NEEDS_IMPROVEMENT" || r.overallVerdict === "NEEDS_WORK").length;
+      setReviewStats({ total, avgScore, notReady, competitive, strong, needsWork });
+    } catch (err) {
+      console.error("Failed to fetch reviews:", err);
+    }
+  }
+
+  function getScoreColor(score: number) {
+    if (score >= 80) return "#27ae60";
+    if (score >= 60) return "#C89B3C";
+    if (score >= 40) return "#e67e22";
+    return "#e74c3c";
+  }
+
+  function getVerdictColor(verdict: string) {
+    if (verdict === "STRONG") return "#27ae60";
+    if (verdict === "COMPETITIVE") return "#2980b9";
+    if (verdict === "NEEDS_IMPROVEMENT" || verdict === "NEEDS_WORK") return "#C89B3C";
+    if (verdict === "NOT_READY") return "#e74c3c";
+    return "var(--ink3)";
   }
 
   function logout() {
@@ -152,6 +187,84 @@ export default function DashboardPage() {
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink3)", marginBottom: 4 }}>No activity yet</div>
                 <div style={{ fontSize: 12, color: "var(--ink4)" }}>Add your first client to get started</div>
               </div>
+            </div>
+          </div>
+
+          {/* GovCert Reviews */}
+          <div style={{ marginTop: 32 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>AI Reviews</div>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 20 }}>GovCert Reviews</h2>
+
+            {/* Review Aggregate Stats */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
+              {[
+                { label: "Total Reviews", value: String(reviewStats.total), color: "var(--navy)" },
+                { label: "Avg Score", value: String(reviewStats.avgScore), color: getScoreColor(reviewStats.avgScore) },
+                { label: "Strong", value: String(reviewStats.strong), color: "#27ae60" },
+                { label: "Competitive", value: String(reviewStats.competitive), color: "#2980b9" },
+                { label: "Not Ready", value: String(reviewStats.notReady), color: "#e74c3c" },
+              ].map(stat => (
+                <div key={stat.label} style={{ background: "#fff", borderRadius: 10, padding: "18px 16px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", border: "1px solid rgba(200,155,60,.08)", textAlign: "center" as const }}>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, color: stat.color, fontWeight: 400, lineHeight: 1 }}>{stat.value}</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginTop: 6 }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Reviews Table */}
+            <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", border: "1px solid rgba(200,155,60,.08)", overflow: "hidden" }}>
+              <div style={{ padding: "20px 24px 12px", borderBottom: "1px solid var(--border)" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Recent</div>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400 }}>Recent Reviews</h3>
+              </div>
+
+              {reviews.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "var(--ink4)" }}>
+                  <div style={{ fontSize: 28, marginBottom: 10 }}>📝</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink3)", marginBottom: 4 }}>No reviews yet</div>
+                  <div style={{ fontSize: 12, color: "var(--ink4)" }}>AI reviews will appear here once generated</div>
+                </div>
+              ) : (
+                <div>
+                  {/* Table Header */}
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 1fr 1fr 60px", gap: 12, padding: "10px 24px", background: "var(--cream)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink4)" }}>
+                    <div>Client</div>
+                    <div>Cert Type</div>
+                    <div>Score</div>
+                    <div>Verdict</div>
+                    <div>Date</div>
+                    <div></div>
+                  </div>
+                  {/* Table Rows */}
+                  {reviews.slice(0, 15).map((review: any, idx: number) => {
+                    const clientName = review.certification?.client?.businessName || "Unknown";
+                    const clientId = review.certification?.client?.id || review.certification?.clientId;
+                    const certType = (review.certType || "").replace(/_/g, " ");
+                    const score = review.overallScore || 0;
+                    const verdict = (review.overallVerdict || "").replace(/_/g, " ");
+                    const verdictRaw = review.overallVerdict || "";
+                    const date = review.createdAt ? new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+                    return (
+                      <div key={review.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 1fr 1fr 60px", gap: 12, padding: "12px 24px", borderBottom: "1px solid var(--border)", alignItems: "center", fontSize: 13 }}>
+                        <div style={{ fontWeight: 500, color: "var(--navy)" }}>{clientName}</div>
+                        <div style={{ color: "var(--ink3)" }}>{certType}</div>
+                        <div style={{ fontWeight: 600, color: getScoreColor(score) }}>{score}</div>
+                        <div>
+                          <span style={{ display: "inline-flex", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600, color: getVerdictColor(verdictRaw), background: `${getVerdictColor(verdictRaw)}15` }}>
+                            {verdict}
+                          </span>
+                        </div>
+                        <div style={{ color: "var(--ink4)", fontSize: 12 }}>{date}</div>
+                        <div>
+                          {clientId && (
+                            <a href={`/clients/${clientId}`} style={{ fontSize: 12, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>View →</a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

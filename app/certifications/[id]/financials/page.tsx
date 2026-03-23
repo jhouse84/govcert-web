@@ -201,7 +201,7 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
     }));
   }
 
-  async function saveFinancials() {
+  async function saveFinancials(navigate = false) {
     setSaving(true);
     setError(null);
     try {
@@ -216,7 +216,11 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
         }),
       });
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      if (navigate) {
+        setTimeout(() => router.push(`/certifications/${certId}/pricing`), 500);
+      } else {
+        setTimeout(() => setSaved(false), 3000);
+      }
     } catch (err: any) {
       setError("Failed to save: " + (err.message || "Unknown error"));
     } finally {
@@ -563,7 +567,7 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
                 <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>← Back to Dashboard</a>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   {saved && <span style={{ fontSize: 12, color: "var(--green)" }}>✓ Saved</span>}
-                  <button onClick={saveFinancials} disabled={saving}
+                  <button onClick={() => saveFinancials(true)} disabled={saving}
                     style={{ padding: "12px 28px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 16px rgba(200,155,60,.35)" }}>
                     {saving ? "Saving..." : "Save & Continue →"}
                   </button>

@@ -460,9 +460,22 @@ export default function PastPerformance8aPage({ params }: { params: Promise<{ id
             <a href={`/certifications/${certId}/8a/corporate`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>&larr; Previous: Corporate Experience</a>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {saved && <span style={{ fontSize: 13, color: "var(--green)", fontWeight: 500 }}>{"\u2713"} Saved</span>}
-              <button onClick={() => router.push(`/certifications/${certId}/8a/financials`)}
+              <button onClick={async () => {
+                setSaving(true);
+                try {
+                  for (let i = 0; i < contracts.length; i++) {
+                    await saveContract(contracts[i], i);
+                  }
+                  setSaved(true);
+                  setTimeout(() => router.push(`/certifications/${certId}/8a/financials`), 500);
+                } catch (err: any) {
+                  setError("Failed to save: " + err.message);
+                } finally {
+                  setSaving(false);
+                }
+              }} disabled={saving}
                 style={{ padding: "10px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
-                Next: Financials &rarr;
+                {saving ? "Saving..." : "Save & Next \u2192"}
               </button>
             </div>
           </div>

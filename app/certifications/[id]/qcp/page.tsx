@@ -172,12 +172,16 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
     });
   }
 
-  async function saveAnswers() {
+  async function saveAnswers(navigate = false) {
     setSaving(true);
     try {
       await saveAnswersData(answers);
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      if (navigate) {
+        setTimeout(() => router.push(`/certifications/${certId}/past-performance`), 500);
+      } else {
+        setTimeout(() => setSaved(false), 3000);
+      }
     } catch (err) { console.error(err); }
     finally { setSaving(false); }
   }
@@ -604,7 +608,7 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
                     style={{ padding: "8px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, cursor: "pointer", color: "var(--ink3)" }}>
                     Regenerate All
                   </button>
-                  <button onClick={saveAnswers} disabled={saving}
+                  <button onClick={() => saveAnswers(false)} disabled={saving}
                     style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
                     {saving ? "Saving..." : "Save Progress"}
                   </button>
@@ -659,9 +663,9 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
                 <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>
                   ← Back to Dashboard
                 </a>
-                <button onClick={saveAnswers} disabled={saving}
+                <button onClick={() => saveAnswers(true)} disabled={saving}
                   style={{ padding: "12px 28px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 16px rgba(200,155,60,.35)" }}>
-                  {saving ? "Saving..." : "Save & Continue"}
+                  {saving ? "Saving..." : "Save & Continue →"}
                 </button>
               </div>
             </div>

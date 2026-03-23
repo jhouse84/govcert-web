@@ -238,13 +238,14 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
       await saveData(narratives, guidedAnswers);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch (err: any) { setError("Failed to save: " + err.message); }
+      return true;
+    } catch (err: any) { setError("Failed to save: " + err.message); return false; }
     finally { setSaving(false); }
   }
 
   async function saveAndNavigate(next: boolean) {
-    await saveAll();
-    if (next) router.push(`/certifications/${certId}/8a/past-performance`);
+    const success = await saveAll();
+    if (next && success) setTimeout(() => router.push(`/certifications/${certId}/8a/past-performance`), 500);
   }
 
   const totalGuidedFilled = GUIDED_QUESTIONS.filter(q => guidedAnswers[q.id]?.trim()).length;

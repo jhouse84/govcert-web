@@ -124,16 +124,18 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      return true;
     } catch (err: any) {
       setError("Failed to save: " + err.message);
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
   async function saveAndNavigate(next: boolean) {
-    await saveData();
-    if (next) router.push(`/certifications/${certId}/8a/corporate`);
+    const success = await saveData();
+    if (next && success) setTimeout(() => router.push(`/certifications/${certId}/8a/corporate`), 500);
   }
 
   const filledCount = BP_SECTIONS.filter(s => sections[s.id]?.trim()).length;

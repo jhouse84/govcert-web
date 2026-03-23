@@ -138,16 +138,18 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      return true;
     } catch (err: any) {
       setError("Failed to save: " + err.message);
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
   async function saveAndNavigate(next: boolean) {
-    await saveAndNext();
-    if (next) router.push(`/certifications/${certId}/8a/business-plan`);
+    const success = await saveAndNext();
+    if (next && success) setTimeout(() => router.push(`/certifications/${certId}/8a/business-plan`), 500);
   }
 
   if (loading) return (

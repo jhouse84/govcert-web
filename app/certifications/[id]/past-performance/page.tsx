@@ -759,9 +759,10 @@ Scope of Work: ${contract.sowDescription}`,
           {/* Bottom nav */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 32 }}>
             <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>← Back to Dashboard</a>
-            <a href={`/certifications/${certId}`} style={{ padding: "12px 28px", background: "var(--gold)", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, textDecoration: "none", boxShadow: "0 4px 16px rgba(200,155,60,.35)" }}>
-              Save & Continue →
-            </a>
+            <button onClick={() => router.push(`/certifications/${certId}/financials`)} disabled={saving}
+              style={{ padding: "12px 28px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 16px rgba(200,155,60,.35)" }}>
+              {saving ? "Saving..." : "Save & Continue →"}
+            </button>
           </div>
         </div>
       </div>

@@ -163,16 +163,18 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      return true;
     } catch (err: any) {
       setError("Failed to save: " + err.message);
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
   async function saveAndNavigate(next: boolean) {
-    await saveAndNext();
-    if (next) router.push(`/certifications/${certId}/8a/economic-disadvantage`);
+    const success = await saveAndNext();
+    if (next && success) setTimeout(() => router.push(`/certifications/${certId}/8a/economic-disadvantage`), 500);
   }
 
   if (loading) return (

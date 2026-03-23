@@ -344,7 +344,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
     }
   }
 
-  async function savePricing() {
+  async function savePricing(navigate = false) {
     setSaving(true);
     setError(null);
     try {
@@ -359,7 +359,11 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
         }),
       });
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      if (navigate) {
+        setTimeout(() => router.push(`/certifications/${certId}/submit`), 500);
+      } else {
+        setTimeout(() => setSaved(false), 3000);
+      }
     } catch (err: any) {
       setError("Failed to save: " + (err.message || "Unknown error"));
     } finally {
@@ -921,7 +925,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                     style={{ padding: "8px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12.5, fontWeight: 500, cursor: lcats.length === 0 ? "not-allowed" : "pointer", opacity: lcats.length === 0 ? 0.5 : 1 }}>
                     ⬇ Export CSP-1
                   </button>
-                  <button onClick={savePricing} disabled={saving}
+                  <button onClick={() => savePricing(false)} disabled={saving}
                     style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 12.5, fontWeight: 500, cursor: "pointer" }}>
                     {saving ? "Saving..." : "Save"}
                   </button>
@@ -1045,7 +1049,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                     </button>
                   )}
                   {saved && <span style={{ fontSize: 12, color: "var(--green)" }}>✓ Saved</span>}
-                  <button onClick={savePricing} disabled={saving}
+                  <button onClick={() => savePricing(true)} disabled={saving}
                     style={{ padding: "12px 28px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 16px rgba(200,155,60,.35)" }}>
                     {saving ? "Saving..." : "Save & Continue →"}
                   </button>

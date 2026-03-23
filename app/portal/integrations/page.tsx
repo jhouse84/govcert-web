@@ -16,6 +16,14 @@ export default function PortalIntegrationsPage() {
   const [samResult, setSamResult] = useState<any>(null);
   const [samError, setSamError] = useState("");
 
+  // QuickBooks data pull
+  const [qbPulling, setQbPulling] = useState(false);
+  const [qbData, setQbData] = useState<any>(null);
+  const [qbError, setQbError] = useState("");
+
+  // OAuth error from redirect
+  const [oauthError, setOauthError] = useState("");
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -29,6 +37,19 @@ export default function PortalIntegrationsPage() {
       setUser(parsed);
     }
     fetchClientId();
+    // Check for OAuth error/success from redirect
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get("error");
+      if (err === "not_configured") setOauthError(`${params.get("provider") || "Provider"} is not configured yet. Contact support.`);
+      else if (err === "session_expired") setOauthError("Your session expired. Please try connecting again.");
+      else if (err === "oauth_failed") setOauthError("Connection failed: " + (params.get("detail") || "Please try again."));
+      else if (err) setOauthError("Connection error: " + err);
+      if (params.get("connected")) {
+        // Success — clear URL params
+        window.history.replaceState({}, "", "/portal/integrations");
+      }
+    }
   }, []);
 
   async function fetchClientId() {
@@ -77,6 +98,21 @@ export default function PortalIntegrationsPage() {
       const data = await apiRequest(`/api/oauth/status/${cId}`);
       setOauthStatus(data);
     } catch {}
+  }
+
+  async function pullQuickBooksData() {
+    if (!clientId) return;
+    setQbPulling(true);
+    setQbError("");
+    setQbData(null);
+    try {
+      const data = await apiRequest(`/api/oauth/quickbooks/pull?clientId=${clientId}`);
+      setQbData(data);
+    } catch (err: any) {
+      setQbError(err.message || "Failed to pull QuickBooks data.");
+    } finally {
+      setQbPulling(false);
+    }
   }
 
   function connectOAuth(provider: string) {
@@ -441,12 +477,80 @@ export default function PortalIntegrationsPage() {
                           {integration.connected ? "\u2713 Connected" : integration.cta}
                         </button>
                       )}
+                      {/* Pull Data button for connected QuickBooks */}
+                      {integration.id === "quickbooks" && integration.connected && (
+                        <button onClick={pullQuickBooksData} disabled={qbPulling}
+                          style={{ marginLeft: 8, padding: "11px 20px", background: qbPulling ? "var(--ink4)" : "var(--navy)", border: "none", borderRadius: 8, color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: qbPulling ? "wait" : "pointer" }}>
+                          {qbPulling ? "Pulling data..." : "📊 Pull Financial Data"}
+                        </button>
+                      }
                     </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {/* OAuth Error Banner */}
+          {oauthError && (
+            <div style={{ marginTop: 16, padding: "14px 20px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 13, color: "var(--red)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>{oauthError}</span>
+              <button onClick={() => { setOauthError(""); window.history.replaceState({}, "", "/portal/integrations"); }} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>&times;</button>
+            </div>
+          )}
+
+          {/* QB Error */}
+          {qbError && (
+            <div style={{ marginTop: 16, padding: "14px 20px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 13, color: "var(--red)" }}>
+              {qbError}
+            </div>
+          )}
+
+          {/* QuickBooks Data Results */}
+          {qbData && (
+            <div style={{ marginTop: 20, background: "#fff", border: "1px solid var(--green-b)", borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
+              <div style={{ padding: "16px 22px", background: "var(--green-bg)", borderBottom: "1px solid var(--green-b)" }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--green)" }}>QuickBooks Data Pulled Successfully</div>
+                <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 2 }}>Data has been automatically applied to your Company Profile and application sections.</div>
+              </div>
+              <div style={{ padding: "16px 22px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+                  {qbData.data?.companyInfo?.companyName && (
+                    <div style={{ padding: "10px 14px", background: "var(--cream)", borderRadius: "var(--r)" }}>
+                      <div style={{ fontSize: 10, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Company</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginTop: 2 }}>{qbData.data.companyInfo.companyName}</div>
+                    </div>
+                  )}
+                  {qbData.data?.employeeCount !== undefined && (
+                    <div style={{ padding: "10px 14px", background: "var(--cream)", borderRadius: "var(--r)" }}>
+                      <div style={{ fontSize: 10, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Employees</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginTop: 2 }}>{qbData.data.employeeCount}</div>
+                    </div>
+                  )}
+                  {qbData.data?.profitAndLoss?.[0] && (
+                    <div style={{ padding: "10px 14px", background: "var(--cream)", borderRadius: "var(--r)" }}>
+                      <div style={{ fontSize: 10, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Revenue ({qbData.data.profitAndLoss[0].year})</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginTop: 2 }}>${(qbData.data.profitAndLoss[0].totalIncome || 0).toLocaleString()}</div>
+                    </div>
+                  )}
+                  {qbData.data?.balanceSheet && (
+                    <div style={{ padding: "10px 14px", background: "var(--cream)", borderRadius: "var(--r)" }}>
+                      <div style={{ fontSize: 10, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Net Worth</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginTop: 2 }}>${(qbData.data.balanceSheet.equity || 0).toLocaleString()}</div>
+                    </div>
+                  )}
+                </div>
+                {qbData.dataMapping && (
+                  <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
+                    <strong>Auto-filled:</strong><br/>
+                    {Object.values(qbData.dataMapping).map((m: any, i: number) => (
+                      <span key={i}>&bull; {m}<br/></span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Help note */}
           <div style={{ marginTop: 28, padding: "20px 24px", background: "#fff", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", display: "flex", gap: 16, alignItems: "center" }}>

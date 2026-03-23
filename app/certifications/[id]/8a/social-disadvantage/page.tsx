@@ -15,13 +15,94 @@ const EIGHT_A_SECTIONS = [
 ];
 
 const GUIDED_QUESTIONS = [
-  { id: "identity", label: "Your Background", question: "What is your racial, ethnic, cultural background, gender, disability status, or other characteristic that forms the basis of your social disadvantage?", hint: "Be specific — e.g., 'I am a Black American woman' or 'I am Hispanic, born in Guatemala.' SBA needs to know the exact identity basis." },
-  { id: "incident1", label: "First Incident of Bias", question: "Describe a specific incident where you experienced discrimination, prejudice, or bias. Include WHEN it happened, WHERE, WHO was involved, WHAT happened, WHY you believe it was bias-motivated, and HOW it impacted your education, career, or business.", hint: "SBA requires the '5 W's and How' for each incident. Be as specific as possible — dates, names of organizations, concrete outcomes." },
-  { id: "incident2", label: "Second Incident of Bias", question: "Describe another specific incident of bias or discrimination. This should ideally be from a different life category (education, employment, or business) than your first incident.", hint: "SBA recommends at least 2 strong incidents spanning different categories. If your first was employment-related, try to describe one from education or business." },
-  { id: "education", label: "Educational Impact", question: "How has your social disadvantage affected your educational experience? Were you denied access, excluded from opportunities, discouraged from pursuing certain paths, or treated differently?", hint: "SBA evaluates: denial of access to higher education, exclusion from associations, denial of honors, social pressures discouraging professional education." },
-  { id: "employment", label: "Employment Impact", question: "How has your disadvantage affected your employment history? Describe unequal treatment in hiring, promotions, pay, or professional advancement.", hint: "SBA evaluates: unequal hiring/promotions/pay, retaliation, channeling into non-professional fields, discriminatory terms of employment." },
-  { id: "business", label: "Business Impact", question: "How has your disadvantage impacted your business? Describe barriers to capital, credit, contracts, or exclusion from professional networks.", hint: "SBA evaluates: unequal access to credit/capital, unfavorable commercial terms, unequal contract opportunities, exclusion from professional organizations." },
-  { id: "ongoing", label: "Ongoing Impact", question: "How does this disadvantage continue to affect you today? Focus on the ongoing negative impact — NOT how you overcame it, but how it remains a hurdle.", hint: "Critical: SBA looks for CHRONIC and SUBSTANTIAL disadvantage. Don't frame as a success story. Frame as an ongoing challenge that the 8(a) program can help address." },
+  {
+    id: "identity",
+    label: "Your Background",
+    question: "What is your racial, ethnic, cultural background, gender, disability status, or other characteristic that forms the basis of your social disadvantage?",
+    hint: "Be specific about how you identify. For example: 'I am a Black American woman,' 'I am a first-generation Mexican-American,' 'I am a South Asian immigrant,' or 'I have a documented physical disability.' The SBA needs to clearly understand the identity at the root of your experiences.",
+    prompts: [
+      "How do you identify racially and/or ethnically?",
+      "Were you born in the U.S. or did you immigrate? If so, from where?",
+      "Do you identify as a woman, a person with a disability, or a member of another disadvantaged group?",
+    ],
+  },
+  {
+    id: "incident1",
+    label: "First Incident of Bias",
+    question: "Think of a time when something went wrong in your education, career, or business — a setback, a rejection, a missed opportunity. Now trace it back: was there a moment where bias, prejudice, or discrimination played a role?",
+    hint: "Work backwards from the outcome. Maybe you were passed over for a promotion, denied a loan, lost a contract, or were excluded from a group. Then ask: would this have happened to someone who didn't share my background? Describe the specifics — SBA needs the 5 W's: When, Where, Who, What, Why it was bias, and How it impacted you.",
+    prompts: [
+      "What was the negative outcome? (e.g., denied a loan, passed over for promotion, lost a contract bid)",
+      "When and where did this happen? (approximate dates, organization, or city are fine)",
+      "Who was involved? (a boss, a loan officer, a contracting officer, a professor — you don't need exact names)",
+      "What made you believe it was motivated by your background rather than other factors?",
+      "What was the tangible impact? (e.g., delayed your business 2 years, cost you $50K, forced a career change)",
+    ],
+  },
+  {
+    id: "incident2",
+    label: "Second Incident of Bias",
+    question: "Think of another time when your background created a barrier. Ideally, choose a different area of your life — if your first example was about employment, think about school or your business. If it was about education, think about a time in your professional career.",
+    hint: "SBA looks for a pattern across your life — not just one isolated event. A strong second incident from a different category (education, employment, or business) shows that discrimination wasn't a one-time thing. Even subtle bias counts: being talked over in meetings, excluded from networking events, steered away from leadership roles, or receiving harsher scrutiny than peers.",
+    prompts: [
+      "Was there a time in school where you were treated differently, discouraged, or excluded because of your background?",
+      "In your career, were you ever paid less, given fewer opportunities, or treated with suspicion compared to colleagues?",
+      "In business, were you denied credit, shut out of partnerships, or treated differently by potential clients or agencies?",
+      "Did you ever feel you had to work twice as hard to get the same recognition as someone from a different background?",
+    ],
+  },
+  {
+    id: "education",
+    label: "Educational Impact",
+    question: "How did your background shape your educational journey? Think about whether you had the same access, support, and encouragement as your peers.",
+    hint: "This doesn't have to be dramatic — subtle patterns matter too. Think about: Were you in underfunded schools? Did guidance counselors steer you away from college or professional programs? Were you the only person who looked like you in your classes? Did financial barriers related to your background limit your options? Did you feel pressure to take a 'safe' path instead of pursuing business or advanced education?",
+    prompts: [
+      "What kind of schools did you attend? Were they well-funded and supportive?",
+      "Did anyone discourage you from pursuing higher education or professional training?",
+      "Were you excluded from honors programs, mentorships, or social groups that helped others advance?",
+      "Did financial hardship linked to your family's circumstances limit your educational choices?",
+      "Were you the first in your family to attend college or pursue a professional career?",
+    ],
+  },
+  {
+    id: "employment",
+    label: "Employment Impact",
+    question: "In your work history, were there moments where your background held you back — even if it wasn't said out loud?",
+    hint: "Discrimination at work is often unspoken. Think about: Were you hired at a lower level or salary than equally qualified peers? Were you passed over for promotions that went to less experienced colleagues? Were you assigned to less visible projects? Did you face microaggressions, assumptions about your competence, or a hostile work environment? Were you channeled into support roles instead of leadership?",
+    prompts: [
+      "Were you ever paid less or started at a lower level than peers with similar qualifications?",
+      "Were promotions or leadership opportunities given to others who were less qualified or experienced?",
+      "Did colleagues or supervisors make assumptions about your abilities based on your background?",
+      "Were you given less desirable assignments, excluded from important meetings, or left off key projects?",
+      "Did you ever leave a position — or feel forced to — because of how you were treated?",
+    ],
+  },
+  {
+    id: "business",
+    label: "Business Impact",
+    question: "As a business owner, where have you encountered barriers that you believe are connected to your background? Think about access to capital, contracts, networks, and opportunities.",
+    hint: "This is often the most impactful section for SBA. Think about: Were you denied business loans or offered worse terms than you deserved? Did you struggle to break into industry networks or professional associations? Were potential clients or partners dismissive? Did government or commercial buyers seem to overlook you? Were teaming partners reluctant to work with you? Did you lack access to mentors or sponsors in your industry?",
+    prompts: [
+      "Were you denied a business loan, line of credit, or bonding — or offered unfavorable terms?",
+      "Did you have difficulty finding teaming partners, mentors, or sponsors in your industry?",
+      "Were potential clients or agencies dismissive or skeptical in ways that felt connected to your background?",
+      "Were you excluded from industry associations, networking events, or 'old boys' club' circles?",
+      "Have you lost contract opportunities where you felt your background was a factor?",
+    ],
+  },
+  {
+    id: "ongoing",
+    label: "Ongoing Impact",
+    question: "How do these experiences continue to affect your business today? Don't focus on how you overcame them — focus on how they are still a hurdle.",
+    hint: "This is critical. SBA wants to see that disadvantage is ONGOING, not historical. Think about: Do you still lack access to the networks and capital that competitors have? Is your business smaller or growing slower than it would be without these barriers? Are you still competing at a disadvantage for contracts? Does your background still create trust barriers with clients or partners? The 8(a) program exists to level this playing field — explain why you still need it.",
+    prompts: [
+      "Is your business still smaller or less capitalized than it would be without these barriers?",
+      "Do you still lack access to professional networks that competitors take for granted?",
+      "Are you still at a disadvantage when competing for contracts against established firms?",
+      "Do clients or partners still make assumptions about your company based on your background?",
+      "How would the 8(a) program specifically help overcome the disadvantages you still face?",
+    ],
+  },
 ];
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
@@ -45,6 +126,8 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [listeningField, setListeningField] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
+  const [expandedCoaching, setExpandedCoaching] = useState<string | null>(null);
+  const [showIntroPopup, setShowIntroPopup] = useState(true);
 
   // Refine mode state
   const [narrative, setNarrative] = useState("");
@@ -353,6 +436,38 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
             </div>
           </div>
 
+          {/* Intro coaching popup */}
+          {showIntroPopup && mode === "gather" && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(11,25,41,.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+              onClick={() => setShowIntroPopup(false)}>
+              <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: "36px 40px", maxWidth: 580, width: "100%", boxShadow: "0 24px 80px rgba(0,0,0,.25)" }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>💡</div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 12 }}>Before you begin</h2>
+                <p style={{ fontSize: 14, color: "var(--ink2)", lineHeight: 1.7, marginBottom: 16 }}>
+                  This section asks you to recall personal experiences of disadvantage. These memories can be challenging, but they are essential to your 8(a) application. Here are some tips:
+                </p>
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 10, marginBottom: 20 }}>
+                  {[
+                    { icon: "🔄", text: "Work backwards from outcomes. Think of a time something went wrong — a rejection, a setback, a missed opportunity — and trace it back to a moment where bias may have played a role." },
+                    { icon: "📝", text: "Answer every question you can. The more detail you provide, the stronger your AI-generated narrative will be. Even a few sentences per question helps." },
+                    { icon: "💡", text: "Use the 'Need Help?' button on each question. It provides specific prompts to jog your memory and help you recall relevant experiences." },
+                    { icon: "🎙️", text: "Try voice input if writing is difficult. Sometimes it's easier to talk through your experiences than to type them." },
+                    { icon: "🤖", text: "Don't worry about polished language. Our AI will transform your raw answers into a professional, SBA-compliant narrative." },
+                  ].map((tip, i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <span style={{ fontSize: 18, flexShrink: 0 }}>{tip.icon}</span>
+                      <span style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.6 }}>{tip.text}</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setShowIntroPopup(false)}
+                  style={{ width: "100%", padding: "14px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 15, fontWeight: 600, color: "#fff", cursor: "pointer", boxShadow: "0 4px 20px rgba(200,155,60,.3)" }}>
+                  I'm Ready — Let's Begin
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ═══ GATHER MODE ═══ */}
           {mode === "gather" && (
             <div>
@@ -369,7 +484,9 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
                 </button>
               </div>
 
-              {GUIDED_QUESTIONS.map((q, i) => (
+              {GUIDED_QUESTIONS.map((q, i) => {
+                const isCoachingOpen = expandedCoaching === q.id;
+                return (
                 <div key={q.id} style={{ background: "#fff", border: `1px solid ${answers[q.id]?.trim() ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", padding: "22px 26px", marginBottom: 14, boxShadow: "var(--shadow)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <div style={{ flex: 1 }}>
@@ -381,11 +498,34 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
                       </div>
                       <p style={{ fontSize: 14, color: "var(--ink2)", lineHeight: 1.6, marginBottom: 0 }}>{q.question}</p>
                     </div>
-                    <button onClick={listeningField === q.id ? stopVoice : () => startVoice(q.id)}
-                      style={{ padding: "6px 12px", background: listeningField === q.id ? "#C62828" : "var(--cream)", border: `1px solid ${listeningField === q.id ? "#C62828" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 12, color: listeningField === q.id ? "#fff" : "var(--ink3)", cursor: "pointer", flexShrink: 0 }}>
-                      {listeningField === q.id ? "\u23F9 Stop" : "\uD83C\uDF99\uFE0F Voice"}
-                    </button>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      <button onClick={() => setExpandedCoaching(isCoachingOpen ? null : q.id)}
+                        style={{ padding: "6px 12px", background: isCoachingOpen ? "rgba(99,102,241,.1)" : "var(--cream)", border: `1px solid ${isCoachingOpen ? "rgba(99,102,241,.3)" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 12, color: isCoachingOpen ? "#6366F1" : "var(--ink3)", cursor: "pointer" }}>
+                        {isCoachingOpen ? "Hide Tips" : "Need Help?"}
+                      </button>
+                      <button onClick={listeningField === q.id ? stopVoice : () => startVoice(q.id)}
+                        style={{ padding: "6px 12px", background: listeningField === q.id ? "#C62828" : "var(--cream)", border: `1px solid ${listeningField === q.id ? "#C62828" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 12, color: listeningField === q.id ? "#fff" : "var(--ink3)", cursor: "pointer" }}>
+                        {listeningField === q.id ? "\u23F9 Stop" : "\uD83C\uDF99\uFE0F Voice"}
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Coaching prompts — expandable */}
+                  {isCoachingOpen && (
+                    <div style={{ background: "rgba(99,102,241,.04)", border: "1px solid rgba(99,102,241,.12)", borderRadius: "var(--r)", padding: "14px 18px", marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#6366F1", marginBottom: 8 }}>Think about these questions to help you recall:</div>
+                      {q.prompts.map((p: string, pi: number) => (
+                        <div key={pi} style={{ display: "flex", gap: 8, marginBottom: 6, fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.5 }}>
+                          <span style={{ color: "#6366F1", flexShrink: 0, fontWeight: 600 }}>{pi + 1}.</span>
+                          <span>{p}</span>
+                        </div>
+                      ))}
+                      <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 8, fontStyle: "italic", lineHeight: 1.5, borderTop: "1px solid rgba(99,102,241,.1)", paddingTop: 8 }}>
+                        {q.hint}
+                      </div>
+                    </div>
+                  )}
+
                   <textarea
                     value={answers[q.id] || ""}
                     onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
@@ -393,9 +533,10 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
                     rows={4}
                     style={{ width: "100%", padding: "12px 14px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.7, resize: "vertical", outline: "none", boxSizing: "border-box" as const }}
                   />
-                  <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 4, fontStyle: "italic" }}>{q.hint}</div>
+                  {!isCoachingOpen && <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 4, fontStyle: "italic" }}>{q.hint}</div>}
                 </div>
-              ))}
+                );
+              })}
 
               {/* Supporting evidence upload */}
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "22px 26px", marginBottom: 14, boxShadow: "var(--shadow)" }}>

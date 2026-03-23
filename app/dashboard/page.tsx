@@ -370,17 +370,30 @@ export default function DashboardPage() {
                         {inv.registeredUser ? `${inv.registeredUser.firstName || ""} ${inv.registeredUser.lastName || ""}`.trim() : "\u2014"}
                       </div>
                       <div>
-                        {(inv.status === "PENDING" || inv.status === "EXPIRED") && (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {(inv.status === "PENDING" || inv.status === "EXPIRED") && (
+                            <button onClick={async () => {
+                              try {
+                                await apiRequest("/api/invites", { method: "POST", body: JSON.stringify({ email: inv.email }) });
+                                fetchInvites();
+                              } catch (err: any) { console.error(err); }
+                            }}
+                              style={{ padding: "4px 10px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 500, color: "#fff", cursor: "pointer" }}>
+                              Resend
+                            </button>
+                          )}
                           <button onClick={async () => {
+                            if (!confirm(`Delete invitation for ${inv.email}?`)) return;
                             try {
-                              await apiRequest("/api/invites", { method: "POST", body: JSON.stringify({ email: inv.email }) });
-                              fetchInvites();
-                            } catch (err: any) { console.error(err); }
+                              await apiRequest(`/api/invites/${inv.id}`, { method: "DELETE" });
+                              setInvites(prev => prev.filter((i: any) => i.id !== inv.id));
+                              setInviteStats(prev => ({ ...prev, total: prev.total - 1, [inv.status.toLowerCase()]: (prev as any)[inv.status.toLowerCase()] - 1 }));
+                            } catch (err: any) { alert("Failed: " + err.message); }
                           }}
-                            style={{ padding: "4px 10px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 500, color: "#fff", cursor: "pointer" }}>
-                            Resend
+                            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 10, color: "var(--red)", cursor: "pointer" }}>
+                            ✕
                           </button>
-                        )}
+                        </div>
                       </div>
                     </div>
                   );

@@ -135,7 +135,7 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
         combinedText += snippet;
       }
 
-      // Call the extract endpoint with real document text
+      // Call the extract endpoint with real document text + context about what questions we're answering
       const data = await apiRequest("/api/applications/ai/extract", {
         method: "POST",
         body: JSON.stringify({
@@ -143,6 +143,8 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
           businessName: cert?.client?.businessName || "",
           certType: "EIGHT_A",
           clientId: cert.clientId,
+          extractionContext: "business-plan",
+          extractionQuestions: GUIDED_BP_QUESTIONS.map(q => q.question).join("\n"),
         }),
       });
 

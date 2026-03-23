@@ -158,6 +158,8 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
           businessName: cert?.client?.businessName || "",
           certType: "EIGHT_A",
           clientId: cert?.clientId,
+          extractionContext: "corporate-experience",
+          extractionQuestions: GUIDED_QUESTIONS.map(q => q.question).join("\n"),
         }),
       });
 

@@ -57,11 +57,45 @@ export default function OASISFederalExperiencePage({ params }: { params: Promise
       const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
       const app = data.application;
+      // Load existing FEP data
+      let hasFEPData = false;
       if (app?.oasisFEPData) {
         try {
           const parsed = JSON.parse(app.oasisFEPData);
-          if (Array.isArray(parsed) && parsed.length > 0) setEntries(parsed);
-        } catch { }
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEntries(parsed);
+            hasFEPData = true;
+          }
+        } catch {}
+      }
+
+      // Auto-populate from contract history — federal contracts NOT used as QPs
+      if (!hasFEPData && app?.oasisContractHistory) {
+        try {
+          const ch = JSON.parse(app.oasisContractHistory);
+          const contracts = ch.contracts || [];
+          const qpContracts = new Set<string>();
+          if (app?.oasisQPData) {
+            try {
+              const qps = JSON.parse(app.oasisQPData);
+              (qps || []).forEach((qp: any) => { if (qp.contractNumber) qpContracts.add(qp.contractNumber); });
+            } catch {}
+          }
+          // Get federal contracts not already used as QPs
+          const fedContracts = contracts
+            .filter((c: any) => c.contractType === "Prime" && !qpContracts.has(c.contractNumber))
+            .slice(0, 10);
+          if (fedContracts.length > 0) {
+            setEntries(fedContracts.map((c: any) => ({
+              id: crypto.randomUUID(),
+              agency: c.agency || "",
+              contractNumber: c.contractNumber || "",
+              value: c.totalValue ? String(c.totalValue) : "",
+              periodOfPerformance: [c.startDate, c.endDate].filter(Boolean).join(" - "),
+              description: c.servicesPerformed || c.title || "",
+            })));
+          }
+        } catch {}
       }
       const completed: Record<string, boolean> = {};
       if (app) {

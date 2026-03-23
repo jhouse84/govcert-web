@@ -65,11 +65,13 @@ export default function OASISQualifyingProjectsPage({ params }: { params: Promis
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [projects, setProjects] = useState<QualifyingProject[]>([createEmptyQP()]);
+  const [projects, setProjects] = useState<QualifyingProject[]>([]);
   const [expandedQP, setExpandedQP] = useState<string | null>(null);
   const [draftingQP, setDraftingQP] = useState<string | null>(null);
   const [solicitation, setSolicitation] = useState("unrestricted");
   const [completedSections, setCompletedSections] = useState<Record<string, boolean>>({});
+  const [contractHistory, setContractHistory] = useState<any[]>([]);
+  const [showContractPicker, setShowContractPicker] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingQP, setUploadingQP] = useState<string | null>(null);
@@ -89,16 +91,60 @@ export default function OASISQualifyingProjectsPage({ params }: { params: Promis
       setCert(data);
       const app = data.application;
       if (app?.oasisSolicitation) setSolicitation(app.oasisSolicitation);
+
+      // Load existing QP data if already saved
+      let hasExistingQPs = false;
       if (app?.oasisQPData) {
         try {
           const parsed = JSON.parse(app.oasisQPData);
           if (Array.isArray(parsed) && parsed.length > 0) {
             setProjects(parsed);
             setExpandedQP(parsed[0].id);
+            hasExistingQPs = true;
           }
-        } catch { }
+        } catch {}
       }
-      if (!expandedQP && projects.length > 0) setExpandedQP(projects[0].id);
+
+      // Load contract history from analysis step
+      if (app?.oasisContractHistory) {
+        try {
+          const ch = JSON.parse(app.oasisContractHistory);
+          const contracts = ch.contracts || [];
+          setContractHistory(contracts);
+
+          // If no existing QPs, auto-populate from top 5 "strong" contracts
+          if (!hasExistingQPs && contracts.length > 0) {
+            const strong = contracts
+              .filter((c: any) => c.qpPotential === "strong" || c.qpPotential === "moderate")
+              .sort((a: any, b: any) => (b.annualAverageValue || 0) - (a.annualAverageValue || 0))
+              .slice(0, 5);
+
+            if (strong.length > 0) {
+              const imported = strong.map((c: any) => ({
+                id: crypto.randomUUID(),
+                contractNumber: c.contractNumber || "",
+                agencyName: c.agency || "",
+                contractType: c.contractType || "Prime",
+                startDate: c.startDate || "",
+                endDate: c.endDate || "",
+                totalValue: c.totalValue ? String(c.totalValue) : "",
+                naicsCodes: (c.naicsCodes || []).join(", "),
+                scopeNarrative: c.servicesPerformed || "",
+                managementNarrative: "",
+                personnelCount: c.personnelCount ? String(c.personnelCount) : "",
+                clearanceLevel: c.clearanceLevel || "None",
+              }));
+              setProjects(imported);
+              setExpandedQP(imported[0].id);
+            }
+          }
+        } catch {}
+      }
+
+      // Fallback: at least one empty QP
+      if (!hasExistingQPs && contractHistory.length === 0) {
+        setProjects([createEmptyQP()]);
+      }
       // Build completed sections
       const completed: Record<string, boolean> = {};
       if (app) {
@@ -504,6 +550,57 @@ export default function OASISQualifyingProjectsPage({ params }: { params: Promis
               </div>
             );
           })}
+
+          {/* Import from Contract History */}
+          {contractHistory.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <button onClick={() => setShowContractPicker(!showContractPicker)}
+                style={{ padding: "10px 20px", background: "rgba(99,102,241,.08)", border: "1px solid rgba(99,102,241,.2)", borderRadius: "var(--r)", color: "#6366F1", fontSize: 13, fontWeight: 500, cursor: "pointer", width: "100%" }}>
+                {showContractPicker ? "Hide Contract History" : `📂 Import from Contract History (${contractHistory.length} contracts analyzed)`}
+              </button>
+              {showContractPicker && (
+                <div style={{ marginTop: 10, background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", overflow: "hidden", maxHeight: 300, overflowY: "auto" }}>
+                  {contractHistory
+                    .filter((c: any) => !projects.some(p => p.contractNumber === c.contractNumber && p.agencyName === c.agency))
+                    .map((c: any, i: number) => (
+                    <div key={c.id || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 500, color: "var(--navy)" }}>{c.title || c.contractNumber || "Untitled"}</div>
+                        <div style={{ fontSize: 11, color: "var(--ink4)" }}>{c.agency} &middot; AAV: ${((c.annualAverageValue || 0) / 1000).toFixed(0)}K &middot; {c.qpPotential}</div>
+                      </div>
+                      <button onClick={() => {
+                        if (projects.length >= 5) { alert("Maximum 5 QPs allowed."); return; }
+                        const imported: QualifyingProject = {
+                          id: crypto.randomUUID(),
+                          contractNumber: c.contractNumber || "",
+                          agencyName: c.agency || "",
+                          contractType: c.contractType || "Prime",
+                          startDate: c.startDate || "",
+                          endDate: c.endDate || "",
+                          totalValue: c.totalValue ? String(c.totalValue) : "",
+                          naicsCodes: (c.naicsCodes || []).join(", "),
+                          scopeNarrative: c.servicesPerformed || "",
+                          managementNarrative: "",
+                          personnelCount: c.personnelCount ? String(c.personnelCount) : "",
+                          clearanceLevel: c.clearanceLevel || "None",
+                        };
+                        setProjects(prev => [...prev, imported]);
+                        setExpandedQP(imported.id);
+                        setShowContractPicker(false);
+                      }}
+                        disabled={projects.length >= 5}
+                        style={{ padding: "4px 12px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 600, color: "#fff", cursor: projects.length >= 5 ? "not-allowed" : "pointer" }}>
+                        + Add as QP
+                      </button>
+                    </div>
+                  ))}
+                  {contractHistory.filter((c: any) => !projects.some(p => p.contractNumber === c.contractNumber && p.agencyName === c.agency)).length === 0 && (
+                    <div style={{ padding: 20, textAlign: "center" as const, color: "var(--ink4)", fontSize: 13 }}>All analyzed contracts have been added as QPs.</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Add QP Button */}
           {projects.length < 5 && (

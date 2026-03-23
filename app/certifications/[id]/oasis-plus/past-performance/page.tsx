@@ -63,15 +63,29 @@ export default function OASISPastPerformancePage({ params }: { params: Promise<{
         try { existingPP = JSON.parse(app.oasisPPData); } catch { }
       }
 
-      // Merge QPs with existing PP data
+      // Load contract history for CPARS data
+      let contractHistoryMap: Record<string, any> = {};
+      if (app?.oasisContractHistory) {
+        try {
+          const ch = JSON.parse(app.oasisContractHistory);
+          (ch.contracts || []).forEach((c: any) => {
+            if (c.contractNumber) contractHistoryMap[c.contractNumber] = c;
+          });
+        } catch {}
+      }
+
+      // Merge QPs with existing PP data + contract history CPARS
       const entries: PPEntry[] = qps.map((qp: any) => {
         const existing = existingPP.find(e => e.qpId === qp.id);
-        return existing || {
+        if (existing) return existing;
+        // Try to pull CPARS from contract history
+        const ch = contractHistoryMap[qp.contractNumber];
+        return {
           qpId: qp.id,
           qpLabel: qp.contractNumber || `QP`,
           contractNumber: qp.contractNumber || "",
-          cparsRating: "",
-          narrative: "",
+          cparsRating: ch?.cparsRating && ch.cparsRating !== "Unknown" && ch.cparsRating !== "N/A" ? ch.cparsRating : "",
+          narrative: ch?.servicesPerformed || "",
           refName: "",
           refTitle: "",
           refEmail: "",

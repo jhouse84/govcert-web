@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
 
@@ -62,6 +62,75 @@ export default function PPQRespondPage({ params }: { params: Promise<{ token: st
     certify: false,
     understand: false,
   });
+
+  // Canvas signature pad
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasSignature, setHasSignature] = useState(false);
+  const [signatureDataUrl, setSignatureDataUrl] = useState("");
+
+  const getCanvasCoords = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    if ("touches" in e) {
+      return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY };
+    }
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  }, []);
+
+  const startDrawing = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    const { x, y } = getCanvasCoords(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
+    setHasSignature(true);
+  }, [getCanvasCoords]);
+
+  const draw = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing) return;
+    e.preventDefault();
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    const { x, y } = getCanvasCoords(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }, [isDrawing, getCanvasCoords]);
+
+  const stopDrawing = useCallback(() => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+    if (canvasRef.current) {
+      setSignatureDataUrl(canvasRef.current.toDataURL("image/png"));
+    }
+  }, [isDrawing]);
+
+  const clearSignature = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSignature(false);
+    setSignatureDataUrl("");
+  }, []);
+
+  // Init canvas drawing style
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.strokeStyle = "#0B1929";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+  }, [ppq]);
 
   useEffect(() => {
     async function fetchPPQ() {
@@ -142,8 +211,12 @@ export default function PPQRespondPage({ params }: { params: Promise<{ token: st
       setSubmitError("Please acknowledge that this information will be used in support of a GSA MAS application.");
       return;
     }
+    if (!hasSignature || !signatureDataUrl) {
+      setSubmitError("Please draw your signature in the signature pad.");
+      return;
+    }
     if (!signature.typedName.trim()) {
-      setSubmitError("Please provide your typed name as an electronic signature.");
+      setSubmitError("Please type your full name below your signature.");
       return;
     }
     if (!signature.title.trim() || !signature.organization.trim()) {
@@ -163,6 +236,7 @@ export default function PPQRespondPage({ params }: { params: Promise<{ token: st
           narratives,
           signature: {
             ...signature,
+            signatureImage: signatureDataUrl,
             date: new Date().toISOString(),
           },
         }),
@@ -381,6 +455,20 @@ export default function PPQRespondPage({ params }: { params: Promise<{ token: st
             <p style={{ fontSize: 15, color: "#6b7280", lineHeight: 1.7, maxWidth: 460, margin: "0 auto 8px" }}>
               Your Past Performance Questionnaire has been submitted successfully. Thank you for your time and contribution to the GSA Multiple Award Schedule evaluation process.
             </p>
+            <a
+              href={`${API_URL}/api/ppq/pdf/${token}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "12px 28px", marginTop: 20,
+                background: "#0B1929", color: "#E8B84B", borderRadius: 8,
+                fontSize: 14, fontWeight: 600, textDecoration: "none",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Download PDF Copy
+            </a>
             <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 16 }}>
               No further action is needed. You may close this page.
             </p>
@@ -691,22 +779,56 @@ export default function PPQRespondPage({ params }: { params: Promise<{ token: st
             </label>
           </div>
 
-          {/* Signature fields */}
+          {/* Signature pad */}
+          <div style={{ marginBottom: 24 }}>
+            <label style={labelStyle}>Signature {requiredStar}</label>
+            <div style={{
+              border: hasSignature ? "2px solid #C89B3C" : "2px dashed rgba(11,25,41,0.2)",
+              borderRadius: 8, background: "#fff", position: "relative", overflow: "hidden",
+            }}>
+              <canvas
+                ref={canvasRef}
+                width={700}
+                height={160}
+                style={{ width: "100%", height: 160, cursor: "crosshair", display: "block", touchAction: "none" }}
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={stopDrawing}
+                onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={stopDrawing}
+              />
+              {!hasSignature && (
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  pointerEvents: "none", color: "rgba(11,25,41,0.25)", fontSize: 15,
+                }}>
+                  Draw your signature here
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+              <button type="button" onClick={clearSignature} style={{
+                background: "none", border: "none", color: "#9ca3af", fontSize: 12,
+                cursor: "pointer", textDecoration: "underline",
+              }}>
+                Clear Signature
+              </button>
+            </div>
+          </div>
+
+          {/* Typed name + title/org/date */}
           <div className="ppq-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={labelStyle}>Electronic Signature (Typed Full Name) {requiredStar}</label>
+              <label style={labelStyle}>Printed Name {requiredStar}</label>
               <input
                 type="text"
                 value={signature.typedName}
                 onChange={(e) => setSignature((p) => ({ ...p, typedName: e.target.value }))}
-                placeholder="Type your full name as your electronic signature"
-                style={{
-                  ...inputStyle,
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: 18,
-                  fontStyle: "italic",
-                  padding: "12px 16px",
-                }}
+                placeholder="Type your full name"
+                style={inputStyle}
               />
             </div>
             <div>

@@ -62,6 +62,130 @@ const STATUS_MESSAGES: Record<string, string> = {
 
 const AVAILABLE_CERTS = ["GSA_MAS", "EIGHT_A"];
 
+const CERT_REQUIREMENTS: Record<string, { documents: string[]; data: string[] }> = {
+  EIGHT_A: {
+    documents: [
+      "Personal Financial Statement (SBA Form 413)",
+      "Personal tax returns — last 3 years",
+      "Business tax returns — last 3 years",
+      "Business financial statements (P&L, Balance Sheet)",
+      "Social disadvantage narrative & supporting evidence",
+      "Business plan with growth projections",
+      "Resumes of key personnel",
+      "Organizational chart",
+      "Business licenses & registrations",
+      "Proof of US citizenship",
+    ],
+    data: [
+      "Owner demographics (ethnicity, gender, disability status)",
+      "Personal net worth breakdown (assets minus liabilities)",
+      "3-year income history (AGI)",
+      "Ownership percentages for all owners",
+      "Year business was established",
+      "NAICS codes for your services",
+    ],
+  },
+  GSA_MAS: {
+    documents: [
+      "Business financial statements — last 2 years",
+      "Commercial price list or rate card",
+      "Past performance references (3+ contracts)",
+      "Quality control/management documentation",
+      "Capability statement",
+      "Past proposals or statements of work",
+      "CPARS reports (if available)",
+      "SAM.gov registration confirmation",
+    ],
+    data: [
+      "Revenue history — last 2+ years",
+      "Employee count",
+      "NAICS codes and SIN categories",
+      "GSA pricing for each labor category",
+      "Past contract details (agency, value, period of performance)",
+    ],
+  },
+  WOSB: {
+    documents: [
+      "Proof of woman ownership (51%+)",
+      "Operating agreement or articles showing control",
+      "Proof of US citizenship",
+      "Business financial statements",
+      "Business tax returns — last 3 years",
+    ],
+    data: [
+      "Owner gender and ownership percentages",
+      "Evidence of daily management and control",
+      "Business size (revenue by NAICS)",
+    ],
+  },
+  EDWOSB: {
+    documents: [
+      "All WOSB documents (above)",
+      "Personal Financial Statement",
+      "Personal tax returns — last 3 years",
+      "Proof of economic disadvantage",
+    ],
+    data: [
+      "Personal net worth (must be under $850K)",
+      "Average adjusted gross income — last 3 years",
+      "Total personal assets",
+    ],
+  },
+  HUBZONE: {
+    documents: [
+      "Lease or deed for principal office",
+      "Employee roster with home addresses",
+      "Payroll records showing employee locations",
+      "Proof of US citizenship for owners",
+    ],
+    data: [
+      "Principal office ZIP code (must be in HUBZone)",
+      "Percentage of employees residing in HUBZone (must be 35%+)",
+      "Business size by NAICS",
+    ],
+  },
+  SDVOSB: {
+    documents: [
+      "VA disability rating letter",
+      "DD-214 (Certificate of Release/Discharge)",
+      "Operating agreement showing veteran control",
+      "Proof of 51%+ veteran ownership",
+    ],
+    data: [
+      "Service-disabled veteran status and rating",
+      "Ownership percentages",
+      "Evidence of daily management by veteran",
+    ],
+  },
+  VOSB: {
+    documents: [
+      "DD-214 (Certificate of Release/Discharge)",
+      "Operating agreement showing veteran control",
+      "Proof of 51%+ veteran ownership",
+    ],
+    data: [
+      "Veteran status verification",
+      "Ownership percentages",
+      "Evidence of daily management by veteran",
+    ],
+  },
+};
+
+const STATE_CERT_REQUIREMENTS = {
+  documents: [
+    "State-specific application forms",
+    "Proof of minority/disadvantaged status",
+    "Business financial statements",
+    "Personal financial statement",
+    "Business licenses & registrations",
+  ],
+  data: [
+    "Owner demographics and ownership percentages",
+    "Business revenue history",
+    "Personal net worth information",
+  ],
+};
+
 const ELIGIBILITY_FIELDS = [
   "entityType", "stateOfIncorporation", "principalAddress", "city", "state", "zip",
   "yearEstablished", "firstRevenueDate", "naicsCodes", "owners",
@@ -324,6 +448,7 @@ export default function EligibilityResultsPage() {
                     assessment={assessment}
                     onStartApplication={startApplication}
                     creatingCert={creatingCert}
+                    eligibilityData={eligibility}
                   />
                 ))}
               </div>
@@ -344,6 +469,7 @@ export default function EligibilityResultsPage() {
                     assessment={assessment}
                     onStartApplication={startApplication}
                     creatingCert={creatingCert}
+                    eligibilityData={eligibility}
                   />
                 ))}
               </div>
@@ -382,63 +508,167 @@ export default function EligibilityResultsPage() {
           )}
 
           {/* Recommendation Section */}
-          {recommendedNext && (
-            <div style={{
-              background: "linear-gradient(135deg, #0B1929 0%, #1A3357 50%, #0B1929 100%)",
-              borderRadius: 12,
-              padding: "28px 30px",
-              marginBottom: 28,
-              position: "relative",
-              overflow: "hidden",
-            }}>
+          {recommendedNext && (() => {
+            const recAssessment = [...federalAssessments, ...stateAssessments].find((a: any) => a.certType === recommendedNext);
+            const recScore = recAssessment?.score ?? 0;
+            const recTimeline = CERT_TIMELINES[recommendedNext] || "Varies";
+            const recCertName = CERT_LABELS[recommendedNext] || recommendedNext;
+            const recReqs = CERT_REQUIREMENTS[recommendedNext] || STATE_CERT_REQUIREMENTS;
+
+            const CERT_NEXT_STEPS: Record<string, string[]> = {
+              EIGHT_A: [
+                "Prepare your social disadvantage narrative with specific examples and supporting evidence",
+                "Gather your last 3 years of personal and business tax returns",
+                "Complete SBA Form 413 (Personal Financial Statement) for all owners",
+                "Compile your business plan with realistic growth projections",
+              ],
+              GSA_MAS: [
+                "Verify your SAM.gov registration is active and current",
+                "Prepare a commercial price list or rate card for all labor categories",
+                "Gather 3+ past performance references with contract details",
+                "Document your quality control processes and procedures",
+              ],
+              WOSB: [
+                "Gather proof of woman ownership showing 51%+ stake",
+                "Prepare your operating agreement showing management and control",
+                "Collect business financial statements and tax returns",
+                "Verify your business meets SBA size standards for your NAICS codes",
+              ],
+              EDWOSB: [
+                "Complete all WOSB documentation requirements first",
+                "Prepare your Personal Financial Statement showing net worth under $850K",
+                "Gather personal tax returns for the last 3 years",
+                "Compile documentation proving economic disadvantage",
+              ],
+              HUBZONE: [
+                "Verify your principal office address is in a designated HUBZone",
+                "Compile an employee roster with home addresses to confirm 35%+ reside in HUBZones",
+                "Gather payroll records documenting employee locations",
+                "Confirm your business meets SBA size standards",
+              ],
+              SDVOSB: [
+                "Obtain your VA disability rating letter documenting service-connected disability",
+                "Gather your DD-214 (Certificate of Release/Discharge from Active Duty)",
+                "Prepare operating agreement showing veteran daily management and control",
+                "Document 51%+ ownership by the service-disabled veteran",
+              ],
+              VOSB: [
+                "Gather your DD-214 (Certificate of Release/Discharge from Active Duty)",
+                "Prepare operating agreement showing veteran daily management and control",
+                "Document 51%+ ownership by the veteran",
+                "Register and verify through the SBA VetCert portal",
+              ],
+            };
+
+            const defaultNextSteps = [
+              "Review the required documents list above and begin gathering materials",
+              "Ensure all business registrations and licenses are current",
+              "Complete the eligibility questionnaire with any missing information",
+              "Contact a certification specialist if you have questions about requirements",
+            ];
+
+            const nextSteps = CERT_NEXT_STEPS[recommendedNext] || defaultNextSteps;
+
+            return (
               <div style={{
-                position: "absolute", top: 0, left: 0, right: 0, height: 2,
-                background: "linear-gradient(90deg, #C89B3C, #E8B84B)",
-              }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                background: "linear-gradient(135deg, #0B1929 0%, #1A3357 50%, #0B1929 100%)",
+                borderRadius: 12,
+                padding: "32px 34px",
+                marginBottom: 28,
+                position: "relative",
+                overflow: "hidden",
+              }}>
                 <div style={{
-                  width: 52, height: 52, borderRadius: "50%",
-                  background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0, boxShadow: "0 4px 16px rgba(200,155,60,.3)",
-                }}>
-                  <span style={{ fontSize: 22, color: "#fff" }}>{"\u2726"}</span>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold2)", marginBottom: 6 }}>Our Recommendation</div>
-                  <div style={{ fontSize: 17, color: "#fff", fontWeight: 400, lineHeight: 1.5 }}>
-                    Based on your profile, we recommend starting with:{" "}
-                    <strong style={{ color: "var(--gold2)" }}>{CERT_LABELS[recommendedNext] || recommendedNext}</strong>
+                  position: "absolute", top: 0, left: 0, right: 0, height: 2,
+                  background: "linear-gradient(90deg, #C89B3C, #E8B84B)",
+                }} />
+
+                {/* Header row */}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 20, marginBottom: 24 }}>
+                  <div style={{
+                    width: 52, height: 52, borderRadius: "50%",
+                    background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0, boxShadow: "0 4px 16px rgba(200,155,60,.3)",
+                  }}>
+                    <span style={{ fontSize: 22, color: "#fff" }}>{"\u2726"}</span>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold2)", marginBottom: 6 }}>Our Recommendation</div>
+                    <div style={{ fontSize: 22, fontFamily: "'Cormorant Garamond', serif", color: "#fff", fontWeight: 400, lineHeight: 1.3, marginBottom: 8 }}>
+                      Start with <strong style={{ color: "var(--gold2)" }}>{recCertName}</strong>
+                    </div>
+                    <p style={{ fontSize: 14, color: "rgba(255,255,255,.7)", lineHeight: 1.7, margin: 0 }}>
+                      Based on your profile, {recCertName} has the highest eligibility score at {recScore}%.
+                      {recTimeline !== "Varies" && ` This certification also has a processing time of ${recTimeline}, making it an efficient starting point.`}
+                      {recScore >= 70 && " Your strong score suggests a solid foundation for a successful application."}
+                      {recScore >= 50 && recScore < 70 && " With some additional documentation, you have a good chance of qualifying."}
+                    </p>
                   </div>
                 </div>
-                {AVAILABLE_CERTS.includes(recommendedNext) ? (
-                  <button
-                    onClick={() => startApplication(recommendedNext)}
-                    disabled={!!creatingCert}
-                    style={{
-                      padding: "12px 28px",
-                      background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
-                      border: "none", borderRadius: 8, color: "#fff",
-                      fontSize: 14, fontWeight: 500, cursor: creatingCert ? "wait" : "pointer",
-                      boxShadow: "0 4px 20px rgba(200,155,60,.35)",
-                      transition: "all .2s", flexShrink: 0,
-                      opacity: creatingCert ? 0.7 : 1,
-                    }}
-                  >
-                    {creatingCert === recommendedNext ? "Creating..." : `Start Application \u2192`}
-                  </button>
-                ) : (
-                  <span style={{
-                    padding: "10px 20px", borderRadius: 8,
-                    background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)",
-                    color: "rgba(255,255,255,.45)", fontSize: 13, fontWeight: 500, flexShrink: 0,
-                  }}>
-                    Coming Soon
+
+                {/* Next steps */}
+                <div style={{
+                  background: "rgba(255,255,255,.06)",
+                  border: "1px solid rgba(255,255,255,.1)",
+                  borderRadius: 10,
+                  padding: "20px 24px",
+                  marginBottom: 24,
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--gold2)", marginBottom: 14 }}>
+                    What You Should Do First
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {nextSteps.map((step: string, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                        <div style={{
+                          width: 22, height: 22, borderRadius: "50%",
+                          background: "rgba(200,155,60,.2)", border: "1px solid rgba(200,155,60,.3)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 11, fontWeight: 700, color: "var(--gold2)", flexShrink: 0, marginTop: 1,
+                        }}>
+                          {i + 1}
+                        </div>
+                        <span style={{ fontSize: 13, color: "rgba(255,255,255,.75)", lineHeight: 1.5 }}>{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* CTA */}
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  {AVAILABLE_CERTS.includes(recommendedNext) ? (
+                    <button
+                      onClick={() => startApplication(recommendedNext)}
+                      disabled={!!creatingCert}
+                      style={{
+                        padding: "14px 32px",
+                        background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
+                        border: "none", borderRadius: 8, color: "#fff",
+                        fontSize: 15, fontWeight: 600, cursor: creatingCert ? "wait" : "pointer",
+                        boxShadow: "0 4px 20px rgba(200,155,60,.35)",
+                        transition: "all .2s", flexShrink: 0,
+                        opacity: creatingCert ? 0.7 : 1,
+                      }}
+                    >
+                      {creatingCert === recommendedNext ? "Creating..." : `Start This Application \u2192`}
+                    </button>
+                  ) : (
+                    <span style={{
+                      padding: "14px 28px", borderRadius: 8,
+                      background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)",
+                      color: "rgba(255,255,255,.45)", fontSize: 14, fontWeight: 500, flexShrink: 0,
+                    }}>
+                      Coming Soon
+                    </span>
+                  )}
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,.35)" }}>
+                    Estimated processing: {recTimeline}
                   </span>
-                )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Bottom Section */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 40 }}>
@@ -523,10 +753,12 @@ function AssessmentCard({
   assessment,
   onStartApplication,
   creatingCert,
+  eligibilityData,
 }: {
   assessment: any;
   onStartApplication: (type: string) => void;
   creatingCert: string | null;
+  eligibilityData: any;
 }) {
   const status = assessment.status || "INSUFFICIENT_DATA";
   const sc = STATUS_COLORS[status] || STATUS_COLORS.INSUFFICIENT_DATA;
@@ -680,6 +912,105 @@ function AssessmentCard({
           </div>
         </div>
       )}
+
+      {/* What You'll Need to Apply */}
+      {(() => {
+        const reqs = CERT_REQUIREMENTS[certType] || STATE_CERT_REQUIREMENTS;
+        // Determine which items are likely already provided based on eligibility data
+        const hasFinancials = !!(eligibilityData?.revenueYear1 || eligibilityData?.revenueYear2 || eligibilityData?.revenueYear3);
+        const hasOwners = !!(eligibilityData?.owners && eligibilityData.owners.length > 0);
+        const hasNaics = !!(eligibilityData?.naicsCodes && eligibilityData.naicsCodes.length > 0);
+        const hasNetWorth = !!eligibilityData?.netWorthRange;
+        const hasAgi = !!eligibilityData?.agiRange;
+        const hasAssets = !!eligibilityData?.totalAssetsRange;
+        const hasEmployees = !!eligibilityData?.employeeCount;
+        const hasYearEstablished = !!eligibilityData?.yearEstablished;
+        const hasSam = !!eligibilityData?.samRegistered;
+        const hasPastPerf = !!(eligibilityData?.pastPerfRefs || eligibilityData?.completedContracts);
+        const hasCpars = !!eligibilityData?.cparsAvailable;
+        const hasHubzoneZip = !!eligibilityData?.hubzoneZip;
+        const hasHubzonePct = !!eligibilityData?.hubzoneEmployeePct;
+        const hasAddress = !!(eligibilityData?.principalAddress || eligibilityData?.zip);
+
+        function isDocLikelyProvided(doc: string): boolean {
+          const d = doc.toLowerCase();
+          if (d.includes("financial statement") && !d.includes("personal")) return hasFinancials;
+          if (d.includes("personal financial statement")) return hasNetWorth;
+          if (d.includes("tax return") && d.includes("business")) return hasFinancials;
+          if (d.includes("tax return") && d.includes("personal")) return hasAgi;
+          if (d.includes("sam.gov")) return hasSam;
+          if (d.includes("past performance") || d.includes("past proposals")) return hasPastPerf;
+          if (d.includes("cpars")) return hasCpars;
+          if (d.includes("business license")) return hasYearEstablished;
+          if (d.includes("lease") || d.includes("deed")) return hasAddress;
+          if (d.includes("employee roster") || d.includes("payroll")) return hasEmployees;
+          return false;
+        }
+
+        function isDataLikelyProvided(item: string): boolean {
+          const d = item.toLowerCase();
+          if (d.includes("revenue")) return hasFinancials;
+          if (d.includes("employee count") || d.includes("employee")) return hasEmployees;
+          if (d.includes("naics") || d.includes("sin")) return hasNaics;
+          if (d.includes("ownership percentage") || d.includes("owner")) return hasOwners;
+          if (d.includes("net worth")) return hasNetWorth;
+          if (d.includes("agi") || d.includes("adjusted gross") || d.includes("income history")) return hasAgi;
+          if (d.includes("total") && d.includes("asset")) return hasAssets;
+          if (d.includes("year") && d.includes("established")) return hasYearEstablished;
+          if (d.includes("hubzone") && d.includes("zip")) return hasHubzoneZip;
+          if (d.includes("hubzone") && d.includes("employee")) return hasHubzonePct;
+          if (d.includes("past contract") || d.includes("period of performance")) return hasPastPerf;
+          if (d.includes("demographics") || d.includes("gender") || d.includes("ethnicity")) return hasOwners;
+          if (d.includes("business size")) return hasFinancials;
+          return false;
+        }
+
+        return (
+          <div style={{ padding: "18px 26px", borderBottom: "1px solid rgba(200,155,60,.06)" }}>
+            <div style={{ marginTop: 0, padding: "16px 20px", background: "rgba(200,155,60,.04)", border: "1px solid rgba(200,155,60,.12)", borderRadius: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--gold)", marginBottom: 10 }}>What You&apos;ll Need to Apply</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>{"\uD83D\uDCC4"} Required Documents</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {reqs.documents.map((doc: string, i: number) => {
+                      const provided = isDocLikelyProvided(doc);
+                      return (
+                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                          <span style={{ fontSize: 10, color: provided ? "#27ae60" : "var(--ink4)", marginTop: 2, flexShrink: 0 }}>
+                            {provided ? "\u2713" : "\u2022"}
+                          </span>
+                          <span style={{ fontSize: 11, color: provided ? "var(--ink3)" : "var(--ink3)", lineHeight: 1.5, textDecoration: provided ? "none" : "none" }}>
+                            {doc}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>{"\uD83D\uDCCA"} Required Data</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {reqs.data.map((item: string, i: number) => {
+                      const provided = isDataLikelyProvided(item);
+                      return (
+                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                          <span style={{ fontSize: 10, color: provided ? "#27ae60" : "var(--ink4)", marginTop: 2, flexShrink: 0 }}>
+                            {provided ? "\u2713" : "\u2022"}
+                          </span>
+                          <span style={{ fontSize: 11, color: "var(--ink3)", lineHeight: 1.5 }}>
+                            {item}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Card Actions */}
       <div style={{ padding: "16px 26px", display: "flex", gap: 12, alignItems: "center" }}>

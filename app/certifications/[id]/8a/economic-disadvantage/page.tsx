@@ -61,6 +61,28 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
     { year: String(currentYear - 3), adjustedGross: "", source: "" },
   ]);
 
+  // Smart auto-populate tools
+  const [aiScanning, setAiScanning] = useState(false);
+  const [aiScanResult, setAiScanResult] = useState<any>(null);
+  // Property estimator
+  const [propAddress, setPropAddress] = useState("");
+  const [propCity, setPropCity] = useState("");
+  const [propState, setPropState] = useState("");
+  const [propZip, setPropZip] = useState("");
+  const [propEstimating, setPropEstimating] = useState(false);
+  const [propEstimate, setPropEstimate] = useState<any>(null);
+  // Vehicle estimator
+  const [vehYear, setVehYear] = useState("");
+  const [vehMake, setVehMake] = useState("");
+  const [vehModel, setVehModel] = useState("");
+  const [vehMileage, setVehMileage] = useState("");
+  const [vehVin, setVehVin] = useState("");
+  const [vehEstimating, setVehEstimating] = useState(false);
+  const [vehEstimate, setVehEstimate] = useState<any>(null);
+  const [vehDecoding, setVehDecoding] = useState(false);
+  // Tool panel
+  const [activeToolIdx, setActiveToolIdx] = useState<number | null>(null);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -106,6 +128,107 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
       setError("Failed to load certification data.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  // AI Document Scan
+  async function scanDocuments() {
+    setAiScanning(true);
+    setAiScanResult(null);
+    try {
+      const data = await apiRequest("/api/applications/ai/8a/extract-financials", {
+        method: "POST",
+        body: JSON.stringify({ clientId: cert?.clientId }),
+      });
+      setAiScanResult(data);
+      // Auto-apply extracted data
+      if (data.assets) {
+        const newAssets: Record<string, string> = { ...assets };
+        if (data.assets.cash && !assets.cash) newAssets.cash = data.assets.cash;
+        if (data.assets.savings && !assets.savings) newAssets.savings = data.assets.savings;
+        if (data.assets.retirement && !assets.ira) newAssets.ira = data.assets.retirement;
+        if (data.assets.investments && !assets.stocks) newAssets.stocks = data.assets.investments;
+        if (data.assets.realEstate && !assets.realEstate) newAssets.realEstate = data.assets.realEstate;
+        if (data.assets.vehicles && !assets.vehicles) newAssets.vehicles = data.assets.vehicles;
+        if (data.assets.other && !assets.otherAssets) newAssets.otherAssets = data.assets.other;
+        setAssets(newAssets);
+      }
+      if (data.liabilities) {
+        const newLiab: Record<string, string> = { ...liabilities };
+        if (data.liabilities.mortgages && !liabilities.mortgages) newLiab.mortgages = data.liabilities.mortgages;
+        if (data.liabilities.loans && !liabilities.loans) newLiab.loans = data.liabilities.loans;
+        if (data.liabilities.creditCards && !liabilities.creditCards) newLiab.creditCards = data.liabilities.creditCards;
+        if (data.liabilities.other && !liabilities.otherLiabilities) newLiab.otherLiabilities = data.liabilities.other;
+        setLiabilities(newLiab);
+      }
+      if (data.incomeYears?.length > 0 && incomeYears.every(y => !y.adjustedGross)) {
+        setIncomeYears(data.incomeYears.slice(0, 3).map((y: any) => ({
+          year: y.year || "", adjustedGross: y.adjustedGross || "", source: y.source || "",
+        })));
+      }
+    } catch (err: any) {
+      setError("AI scan failed: " + (err.message || "Try uploading more financial documents."));
+    } finally {
+      setAiScanning(false);
+    }
+  }
+
+  // Property value estimation
+  async function estimateProperty() {
+    if (!propAddress) return;
+    setPropEstimating(true);
+    setPropEstimate(null);
+    try {
+      const data = await apiRequest("/api/applications/ai/8a/estimate-property", {
+        method: "POST",
+        body: JSON.stringify({ address: propAddress, city: propCity, state: propState, zip: propZip }),
+      });
+      setPropEstimate(data);
+      // Auto-add to real estate assets
+      if (data.estimatedValue) {
+        const current = parseNum(assets.realEstate || "0");
+        setAssets(prev => ({ ...prev, realEstate: String(current + data.estimatedValue) }));
+      }
+    } catch (err: any) {
+      setError("Property estimation failed: " + err.message);
+    } finally {
+      setPropEstimating(false);
+    }
+  }
+
+  // VIN decode
+  async function decodeVin() {
+    if (!vehVin || vehVin.length < 17) return;
+    setVehDecoding(true);
+    try {
+      const data = await apiRequest(`/api/applications/ai/8a/vin-decode/${vehVin}`);
+      if (data.make) setVehMake(data.make);
+      if (data.model) setVehModel(data.model);
+      if (data.year) setVehYear(data.year);
+    } catch { setError("VIN decode failed. Enter make/model manually."); }
+    finally { setVehDecoding(false); }
+  }
+
+  // Vehicle value estimation
+  async function estimateVehicle() {
+    if (!vehYear || !vehMake || !vehModel) return;
+    setVehEstimating(true);
+    setVehEstimate(null);
+    try {
+      const data = await apiRequest("/api/applications/ai/8a/estimate-vehicle", {
+        method: "POST",
+        body: JSON.stringify({ year: vehYear, make: vehMake, model: vehModel, mileage: vehMileage }),
+      });
+      setVehEstimate(data);
+      // Auto-add to vehicle assets
+      if (data.estimatedValue) {
+        const current = parseNum(assets.vehicles || "0");
+        setAssets(prev => ({ ...prev, vehicles: String(current + data.estimatedValue) }));
+      }
+    } catch (err: any) {
+      setError("Vehicle estimation failed: " + err.message);
+    } finally {
+      setVehEstimating(false);
     }
   }
 
@@ -213,6 +336,118 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
               <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>&times;</button>
             </div>
           )}
+
+          {/* Smart Auto-Populate Tools */}
+          <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".12em", color: "var(--gold2)", marginBottom: 14 }}>Smart Auto-Populate</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: activeToolIdx !== null ? 16 : 0 }}>
+              {[
+                { icon: "🤖", label: "Scan My Documents", desc: "AI reads your tax returns & financial statements", action: () => { setActiveToolIdx(0); scanDocuments(); } },
+                { icon: "🏠", label: "Estimate Property Value", desc: "Enter an address for market value estimate", action: () => setActiveToolIdx(activeToolIdx === 1 ? null : 1) },
+                { icon: "🚗", label: "Estimate Vehicle Value", desc: "Enter make/model or scan VIN", action: () => setActiveToolIdx(activeToolIdx === 2 ? null : 2) },
+              ].map((tool, i) => (
+                <button key={i} onClick={tool.action} disabled={i === 0 && aiScanning}
+                  style={{
+                    padding: "12px 14px", background: activeToolIdx === i ? "rgba(200,155,60,.15)" : "rgba(255,255,255,.04)",
+                    border: `1px solid ${activeToolIdx === i ? "rgba(200,155,60,.3)" : "rgba(255,255,255,.08)"}`,
+                    borderRadius: "var(--r)", cursor: "pointer", textAlign: "left" as const,
+                  }}>
+                  <div style={{ fontSize: 18, marginBottom: 4 }}>{tool.icon}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#fff", marginBottom: 2 }}>
+                    {i === 0 && aiScanning ? "Scanning..." : tool.label}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: "rgba(255,255,255,.4)", lineHeight: 1.4 }}>{tool.desc}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* AI Scan result */}
+            {activeToolIdx === 0 && aiScanResult && (
+              <div style={{ padding: "14px 18px", background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.2)", borderRadius: "var(--r)" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--green)", marginBottom: 6 }}>
+                  AI scanned {aiScanResult.documentsAnalyzed} document{aiScanResult.documentsAnalyzed !== 1 ? "s" : ""} — data applied to form below
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)" }}>
+                  Confidence: {aiScanResult.confidence || "medium"} · {aiScanResult.sourceSummary || "Review and adjust values as needed."}
+                </div>
+              </div>
+            )}
+
+            {/* Property estimator */}
+            {activeToolIdx === 1 && (
+              <div style={{ padding: "14px 18px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "var(--r)" }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: "#fff", marginBottom: 10 }}>Enter property address:</div>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                  <input value={propAddress} onChange={e => setPropAddress(e.target.value)} placeholder="Street address"
+                    style={{ padding: "8px 12px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", color: "#fff", fontSize: 12, outline: "none" }} />
+                  <input value={propCity} onChange={e => setPropCity(e.target.value)} placeholder="City"
+                    style={{ padding: "8px 12px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", color: "#fff", fontSize: 12, outline: "none" }} />
+                  <input value={propState} onChange={e => setPropState(e.target.value)} placeholder="State"
+                    style={{ padding: "8px 12px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", color: "#fff", fontSize: 12, outline: "none" }} />
+                  <input value={propZip} onChange={e => setPropZip(e.target.value)} placeholder="ZIP"
+                    style={{ padding: "8px 12px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", color: "#fff", fontSize: 12, outline: "none" }} />
+                </div>
+                <button onClick={estimateProperty} disabled={propEstimating || !propAddress}
+                  style={{ padding: "8px 20px", background: propAddress ? "var(--gold)" : "rgba(255,255,255,.1)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: propAddress ? "pointer" : "not-allowed" }}>
+                  {propEstimating ? "Estimating..." : "Estimate Value"}
+                </button>
+                {propEstimate && (
+                  <div style={{ marginTop: 10, padding: "10px 14px", background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.2)", borderRadius: "var(--r)" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--green)" }}>Est. Value: ${propEstimate.estimatedValue?.toLocaleString()}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)" }}>
+                      Range: ${propEstimate.lowRange?.toLocaleString()} — ${propEstimate.highRange?.toLocaleString()} · Added to Real Estate assets
+                    </div>
+                    {propEstimate.basis && <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 4 }}>{propEstimate.basis}</div>}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Vehicle estimator */}
+            {activeToolIdx === 2 && (
+              <div style={{ padding: "14px 18px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "var(--r)" }}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "flex-end" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginBottom: 4 }}>Have a VIN? Scan it:</div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input value={vehVin} onChange={e => setVehVin(e.target.value.toUpperCase())} placeholder="17-character VIN" maxLength={17}
+                        style={{ flex: 1, padding: "8px 12px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", color: "#fff", fontSize: 12, outline: "none", fontFamily: "'DM Mono', monospace" }} />
+                      <button onClick={decodeVin} disabled={vehDecoding || vehVin.length < 17}
+                        style={{ padding: "8px 14px", background: vehVin.length >= 17 ? "rgba(99,102,241,.5)" : "rgba(255,255,255,.08)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 11, cursor: vehVin.length >= 17 ? "pointer" : "not-allowed" }}>
+                        {vehDecoding ? "..." : "Decode"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginBottom: 8 }}>— or enter manually —</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                  <input value={vehYear} onChange={e => setVehYear(e.target.value)} placeholder="Year"
+                    style={{ padding: "8px 12px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", color: "#fff", fontSize: 12, outline: "none" }} />
+                  <input value={vehMake} onChange={e => setVehMake(e.target.value)} placeholder="Make"
+                    style={{ padding: "8px 12px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", color: "#fff", fontSize: 12, outline: "none" }} />
+                  <input value={vehModel} onChange={e => setVehModel(e.target.value)} placeholder="Model"
+                    style={{ padding: "8px 12px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", color: "#fff", fontSize: 12, outline: "none" }} />
+                  <input value={vehMileage} onChange={e => setVehMileage(e.target.value)} placeholder="Mileage (opt)"
+                    style={{ padding: "8px 12px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", color: "#fff", fontSize: 12, outline: "none" }} />
+                </div>
+                <button onClick={estimateVehicle} disabled={vehEstimating || !vehYear || !vehMake || !vehModel}
+                  style={{ padding: "8px 20px", background: vehYear && vehMake && vehModel ? "var(--gold)" : "rgba(255,255,255,.1)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: vehYear && vehMake ? "pointer" : "not-allowed" }}>
+                  {vehEstimating ? "Estimating..." : "Estimate Value"}
+                </button>
+                {vehEstimate && (
+                  <div style={{ marginTop: 10, padding: "10px 14px", background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.2)", borderRadius: "var(--r)" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--green)" }}>
+                      {vehYear} {vehMake} {vehModel}: Est. ${vehEstimate.estimatedValue?.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)" }}>
+                      Trade-in: ${vehEstimate.tradeInValue?.toLocaleString()} · Private party: ${vehEstimate.privatePartyValue?.toLocaleString()} · Added to Vehicle assets
+                    </div>
+                    {vehEstimate.basis && <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 4 }}>{vehEstimate.basis}</div>}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Threshold summary */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }}>

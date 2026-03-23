@@ -117,25 +117,45 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
     setPrefilling(true);
     setError(null);
     try {
+      // First, get documents with extracted text
+      const docs = await apiRequest(`/api/upload/documents?clientId=${cert.clientId}`);
+      const docsWithText = (Array.isArray(docs) ? docs : []).filter((d: any) => d.extractedText?.trim());
+
+      if (docsWithText.length === 0) {
+        setError("No documents with extractable text found. Upload a proposal, capability statement, or business plan first.");
+        setPrefilling(false);
+        return;
+      }
+
+      // Combine document texts (up to 8000 chars)
+      let combinedText = "";
+      for (const doc of docsWithText) {
+        const snippet = `--- ${doc.originalName} ---\n${doc.extractedText.substring(0, 3000)}\n\n`;
+        if (combinedText.length + snippet.length > 8000) break;
+        combinedText += snippet;
+      }
+
+      // Call the extract endpoint with real document text
       const data = await apiRequest("/api/applications/ai/extract", {
         method: "POST",
         body: JSON.stringify({
-          proposalText: "__USE_CLIENT_DOCUMENTS__",
+          proposalText: combinedText,
           businessName: cert?.client?.businessName || "",
           certType: "EIGHT_A",
           clientId: cert.clientId,
         }),
       });
+
       // Map extracted businessInfo + sections to guided answers
       const newAnswers: Record<string, string> = { ...bpAnswers };
       const bi = data.businessInfo || {};
       const sec = data.sections || {};
 
-      if (bi.coreServiceAreas?.length && !newAnswers.whatDoYouDo) {
-        newAnswers.whatDoYouDo = bi.coreServiceAreas.join(", ");
+      if ((bi.coreServiceAreas?.length || sec.capabilities) && !newAnswers.whatDoYouDo) {
+        newAnswers.whatDoYouDo = bi.coreServiceAreas?.length ? bi.coreServiceAreas.join(", ") : sec.capabilities || "";
       }
-      if (bi.entityType && !newAnswers.legalStructure) {
-        newAnswers.legalStructure = `${bi.entityType}${bi.foundedYear ? `, established ${bi.foundedYear}` : ""}`;
+      if ((bi.entityType || bi.foundedYear) && !newAnswers.legalStructure) {
+        newAnswers.legalStructure = `${bi.entityType || ""}${bi.foundedYear ? `, established ${bi.foundedYear}` : ""}`.trim();
       }
       if (sec.overview && !newAnswers.whatDoYouDo) {
         newAnswers.whatDoYouDo = sec.overview;
@@ -155,8 +175,11 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
       if (sec.employees && !newAnswers.teamStrength) {
         newAnswers.teamStrength = sec.employees;
       }
-      if (sec.capabilities && !newAnswers.whatDoYouDo) {
-        newAnswers.whatDoYouDo = sec.capabilities;
+      if (bi.naicsCodes?.length && !newAnswers.targetAgencies) {
+        newAnswers.targetAgencies = `NAICS: ${bi.naicsCodes.join(", ")}`;
+      }
+      if (bi.location && !newAnswers.legalStructure) {
+        newAnswers.legalStructure = (newAnswers.legalStructure || "") + `, based in ${bi.location}`;
       }
 
       setBpAnswers(newAnswers);

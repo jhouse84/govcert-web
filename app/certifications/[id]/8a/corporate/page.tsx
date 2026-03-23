@@ -71,9 +71,9 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
     try {
       const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
-      if (data.application?.narrativeCorp8a) {
+      if (data.application?.narrativeCorp) {
         try {
-          const parsed = JSON.parse(data.application.narrativeCorp8a);
+          const parsed = JSON.parse(data.application.narrativeCorp);
           if (parsed.narratives) {
             setNarratives(parsed.narratives);
             setGuidedAnswers(parsed.guidedAnswers || {});
@@ -83,7 +83,7 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
             setMode("refine");
           }
         } catch {
-          setNarratives({ overview: data.application.narrativeCorp8a });
+          setNarratives({ overview: data.application.narrativeCorp });
           setMode("refine");
         }
       }
@@ -93,7 +93,7 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
         if (app.socialDisadvantageNarrative?.trim()) completed["social-disadvantage"] = true;
         if (app.economicDisadvantageData) completed["economic-disadvantage"] = true;
         if (app.businessPlanData) completed["business-plan"] = true;
-        if (app.narrativeCorp8a) completed["corporate"] = true;
+        if (app.narrativeCorp) completed["corporate"] = true;
         if (app.pastPerformance8a?.length > 0) completed["past-performance"] = true;
         if (app.financialData8a) completed["financials"] = true;
       }
@@ -125,25 +125,65 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
   }
 
   async function prefillFromDocuments() {
-    if (uploadedTexts.length === 0) return;
     setGeneratingFromGuided(true);
+    setError(null);
     try {
-      const combined = uploadedTexts.map(t => `--- ${t.name} ---\n${t.text}`).join("\n\n").substring(0, 8000);
-      const data = await apiRequest("/api/applications/ai/draft", {
+      // Fetch documents with extracted text from server
+      const docs = await apiRequest(`/api/upload/documents?clientId=${cert?.clientId}`);
+      const docsWithText = (Array.isArray(docs) ? docs : []).filter((d: any) => d.extractedText?.trim());
+
+      // Also include any locally uploaded texts
+      let combinedText = "";
+      for (const doc of docsWithText) {
+        const snippet = `--- ${doc.originalName} ---\n${doc.extractedText.substring(0, 3000)}\n\n`;
+        if (combinedText.length + snippet.length > 8000) break;
+        combinedText += snippet;
+      }
+      for (const t of uploadedTexts) {
+        const snippet = `--- ${t.name} ---\n${t.text.substring(0, 3000)}\n\n`;
+        if (combinedText.length + snippet.length > 8000) break;
+        combinedText += snippet;
+      }
+
+      if (!combinedText.trim()) {
+        setError("No documents with extractable text found. Upload a proposal or capability statement.");
+        setGeneratingFromGuided(false);
+        return;
+      }
+
+      const data = await apiRequest("/api/applications/ai/extract", {
         method: "POST",
         body: JSON.stringify({
-          section: "8(a) Corporate Experience Guided Questions Pre-fill",
-          certType: "8a",
-          prompt: `Read these company documents and extract answers for an 8(a) application. Return ONLY a valid JSON object with keys: yearsInBusiness, coreServices, customerBase, differentiators, teamCapacity, ownerExperience, growthPlan. Write each as a natural paragraph.`,
-          context: { businessName: cert?.client?.businessName, otherSections: combined },
+          proposalText: combinedText,
+          businessName: cert?.client?.businessName || "",
+          certType: "EIGHT_A",
+          clientId: cert?.clientId,
         }),
       });
-      try {
-        const clean = data.text.replace(/```json|```/g, "").trim();
-        setGuidedAnswers(JSON.parse(clean));
-      } catch { setError("Could not auto-fill. Please fill manually."); }
-    } catch { setError("Failed to process documents."); }
-    finally { setGeneratingFromGuided(false); }
+
+      const newAnswers: Record<string, string> = { ...guidedAnswers };
+      const bi = data.businessInfo || {};
+      const sec = data.sections || {};
+
+      if (bi.yearsInBusiness && !newAnswers.yearsInBusiness) newAnswers.yearsInBusiness = String(bi.yearsInBusiness);
+      if ((bi.coreServiceAreas?.length || sec.capabilities) && !newAnswers.coreServices) {
+        newAnswers.coreServices = bi.coreServiceAreas?.length ? bi.coreServiceAreas.join(", ") : sec.capabilities || "";
+      }
+      if (bi.keyDifferentiators?.length && !newAnswers.differentiators) {
+        newAnswers.differentiators = bi.keyDifferentiators.join(". ");
+      }
+      if (bi.employeeCount && !newAnswers.teamCapacity) {
+        newAnswers.teamCapacity = `${bi.employeeCount} employees${bi.location ? `, based in ${bi.location}` : ""}`;
+      }
+      if (sec.employees && !newAnswers.ownerExperience) newAnswers.ownerExperience = sec.employees;
+      if (sec.overview && !newAnswers.coreServices) newAnswers.coreServices = sec.overview;
+
+      setGuidedAnswers(newAnswers);
+    } catch (err: any) {
+      setError("Document scan failed: " + (err.message || "Try uploading more documents."));
+    } finally {
+      setGeneratingFromGuided(false);
+    }
   }
 
   async function generateAllSections() {
@@ -226,7 +266,7 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
         clientId: cert.clientId,
         certType: cert.type,
         currentStep: cert.application?.currentStep || 1,
-        narrativeCorp8a: JSON.stringify({ narratives: narrativeData, guidedAnswers: guidedData }),
+        narrativeCorp: JSON.stringify({ narratives: narrativeData, guidedAnswers: guidedData }),
       }),
     });
   }
@@ -338,9 +378,34 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
           {/* GATHER MODE */}
           {mode === "gather" && (
             <div>
+              {/* Document-first AI panel */}
+              <div style={{ background: "linear-gradient(135deg, rgba(99,102,241,.06) 0%, rgba(200,155,60,.06) 100%)", border: "1px solid rgba(99,102,241,.15)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 14 }}>
+                  <span style={{ fontSize: 28, flexShrink: 0 }}>📄</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "var(--navy)", marginBottom: 4 }}>Step 1: Let AI read your documents</div>
+                    <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 0 }}>
+                      Click "Scan Documents" to have AI pre-fill the answers below from your uploaded proposals, capability statements, and business documents. Then review and edit.
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={prefillFromDocuments} disabled={generatingFromGuided}
+                    style={{
+                      padding: "10px 24px",
+                      background: generatingFromGuided ? "var(--ink4)" : "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+                      border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff",
+                      cursor: generatingFromGuided ? "wait" : "pointer",
+                      boxShadow: "0 4px 16px rgba(99,102,241,.3)",
+                    }}>
+                    {generatingFromGuided ? "Scanning documents..." : "🤖 Scan Documents & Pre-fill Answers"}
+                  </button>
+                </div>
+              </div>
+
               {/* File upload */}
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Step 1 — Upload Documents</div>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Upload Additional Documents</div>
                 <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>Upload Company Documents</h3>
                 <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 16, lineHeight: 1.6 }}>
                   Capability statements, proposals, org charts, award letters — any docs about your company. The more you upload, the better the AI drafts.

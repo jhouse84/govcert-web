@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
@@ -40,6 +40,16 @@ export default function CompanyProfilePage() {
   const [saved, setSaved] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Auto-save
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const formDataRef = useRef<Record<string, string>>(formData);
+  const clientIdRef = useRef<string | null>(clientId);
+
+  // Keep refs in sync
+  useEffect(() => { formDataRef.current = formData; }, [formData]);
+  useEffect(() => { clientIdRef.current = clientId; }, [clientId]);
+
   // SAM.gov
   const [samQuery, setSamQuery] = useState("");
   const [samSearching, setSamSearching] = useState(false);
@@ -75,6 +85,50 @@ export default function CompanyProfilePage() {
     const changed = FIELDS.some(f => (formData[f.key] || "") !== (original[f.key] || ""));
     setHasChanges(changed);
   }, [formData, original]);
+
+  // Auto-save: debounce 2 seconds after any change
+  const autoSave = useCallback(async () => {
+    const cId = clientIdRef.current;
+    if (!cId) return;
+    setAutoSaving(true);
+    try {
+      await apiRequest(`/api/clients/${cId}`, {
+        method: "PUT",
+        body: JSON.stringify(formDataRef.current),
+      });
+      setOriginal({ ...formDataRef.current });
+      setHasChanges(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      console.error("Auto-save failed:", err.message);
+    } finally {
+      setAutoSaving(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasChanges) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSave();
+    }, 2000);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [formData, hasChanges, autoSave]);
+
+  // Warn before navigating away with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasChanges) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasChanges]);
 
   async function fetchClient() {
     try {
@@ -315,7 +369,7 @@ export default function CompanyProfilePage() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {saved && <span style={{ fontSize: 12, color: "var(--green)", fontWeight: 600 }}>✓ Saved!</span>}
-            <button onClick={saveProfile} disabled={saving || !hasChanges}
+            <button onClick={saveProfile} disabled={saving || autoSaving || !hasChanges}
               style={{
                 padding: "10px 28px",
                 background: hasChanges ? "var(--gold)" : "var(--cream2)",
@@ -324,7 +378,7 @@ export default function CompanyProfilePage() {
                 cursor: hasChanges ? "pointer" : "not-allowed",
                 boxShadow: hasChanges ? "0 4px 20px rgba(200,155,60,.3)" : "none",
               }}>
-              {saving ? "Saving..." : "Save Profile"}
+              {saving || autoSaving ? "Saving..." : "Save Profile"}
             </button>
           </div>
         </div>
@@ -489,7 +543,7 @@ export default function CompanyProfilePage() {
             boxShadow: "0 8px 40px rgba(0,0,0,.25)", zIndex: 50,
           }}>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,.6)" }}>
-              You have unsaved changes
+              {autoSaving ? "Auto-saving..." : "You have unsaved changes — auto-save in 2s"}
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => { setFormData({ ...original }); }}

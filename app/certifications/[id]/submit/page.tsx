@@ -2,6 +2,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { usePaywall } from "@/lib/usePaywall";
+import PaywallModal from "@/components/PaywallModal";
 
 // GSA eOffer field mapping — which section feeds which eOffer tab
 const EOFFER_FIELDS = [
@@ -86,10 +88,8 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedTab, setExpandedTab] = useState<string | null>("Tab 1 — Company Information");
   const [showInstructions, setShowInstructions] = useState<string | null>(null);
-  const [accessGranted, setAccessGranted] = useState(false);
-  const [checkingAccess, setCheckingAccess] = useState(true);
-  const [pricingData, setPricingData] = useState<any>(null);
-  const [unlocking, setUnlocking] = useState(false);
+
+  const pw = usePaywall("GSA_MAS");
 
   // Editable company info
   const [editingCompany, setEditingCompany] = useState(false);
@@ -112,41 +112,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     if (!token) { router.push("/login"); return; }
     if (userData) setUser(JSON.parse(userData));
     fetchCert();
-    checkAccess();
   }, []);
-
-  async function checkAccess() {
-    try {
-      const pricing = await apiRequest("/api/pricing");
-      setPricingData(pricing);
-      const userData = JSON.parse(localStorage.getItem("user") || "{}");
-      // Only auto-grant if user already has CONSULTING tier (already paid/upgraded)
-      if (userData.subscriptionTier === "CONSULTING") {
-        setAccessGranted(true);
-      }
-      // Otherwise show paywall — even during beta (price will be $0)
-    } catch {
-      setAccessGranted(true); // Fail open
-    } finally {
-      setCheckingAccess(false);
-    }
-  }
-
-  async function handleUnlock() {
-    setUnlocking(true);
-    try {
-      const price = pricingData?.tiers?.PLATFORM?.monthlyPrice || 0;
-      if (price === 0) {
-        // Free / beta — instant unlock
-        setAccessGranted(true);
-      } else {
-        // Paid — redirect to upgrade page
-        router.push("/portal/upgrade");
-      }
-    } finally {
-      setUnlocking(false);
-    }
-  }
 
   async function fetchCert() {
     try {
@@ -385,63 +351,21 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
 
       {/* Main */}
       <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
-        {checkingAccess && (
+        {pw.loading && (
           <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)", fontSize: 14 }}>
             Checking access...
           </div>
         )}
-        {!checkingAccess && !accessGranted && (
-          <div style={{ position: "fixed", top: 0, left: 240, right: 0, bottom: 0, background: "rgba(11,25,41,.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
-            <div style={{ background: "#fff", borderRadius: 16, maxWidth: 520, width: "100%", padding: "40px 32px", textAlign: "center" as const, boxShadow: "0 12px 40px rgba(0,0,0,.25)" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, marginBottom: 8 }}>
-                Unlock Your Submission Package
-              </h2>
-              <p style={{ fontSize: 15, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 24 }}>
-                Your GSA MAS eOffer package is ready. Upgrade to access your complete, submission-ready documents with all AI-generated narratives, formatted for direct use in eOffer.
-              </p>
-              <div style={{ background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.2)", borderRadius: 8, padding: 16, marginBottom: 24, textAlign: "left" as const }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 8 }}>Your package includes:</div>
-                {[
-                  "Corporate Experience Narrative (copy-paste ready)",
-                  "Quality Control Plan",
-                  "Past Performance formatted for eOffer",
-                  "Financial capability summary",
-                  "CSP-1 Pricing worksheet",
-                  "Complete submission checklist",
-                ].map((item) => (
-                  <div key={item} style={{ fontSize: 13, color: "var(--ink2)", padding: "3px 0" }}>✓ {item}</div>
-                ))}
-              </div>
-              {/* Pricing display */}
-              <div style={{ marginBottom: 16, padding: "12px 16px", background: "var(--cream, #F5F1E8)", borderRadius: 8 }}>
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: "var(--navy)", fontWeight: 400, lineHeight: 1 }}>
-                  {pricingData?.tiers?.PLATFORM?.monthlyPrice === 0 ? "Free" : `$${pricingData?.tiers?.PLATFORM?.monthlyPrice || 0}/mo`}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 4 }}>
-                  {pricingData?.betaMode ? "Beta pricing — no payment required" : "Subscription required"}
-                </div>
-              </div>
-
-              {/* Payment methods (visual — for when pricing is > $0) */}
-              {pricingData?.tiers?.PLATFORM?.monthlyPrice > 0 && (
-                <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 16 }}>
-                  <span style={{ padding: "4px 12px", background: "#fff", border: "1px solid var(--border)", borderRadius: 6, fontSize: 11, color: "var(--ink3)" }}>💳 Credit Card</span>
-                  <span style={{ padding: "4px 12px", background: "#fff", border: "1px solid var(--border)", borderRadius: 6, fontSize: 11, color: "var(--ink3)" }}>PayPal</span>
-                  <span style={{ padding: "4px 12px", background: "#fff", border: "1px solid var(--border)", borderRadius: 6, fontSize: 11, color: "var(--ink3)" }}>Apple Pay</span>
-                </div>
-              )}
-
-              <button onClick={handleUnlock} disabled={unlocking} style={{ display: "block", width: "100%", padding: 14, background: "linear-gradient(135deg, #C89B3C, #E8B84B)", border: "none", borderRadius: 8, color: "#fff", fontSize: 16, fontWeight: 600, cursor: unlocking ? "not-allowed" : "pointer", marginBottom: 12, boxShadow: "0 4px 20px rgba(200,155,60,.35)", fontFamily: "'DM Sans', sans-serif" }}>
-                {unlocking ? "Unlocking..." : pricingData?.tiers?.PLATFORM?.monthlyPrice === 0 ? "Unlock Now — Free →" : `Subscribe — $${pricingData?.tiers?.PLATFORM?.monthlyPrice}/mo →`}
-              </button>
-              <p style={{ fontSize: 12, color: "var(--ink4)" }}>
-                {pricingData?.betaMode ? "Currently free during beta — unlock instantly" : "30-day money-back guarantee"}
-              </p>
-            </div>
-          </div>
+        {!pw.loading && !pw.generationAccess && (
+          <PaywallModal
+            certType="GSA_MAS"
+            price={pw.price}
+            betaMode={pw.betaMode}
+            onUnlock={pw.onUnlock}
+            onClose={pw.closePaywall}
+          />
         )}
-        <div style={!checkingAccess && !accessGranted ? { filter: "blur(8px)", pointerEvents: "none" as const, userSelect: "none" as const } : {}}>
+        <div style={!pw.loading && !pw.generationAccess ? { filter: "blur(8px)", pointerEvents: "none" as const, userSelect: "none" as const } : {}}>
         <div style={{ padding: "40px 48px", maxWidth: 920 }}>
           <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
             ← Back to Application Dashboard

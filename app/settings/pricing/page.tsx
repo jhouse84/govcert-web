@@ -3,14 +3,34 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
+const CERT_TYPE_LABELS: Record<string, string> = {
+  GSA_MAS: "GSA Multiple Award Schedule",
+  EIGHT_A: "8(a) Business Development",
+  WOSB: "Women-Owned Small Business",
+  SDVOSB: "Service-Disabled Veteran-Owned",
+  HUBZONE: "HUBZone",
+  MBE: "Minority Business Enterprise",
+  BUNDLE_8A_GSA: "8(a) + GSA Bundle",
+};
+
+const TIER_LABELS: Record<string, string> = {
+  ESSENTIAL: "Essential",
+  PROFESSIONAL: "Professional",
+  ENTERPRISE: "Enterprise",
+};
+
 export default function PricingManagementPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [pricing, setPricing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [editModal, setEditModal] = useState<{ tier: string; data: any } | null>(null);
-  const [editForm, setEditForm] = useState({ monthlyPrice: 0, annualPrice: 0, betaMode: false });
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Editable state
+  const [betaMode, setBetaMode] = useState(true);
+  const [generationFees, setGenerationFees] = useState<Record<string, number>>({});
+  const [maintenanceTiers, setMaintenanceTiers] = useState<Record<string, { name: string; monthlyPrice: number; annualPrice: number }>>({});
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -29,6 +49,9 @@ export default function PricingManagementPage() {
     try {
       const data = await apiRequest("/api/pricing");
       setPricing(data);
+      setBetaMode(data.betaMode ?? true);
+      setGenerationFees(data.generationFees || {});
+      setMaintenanceTiers(data.maintenanceTiers || {});
     } catch (err) {
       console.error("Failed to fetch pricing:", err);
     } finally {
@@ -36,34 +59,20 @@ export default function PricingManagementPage() {
     }
   }
 
-  function openEdit(tierKey: string) {
-    const tier = pricing?.tiers?.[tierKey];
-    if (!tier) return;
-    setEditForm({
-      monthlyPrice: tier.monthlyPrice || 0,
-      annualPrice: tier.annualPrice || 0,
-      betaMode: pricing?.betaMode ?? true,
-    });
-    setEditModal({ tier: tierKey, data: tier });
-  }
-
   async function handleSave() {
-    if (!editModal) return;
     setSaving(true);
+    setSaveSuccess(false);
     try {
       await apiRequest("/api/pricing", {
         method: "PUT",
-        body: JSON.stringify({
-          tier: editModal.tier,
-          monthlyPrice: editForm.monthlyPrice,
-          annualPrice: editForm.annualPrice,
-          betaMode: editForm.betaMode,
-        }),
+        body: JSON.stringify({ betaMode, generationFees, maintenanceTiers }),
       });
       await fetchPricing();
-      setEditModal(null);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       console.error("Failed to save pricing:", err);
+      alert("Failed to save pricing. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -93,8 +102,6 @@ export default function PricingManagementPage() {
     { label: "Usage & Costs", icon: "\uD83D\uDCCA", href: "/usage" },
     { label: "Pricing", icon: "\uD83D\uDCB0", href: "/settings/pricing", active: true },
   ];
-
-  const tiers = pricing?.tiers ? Object.entries(pricing.tiers) : [];
 
   return (
     <div style={{ minHeight: "100vh", background: "radial-gradient(ellipse at top right, rgba(200,155,60,.03) 0%, transparent 50%), var(--cream)", display: "flex" }}>
@@ -151,41 +158,143 @@ export default function PricingManagementPage() {
             </h1>
             <div style={{ width: 48, height: 2, background: "linear-gradient(90deg, #C89B3C, #E8B84B)", borderRadius: 2, marginBottom: 8 }} />
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300, lineHeight: 1.6 }}>
-              Configure subscription pricing for your platform
+              Configure generation fees and maintenance tiers for your platform
             </p>
           </div>
 
-          {/* Beta Mode Banner */}
-          {pricing?.betaMode && (
-            <div style={{
-              background: "rgba(200,155,60,.08)", border: "1px solid rgba(200,155,60,.2)",
-              borderRadius: 10, padding: "16px 24px", marginBottom: 28,
-              display: "flex", alignItems: "center", gap: 12,
-            }}>
-              <div style={{ fontSize: 20 }}>{"\u26A0\uFE0F"}</div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#92700C", marginBottom: 2 }}>Beta pricing is active</div>
-                <div style={{ fontSize: 13, color: "#92700C", opacity: 0.8, lineHeight: 1.5 }}>
-                  All tiers are free. Turn off beta mode to enable paid subscriptions.
+          {/* Beta Mode Toggle — PROMINENT */}
+          <div style={{
+            background: betaMode ? "linear-gradient(135deg, rgba(200,155,60,.12) 0%, rgba(200,155,60,.04) 100%)" : "linear-gradient(135deg, rgba(34,197,94,.08) 0%, rgba(34,197,94,.02) 100%)",
+            border: betaMode ? "2px solid rgba(200,155,60,.35)" : "2px solid rgba(34,197,94,.3)",
+            borderRadius: 16, padding: "28px 32px", marginBottom: 32,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                  <span style={{ fontSize: 28 }}>{betaMode ? "\u26A0\uFE0F" : "\u2705"}</span>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, margin: 0 }}>
+                    Beta Mode
+                  </h2>
+                </div>
+                <p style={{ fontSize: 15, color: betaMode ? "#92700C" : "var(--ink3)", lineHeight: 1.6, margin: 0, maxWidth: 500 }}>
+                  {betaMode
+                    ? "Everything is FREE. All generation fees and maintenance tiers are bypassed. Users can access all features without payment."
+                    : "Paywalls are ACTIVE. Users must pay generation fees and subscribe to maintenance tiers to access features."
+                  }
+                </p>
+                {betaMode && (
+                  <div style={{
+                    marginTop: 12, padding: "8px 14px", background: "rgba(200,155,60,.12)",
+                    border: "1px solid rgba(200,155,60,.25)", borderRadius: 8,
+                    fontSize: 13, color: "#92700C", fontWeight: 500,
+                    display: "inline-block",
+                  }}>
+                    Turn OFF to start charging users
+                  </div>
+                )}
+              </div>
+              <div
+                onClick={() => setBetaMode(!betaMode)}
+                style={{
+                  width: 72, height: 40, borderRadius: 20, cursor: "pointer",
+                  background: betaMode ? "linear-gradient(135deg, #C89B3C, #E8B84B)" : "rgba(34,197,94,.8)",
+                  position: "relative", transition: "background .3s",
+                  boxShadow: betaMode ? "0 2px 12px rgba(200,155,60,.35)" : "0 2px 12px rgba(34,197,94,.3)",
+                  flexShrink: 0, marginLeft: 24,
+                }}
+              >
+                <div style={{
+                  width: 34, height: 34, borderRadius: "50%", background: "#fff",
+                  position: "absolute", top: 3,
+                  left: betaMode ? 35 : 3,
+                  transition: "left .3s",
+                  boxShadow: "0 2px 6px rgba(0,0,0,.2)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 16,
+                }}>
+                  {betaMode ? "ON" : "OFF"}
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Current Pricing Table */}
+          {/* Generation Fees Table */}
           <div style={{
             background: "#fff", border: "1px solid rgba(200,155,60,.08)",
             borderRadius: 14, overflow: "hidden", marginBottom: 28,
             boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)",
           }}>
             <div style={{ padding: "20px 28px", borderBottom: "1px solid rgba(200,155,60,.08)" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Current Pricing</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400 }}>Subscription Tiers</h2>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>One-Time Fees</div>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400 }}>Generation Fees</h2>
+              <p style={{ fontSize: 13, color: "var(--ink4)", marginTop: 4 }}>Charged once per certification when a user generates their application package</p>
             </div>
 
             {/* Table header */}
             <div style={{
-              display: "grid", gridTemplateColumns: "2fr 1fr 1fr 100px",
+              display: "grid", gridTemplateColumns: "2fr 1fr 1fr",
+              padding: "12px 28px", background: "#FAFAF7",
+              borderBottom: "1px solid rgba(200,155,60,.08)",
+              fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const,
+              letterSpacing: ".08em", color: "var(--ink4)",
+            }}>
+              <div>Certification Type</div>
+              <div>Price (cents)</div>
+              <div>Display Price</div>
+            </div>
+
+            {/* Rows */}
+            {Object.entries(generationFees).map(([key, value]) => (
+              <div key={key} style={{
+                display: "grid", gridTemplateColumns: "2fr 1fr 1fr",
+                padding: "16px 28px", alignItems: "center",
+                borderBottom: "1px solid rgba(200,155,60,.06)",
+              }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{CERT_TYPE_LABELS[key] || key}</div>
+                  <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>{key}</div>
+                </div>
+                <div>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={value}
+                      onChange={e => setGenerationFees(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+                      style={{
+                        width: 120, padding: "8px 12px",
+                        background: betaMode ? "#F8F6F1" : "#fff",
+                        border: "1px solid rgba(200,155,60,.2)",
+                        borderRadius: 8, fontSize: 14, color: "var(--navy)",
+                        outline: "none", fontFamily: "'DM Sans', sans-serif",
+                        opacity: betaMode ? 0.6 : 1,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ fontSize: 14, color: betaMode ? "var(--gold)" : "var(--navy)", fontWeight: betaMode ? 500 : 400 }}>
+                  {betaMode ? "$0 / Free" : `$${(value / 100).toFixed(2)}`}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Maintenance Tiers Table */}
+          <div style={{
+            background: "#fff", border: "1px solid rgba(200,155,60,.08)",
+            borderRadius: 14, overflow: "hidden", marginBottom: 28,
+            boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)",
+          }}>
+            <div style={{ padding: "20px 28px", borderBottom: "1px solid rgba(200,155,60,.08)" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Recurring</div>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400 }}>Maintenance Tiers</h2>
+              <p style={{ fontSize: 13, color: "var(--ink4)", marginTop: 4 }}>Ongoing subscription pricing for certification maintenance and compliance monitoring</p>
+            </div>
+
+            {/* Table header */}
+            <div style={{
+              display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr",
               padding: "12px 28px", background: "#FAFAF7",
               borderBottom: "1px solid rgba(200,155,60,.08)",
               fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const,
@@ -193,52 +302,103 @@ export default function PricingManagementPage() {
             }}>
               <div>Tier</div>
               <div>Monthly Price</div>
+              <div>Display (Monthly)</div>
               <div>Annual Price</div>
-              <div style={{ textAlign: "right" as const }}>Actions</div>
+              <div>Display (Annual)</div>
             </div>
 
             {/* Rows */}
-            {tiers.map(([key, tier]: [string, any]) => (
+            {Object.entries(maintenanceTiers).map(([key, tier]) => (
               <div key={key} style={{
-                display: "grid", gridTemplateColumns: "2fr 1fr 1fr 100px",
-                padding: "18px 28px", alignItems: "center",
+                display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr",
+                padding: "16px 28px", alignItems: "center",
                 borderBottom: "1px solid rgba(200,155,60,.06)",
               }}>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{tier.name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{tier.name || TIER_LABELS[key] || key}</div>
                   <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>{key}</div>
                 </div>
-                <div style={{ fontSize: 14, color: "var(--navy)" }}>
-                  {pricing?.betaMode ? (
-                    <span style={{ color: "var(--gold)", fontWeight: 500 }}>$0 / Free</span>
-                  ) : (
-                    <span>${tier.monthlyPrice}/mo</span>
-                  )}
+                <div>
+                  <div style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink4)" }}>$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={tier.monthlyPrice}
+                      onChange={e => setMaintenanceTiers(prev => ({
+                        ...prev,
+                        [key]: { ...prev[key], monthlyPrice: Number(e.target.value) },
+                      }))}
+                      style={{
+                        width: 100, padding: "8px 10px 8px 24px",
+                        background: betaMode ? "#F8F6F1" : "#fff",
+                        border: "1px solid rgba(200,155,60,.2)",
+                        borderRadius: 8, fontSize: 14, color: "var(--navy)",
+                        outline: "none", fontFamily: "'DM Sans', sans-serif",
+                        opacity: betaMode ? 0.6 : 1,
+                      }}
+                    />
+                  </div>
                 </div>
-                <div style={{ fontSize: 14, color: "var(--navy)" }}>
-                  {pricing?.betaMode ? (
-                    <span style={{ color: "var(--gold)", fontWeight: 500 }}>$0 / Free</span>
-                  ) : (
-                    <span>${tier.annualPrice}/yr</span>
-                  )}
+                <div style={{ fontSize: 14, color: betaMode ? "var(--gold)" : "var(--navy)", fontWeight: betaMode ? 500 : 400 }}>
+                  {betaMode ? "$0 / Free" : `$${tier.monthlyPrice}/mo`}
                 </div>
-                <div style={{ textAlign: "right" as const }}>
-                  <button
-                    onClick={() => openEdit(key)}
-                    style={{
-                      padding: "6px 16px", background: "transparent",
-                      border: "1px solid rgba(200,155,60,.2)", borderRadius: 6,
-                      color: "var(--gold)", fontSize: 13, fontWeight: 500,
-                      cursor: "pointer", transition: "all .15s",
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(200,155,60,.06)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                  >
-                    Edit
-                  </button>
+                <div>
+                  <div style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink4)" }}>$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={tier.annualPrice}
+                      onChange={e => setMaintenanceTiers(prev => ({
+                        ...prev,
+                        [key]: { ...prev[key], annualPrice: Number(e.target.value) },
+                      }))}
+                      style={{
+                        width: 100, padding: "8px 10px 8px 24px",
+                        background: betaMode ? "#F8F6F1" : "#fff",
+                        border: "1px solid rgba(200,155,60,.2)",
+                        borderRadius: 8, fontSize: 14, color: "var(--navy)",
+                        outline: "none", fontFamily: "'DM Sans', sans-serif",
+                        opacity: betaMode ? 0.6 : 1,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ fontSize: 14, color: betaMode ? "var(--gold)" : "var(--navy)", fontWeight: betaMode ? 500 : 400 }}>
+                  {betaMode ? "$0 / Free" : `$${tier.annualPrice}/yr`}
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Save Button */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                padding: "14px 40px",
+                background: saving ? "var(--ink4)" : "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
+                border: "none", borderRadius: 10,
+                color: "#fff", fontSize: 16, fontWeight: 600,
+                cursor: saving ? "wait" : "pointer",
+                boxShadow: "0 4px 20px rgba(200,155,60,.3)",
+                transition: "all .2s",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+              onMouseEnter={e => { if (!saving) e.currentTarget.style.boxShadow = "0 6px 28px rgba(200,155,60,.45)"; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(200,155,60,.3)"; }}
+            >
+              {saving ? "Saving..." : "Save All Changes"}
+            </button>
+            {saveSuccess && (
+              <span style={{ fontSize: 14, color: "var(--green, #22C55E)", fontWeight: 500 }}>
+                {"\u2713"} Saved successfully
+              </span>
+            )}
           </div>
 
           {/* Payment Provider Section */}
@@ -302,156 +462,6 @@ export default function PricingManagementPage() {
 
         </div>
       </div>
-
-      {/* Edit Pricing Modal */}
-      {editModal && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(11,25,41,.6)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 1000, backdropFilter: "blur(4px)",
-        }}
-          onClick={() => setEditModal(null)}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: "#fff", borderRadius: 16, width: 480,
-              boxShadow: "0 8px 40px rgba(0,0,0,.2), 0 1px 3px rgba(0,0,0,.1)",
-              overflow: "hidden",
-            }}
-          >
-            <div style={{
-              padding: "24px 28px", borderBottom: "1px solid rgba(200,155,60,.08)",
-              background: "linear-gradient(135deg, #0B1929 0%, #1A3357 100%)",
-              position: "relative",
-            }}>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg, #C89B3C, #E8B84B)" }} />
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "#fff", fontWeight: 400 }}>
-                Edit Pricing
-              </h3>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,.4)", marginTop: 4 }}>
-                {editModal.data.name}
-              </p>
-            </div>
-
-            <div style={{ padding: "24px 28px" }}>
-              {/* Tier name (read-only) */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink3)", display: "block", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Tier</label>
-                <div style={{
-                  padding: "10px 14px", background: "#F8F6F1", borderRadius: 8,
-                  border: "1px solid rgba(200,155,60,.1)", fontSize: 14, color: "var(--ink4)",
-                }}>
-                  {editModal.data.name} ({editModal.tier})
-                </div>
-              </div>
-
-              {/* Monthly price */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink3)", display: "block", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Monthly Price (USD)</label>
-                <div style={{ position: "relative" }}>
-                  <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--ink4)" }}>$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={editForm.monthlyPrice}
-                    onChange={e => setEditForm({ ...editForm, monthlyPrice: Number(e.target.value) })}
-                    style={{
-                      width: "100%", padding: "10px 14px 10px 28px",
-                      background: "#fff", border: "1px solid rgba(200,155,60,.2)",
-                      borderRadius: 8, fontSize: 14, color: "var(--navy)",
-                      outline: "none", fontFamily: "'DM Sans', sans-serif",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Annual price */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink3)", display: "block", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Annual Price (USD)</label>
-                <div style={{ position: "relative" }}>
-                  <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--ink4)" }}>$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={editForm.annualPrice}
-                    onChange={e => setEditForm({ ...editForm, annualPrice: Number(e.target.value) })}
-                    style={{
-                      width: "100%", padding: "10px 14px 10px 28px",
-                      background: "#fff", border: "1px solid rgba(200,155,60,.2)",
-                      borderRadius: 8, fontSize: 14, color: "var(--navy)",
-                      outline: "none", fontFamily: "'DM Sans', sans-serif",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Beta mode toggle */}
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "14px 16px", background: "#F8F6F1", borderRadius: 8,
-                border: "1px solid rgba(200,155,60,.1)", marginBottom: 24,
-              }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Beta Mode</div>
-                  <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>
-                    When on, price displays as "$0 / Free during beta"
-                  </div>
-                </div>
-                <div
-                  onClick={() => setEditForm({ ...editForm, betaMode: !editForm.betaMode })}
-                  style={{
-                    width: 48, height: 26, borderRadius: 13, cursor: "pointer",
-                    background: editForm.betaMode ? "linear-gradient(135deg, #C89B3C, #E8B84B)" : "rgba(0,0,0,.15)",
-                    position: "relative", transition: "background .2s",
-                  }}
-                >
-                  <div style={{
-                    width: 22, height: 22, borderRadius: "50%", background: "#fff",
-                    position: "absolute", top: 2,
-                    left: editForm.betaMode ? 24 : 2,
-                    transition: "left .2s",
-                    boxShadow: "0 1px 3px rgba(0,0,0,.2)",
-                  }} />
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                <button
-                  onClick={() => setEditModal(null)}
-                  style={{
-                    padding: "10px 24px", background: "transparent",
-                    border: "1px solid rgba(200,155,60,.2)", borderRadius: 8,
-                    color: "var(--ink3)", fontSize: 14, cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  style={{
-                    padding: "10px 28px",
-                    background: saving ? "var(--ink4)" : "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
-                    border: "none", borderRadius: 8,
-                    color: "#fff", fontSize: 14, fontWeight: 600,
-                    cursor: saving ? "wait" : "pointer",
-                    boxShadow: "0 2px 12px rgba(200,155,60,.3)",
-                    transition: "all .2s",
-                  }}
-                  onMouseEnter={e => { if (!saving) e.currentTarget.style.boxShadow = "0 4px 20px rgba(200,155,60,.45)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 12px rgba(200,155,60,.3)"; }}
-                >
-                  {saving ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

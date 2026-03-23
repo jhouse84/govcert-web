@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { trackPageView } from "@/lib/activity";
 import EligibilityScorecard from "@/components/EligibilityScorecard";
 
 const CERT_LABELS: Record<string, string> = {
@@ -39,6 +40,7 @@ export default function PortalPage() {
         return;
       }
     }
+    trackPageView("portal-home");
     fetchMyCerts();
   }, []);
 

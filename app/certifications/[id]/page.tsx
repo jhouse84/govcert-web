@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { trackPageView } from "@/lib/activity";
 
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
@@ -33,6 +34,7 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
     const userData = localStorage.getItem("user");
     if (!token) { router.push("/login"); return; }
     if (userData) setUser(JSON.parse(userData));
+    trackPageView("cert-dashboard");
     fetchCert();
   }, []);
 

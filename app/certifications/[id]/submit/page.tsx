@@ -97,6 +97,12 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   const [savingCompany, setSavingCompany] = useState(false);
   const [companySaved, setCompanySaved] = useState(false);
 
+  // Inline editing for ALL fields
+  const [inlineEdits, setInlineEdits] = useState<Record<string, string>>({});
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [savingField, setSavingField] = useState<string | null>(null);
+  const [savedField, setSavedField] = useState<string | null>(null);
+
   // CSP-1 / pricing LCATs
   const [lcats, setLcats] = useState<any[]>([]);
 
@@ -209,6 +215,53 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     a.download = `CSP-1_${cert?.client?.businessName?.replace(/\s+/g, "_") || "pricing"}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function saveInlineField(field: any) {
+    const val = inlineEdits[field.id];
+    if (val === undefined) return;
+    setSavingField(field.id);
+    try {
+      if (field.source === "client") {
+        // Save to client record
+        await apiRequest(`/api/clients/${cert.client.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ [field.key]: val }),
+        });
+        setCert((prev: any) => ({ ...prev, client: { ...prev.client, [field.key]: val } }));
+      } else if (field.source === "narrativeCorp" || field.source === "narrativeQCP") {
+        // Save to certification narrative JSON
+        const narrativeField = field.source === "narrativeCorp" ? "narrativeCorp" : "narrativeQCP";
+        let existing: any = {};
+        try { existing = JSON.parse(cert?.application?.[narrativeField] || "{}"); } catch {}
+        // Support nested narratives format
+        if (existing.narratives) {
+          existing.narratives[field.narrativeKey] = val;
+        } else {
+          existing[field.narrativeKey] = val;
+        }
+        await apiRequest(`/api/certifications/${certId}`, {
+          method: "PUT",
+          body: JSON.stringify({ [narrativeField]: JSON.stringify(existing) }),
+        });
+        setCert((prev: any) => ({
+          ...prev,
+          application: { ...prev.application, [narrativeField]: JSON.stringify(existing) }
+        }));
+      }
+      setEditingField(null);
+      setSavedField(field.id);
+      setTimeout(() => setSavedField(null), 2000);
+    } catch (err: any) {
+      alert("Failed to save: " + (err.message || "Unknown error"));
+    } finally {
+      setSavingField(null);
+    }
+  }
+
+  function startEditing(field: any, currentValue: string) {
+    setEditingField(field.id);
+    setInlineEdits(prev => ({ ...prev, [field.id]: currentValue }));
   }
 
   function getFieldValue(field: any): string {
@@ -515,9 +568,9 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                                   style={{ padding: "6px 12px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, cursor: "pointer", color: "var(--ink3)" }}>
                                   {showInstructions === field.id ? "Hide" : "ℹ Instructions"}
                                 </button>
-                                {!isStatic && value && (
+                                {!isStatic && value && editingField !== field.id && (
                                   <button
-                                    onClick={() => copyToClipboard(field.id, value)}
+                                    onClick={() => copyToClipboard(field.id, inlineEdits[field.id] ?? value)}
                                     style={{ padding: "6px 16px", background: isCopied ? "var(--green)" : "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 500, cursor: "pointer", color: isCopied ? "#fff" : "var(--gold2)", transition: "all .15s", minWidth: 80 }}>
                                     {isCopied ? "✓ Copied!" : "Copy →"}
                                   </button>
@@ -533,23 +586,61 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                               </div>
                             )}
 
-                            {/* Field content */}
+                            {/* Field content — inline editable */}
                             <div style={{ padding: "14px 16px" }}>
                               {isStatic ? (
                                 <div style={{ fontSize: 13, color: "var(--blue)", lineHeight: 1.6, fontStyle: "italic" }}>{value}</div>
-                              ) : value ? (
-                                <div style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 300, overflowY: "auto", fontFamily: "'DM Sans', sans-serif" }}>
-                                  {value}
+                              ) : editingField === field.id ? (
+                                <div>
+                                  <textarea
+                                    value={inlineEdits[field.id] ?? value}
+                                    onChange={e => setInlineEdits(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                    rows={field.source === "client" ? 1 : 8}
+                                    style={{
+                                      width: "100%", padding: "10px 14px", border: "2px solid var(--gold)",
+                                      borderRadius: "var(--r)", fontSize: 13, lineHeight: 1.7, resize: "vertical",
+                                      outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" as const,
+                                      minHeight: field.source === "client" ? 40 : 150,
+                                      background: "rgba(200,155,60,.03)",
+                                    }}
+                                    autoFocus
+                                  />
+                                  {field.charLimit && (
+                                    <div style={{ fontSize: 11, color: (inlineEdits[field.id] || "").length > field.charLimit ? "var(--red)" : "var(--ink4)", marginTop: 4, textAlign: "right" as const }}>
+                                      {(inlineEdits[field.id] || "").length.toLocaleString()} / {field.charLimit.toLocaleString()} chars
+                                    </div>
+                                  )}
+                                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
+                                    <button onClick={() => setEditingField(null)}
+                                      style={{ padding: "6px 16px", background: "var(--cream2)", border: "none", borderRadius: "var(--r)", fontSize: 12, cursor: "pointer", color: "var(--ink3)" }}>
+                                      Cancel
+                                    </button>
+                                    <button onClick={() => saveInlineField(field)} disabled={savingField === field.id}
+                                      style={{ padding: "6px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#fff" }}>
+                                      {savingField === field.id ? "Saving..." : "Save"}
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
-                                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0" }}>
-                                  <span style={{ fontSize: 16 }}>⚠️</span>
-                                  <div>
-                                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--amber)", marginBottom: 2 }}>This field is empty</div>
-                                    <div style={{ fontSize: 12, color: "var(--ink3)" }}>
-                                      Go back to the <a href={`/certifications/${certId}`} style={{ color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>Application Dashboard</a> to complete this section.
+                                <div style={{ cursor: "pointer", position: "relative" }}
+                                  onClick={() => startEditing(field, value)}>
+                                  {value ? (
+                                    <div style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 300, overflowY: "auto", fontFamily: "'DM Sans', sans-serif" }}>
+                                      {value}
+                                      <div style={{ fontSize: 11, color: "var(--gold)", marginTop: 8, fontWeight: 500 }}>Click to edit</div>
                                     </div>
-                                  </div>
+                                  ) : (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0" }}>
+                                      <span style={{ fontSize: 16 }}>✏️</span>
+                                      <div>
+                                        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--gold)", marginBottom: 2 }}>Click to add content</div>
+                                        <div style={{ fontSize: 12, color: "var(--ink3)" }}>Type directly here, or go to the <a href={`/certifications/${certId}`} onClick={e => e.stopPropagation()} style={{ color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>Application Dashboard</a> for guided input.</div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {savedField === field.id && (
+                                    <div style={{ position: "absolute", top: 0, right: 0, padding: "4px 12px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 11, color: "var(--green)", fontWeight: 500 }}>✓ Saved</div>
+                                  )}
                                 </div>
                               )}
                             </div>

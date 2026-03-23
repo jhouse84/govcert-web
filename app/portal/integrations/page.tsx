@@ -88,18 +88,56 @@ export default function PortalIntegrationsPage() {
     window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/oauth/${provider}/start?clientId=${clientId}&token=${token}`;
   }
 
+  const [samSaving, setSamSaving] = useState(false);
+  const [samSaved, setSamSaved] = useState(false);
+
   async function lookupSam() {
     if (!samQuery.trim()) return;
     setSamSearching(true);
     setSamResult(null);
     setSamError("");
+    setSamSaved(false);
     try {
-      const data = await apiRequest(`/api/sam/lookup?uei=${encodeURIComponent(samQuery.trim())}`);
-      setSamResult(data);
+      const q = samQuery.trim();
+      // Detect CAGE code (5 alphanumeric) vs UEI (12 chars)
+      const param = q.length === 5 ? `cage=${encodeURIComponent(q)}` : `uei=${encodeURIComponent(q)}`;
+      const data = await apiRequest(`/api/sam/lookup?${param}`);
+      // Backend returns { entities: [...] } — extract the first entity
+      const entity = data?.entities?.[0] || data;
+      if (!entity || (!entity.entityName && !entity.uei)) {
+        setSamError("No entity found. Check your UEI or CAGE code and try again.");
+      } else {
+        setSamResult(entity);
+      }
     } catch (err: any) {
       setSamError(err.message || "Entity not found. Check your UEI or CAGE code and try again.");
     } finally {
       setSamSearching(false);
+    }
+  }
+
+  async function savesamToProfile() {
+    if (!samResult || !clientId) return;
+    setSamSaving(true);
+    try {
+      const updates: Record<string, string> = {};
+      if (samResult.entityName) updates.businessName = samResult.entityName;
+      if (samResult.uei) updates.uei = samResult.uei;
+      if (samResult.cageCode) updates.cageCode = samResult.cageCode;
+      if (samResult.address?.line1) updates.address = samResult.address.line1;
+      if (samResult.address?.city) updates.city = samResult.address.city;
+      if (samResult.address?.state) updates.state = samResult.address.state;
+      if (samResult.address?.zip) updates.zip = samResult.address.zip;
+
+      await apiRequest(`/api/clients/${clientId}`, {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      });
+      setSamSaved(true);
+    } catch (err: any) {
+      alert("Failed to save: " + (err.message || "Unknown error"));
+    } finally {
+      setSamSaving(false);
     }
   }
 
@@ -315,18 +353,28 @@ export default function PortalIntegrationsPage() {
 
                           {samResult && (
                             <div style={{ padding: "16px 20px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: 10, marginBottom: 8 }}>
-                              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--green)", marginBottom: 10 }}>Entity Found</div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--green)" }}>Entity Found</div>
+                                {samSaved ? (
+                                  <span style={{ fontSize: 12, color: "var(--green)", fontWeight: 600 }}>✓ Saved to your profile!</span>
+                                ) : (
+                                  <button onClick={savesamToProfile} disabled={samSaving}
+                                    style={{ padding: "6px 16px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", boxShadow: "0 2px 10px rgba(200,155,60,.3)" }}>
+                                    {samSaving ? "Saving..." : "Save to Profile"}
+                                  </button>
+                                )}
+                              </div>
                               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                                {samResult.legalBusinessName && (
+                                {samResult.entityName && (
                                   <div>
                                     <div style={{ fontSize: 10.5, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Business Name</div>
-                                    <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500, marginTop: 2 }}>{samResult.legalBusinessName}</div>
+                                    <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500, marginTop: 2 }}>{samResult.entityName}</div>
                                   </div>
                                 )}
-                                {samResult.ueiSAM && (
+                                {samResult.uei && (
                                   <div>
                                     <div style={{ fontSize: 10.5, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>UEI</div>
-                                    <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500, marginTop: 2 }}>{samResult.ueiSAM}</div>
+                                    <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500, marginTop: 2 }}>{samResult.uei}</div>
                                   </div>
                                 )}
                                 {samResult.cageCode && (
@@ -341,16 +389,27 @@ export default function PortalIntegrationsPage() {
                                     <div style={{ fontSize: 14, color: samResult.registrationStatus === "Active" ? "var(--green)" : "#B45309", fontWeight: 500, marginTop: 2 }}>{samResult.registrationStatus}</div>
                                   </div>
                                 )}
-                                {samResult.registrationExpirationDate && (
+                                {samResult.expirationDate && (
                                   <div>
                                     <div style={{ fontSize: 10.5, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Expiration Date</div>
-                                    <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500, marginTop: 2 }}>{samResult.registrationExpirationDate}</div>
+                                    <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500, marginTop: 2 }}>{samResult.expirationDate}</div>
                                   </div>
                                 )}
-                                {samResult.naicsCode && (
+                                {samResult.naicsCodes && samResult.naicsCodes.length > 0 && (
                                   <div>
                                     <div style={{ fontSize: 10.5, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Primary NAICS</div>
-                                    <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500, marginTop: 2 }}>{samResult.naicsCode}</div>
+                                    <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500, marginTop: 2 }}>
+                                      {samResult.naicsCodes.find((n: any) => n.primary)?.code || samResult.naicsCodes[0]?.code}
+                                      {samResult.naicsCodes.find((n: any) => n.primary)?.description ? ` — ${samResult.naicsCodes.find((n: any) => n.primary)?.description}` : ""}
+                                    </div>
+                                  </div>
+                                )}
+                                {samResult.address && (
+                                  <div style={{ gridColumn: "1 / -1" }}>
+                                    <div style={{ fontSize: 10.5, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Address</div>
+                                    <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500, marginTop: 2 }}>
+                                      {[samResult.address.line1, samResult.address.city, samResult.address.state, samResult.address.zip].filter(Boolean).join(", ")}
+                                    </div>
                                   </div>
                                 )}
                               </div>

@@ -483,7 +483,7 @@ export default function PortalIntegrationsPage() {
                           style={{ marginLeft: 8, padding: "11px 20px", background: qbPulling ? "var(--ink4)" : "var(--navy)", border: "none", borderRadius: 8, color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: qbPulling ? "wait" : "pointer" }}>
                           {qbPulling ? "Pulling data..." : "📊 Pull Financial Data"}
                         </button>
-                      }
+                      )}
                     </div>
                   </div>
                 </div>

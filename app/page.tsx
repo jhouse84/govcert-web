@@ -203,59 +203,111 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* PRICING */}
+      {/* PRICING — Two-Part: Generation Fees + Maintenance */}
       <div id="pricing" style={{ background: "var(--navy)", padding: "88px 0" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto", padding: "0 48px" }}>
-          <div style={{ marginBottom: 56, textAlign: "center" }}>
+          <div style={{ marginBottom: 48, textAlign: "center" }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 12 }}>Pricing</div>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(34px,4vw,52px)", color: "#fff", fontWeight: 400, lineHeight: 1.1, marginBottom: 16, letterSpacing: "-.03em" }}>Simple, transparent pricing</h2>
-            <p style={{ fontSize: 16, color: "rgba(255,255,255,.45)", maxWidth: 560, margin: "0 auto", fontWeight: 300 }}>No hidden fees. Cancel anytime.</p>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(34px,4vw,52px)", color: "#fff", fontWeight: 400, lineHeight: 1.1, marginBottom: 16, letterSpacing: "-.03em" }}>A fraction of what consultants charge</h2>
+            <p style={{ fontSize: 16, color: "rgba(255,255,255,.45)", maxWidth: 600, margin: "0 auto", fontWeight: 300 }}>One-time fee to generate your application. Optional monthly subscription to maintain your certifications.</p>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(34,197,94,.15)", border: "1px solid rgba(34,197,94,.3)", borderRadius: 100, padding: "6px 16px", marginTop: 16 }}>
+              <div style={{ width: 8, height: 8, background: "#22C55E", borderRadius: "50%" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#22C55E" }}>FREE DURING BETA — All features unlocked</span>
+            </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-            {[
-              { name: "Starter", price: "$149", period: "/mo", desc: "Perfect for consultants managing 1-3 clients", features: ["Up to 3 clients", "2 active certifications", "Document vault (5GB)", "Email support"], featured: false },
-              { name: "Professional", price: "$349", period: "/mo", desc: "For growing firms managing multiple certifications", features: ["Up to 15 clients", "Unlimited certifications", "Document vault (50GB)", "QuickBooks integration", "Priority support", "Compliance calendar"], featured: true },
-              { name: "Enterprise", price: "Custom", period: "", desc: "For large firms and government contractors", features: ["Unlimited clients", "White-label portal", "API access", "Dedicated account manager", "SLA guarantee", "Custom integrations"], featured: false },
-            ].map(plan => (
-              <div key={plan.name} style={{
-                background: plan.featured ? "rgba(200,155,60,.08)" : "rgba(255,255,255,.04)",
-                backdropFilter: "blur(16px)",
-                border: `1px solid ${plan.featured ? "rgba(200,155,60,.35)" : "rgba(255,255,255,.09)"}`,
-                borderRadius: "var(--rl)", padding: 32, transition: "all .25s cubic-bezier(.4,0,.2,1)",
-                boxShadow: plan.featured ? "0 4px 24px rgba(200,155,60,.1)" : "none",
-                transform: plan.featured ? "scale(1.03)" : "none"
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = plan.featured ? "scale(1.05)" : "translateY(-4px)"; e.currentTarget.style.boxShadow = plan.featured ? "0 8px 40px rgba(200,155,60,.2)" : "0 4px 24px rgba(0,0,0,.15)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = plan.featured ? "scale(1.03)" : "none"; e.currentTarget.style.boxShadow = plan.featured ? "0 4px 24px rgba(200,155,60,.1)" : "none"; }}>
-                {plan.featured && <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold2)", marginBottom: 8 }}>Most Popular</div>}
-                <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.4)", fontWeight: 600, marginBottom: 8 }}>{plan.name}</div>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 8 }}>
-                  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 44, color: "#fff", fontWeight: 400, letterSpacing: "-.03em" }}>{plan.price}</span>
-                  <span style={{ fontSize: 14, color: "rgba(255,255,255,.4)" }}>{plan.period}</span>
-                </div>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,.4)", marginBottom: 24, lineHeight: 1.5 }}>{plan.desc}</p>
-                <div style={{ marginBottom: 28 }}>
-                  {plan.features.map(f => (
-                    <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                      <span style={{ color: "var(--gold2)", fontSize: 12 }}>✓</span>
-                      <span style={{ fontSize: 13, color: "rgba(255,255,255,.6)" }}>{f}</span>
-                    </div>
-                  ))}
-                </div>
-                <a href="/register" style={{
-                  display: "block", textAlign: "center", padding: "12px",
-                  background: plan.featured ? "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)" : "rgba(255,255,255,.06)",
-                  border: `1px solid ${plan.featured ? "transparent" : "rgba(255,255,255,.12)"}`,
-                  borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none",
-                  boxShadow: plan.featured ? "0 4px 20px rgba(200,155,60,.35)" : "none",
-                  transition: "all .25s cubic-bezier(.4,0,.2,1)"
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = plan.featured ? "0 6px 28px rgba(200,155,60,.45)" : "0 2px 12px rgba(255,255,255,.08)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = plan.featured ? "0 4px 20px rgba(200,155,60,.35)" : "none"; }}>
-                  Get Started →
-                </a>
+
+          {/* Part 1: Get Certified — Comparison Table */}
+          <div style={{ marginBottom: 48 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold2)", marginBottom: 16 }}>Get Certified — One-Time Application Fee</div>
+            <div style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "var(--rl)", overflow: "hidden" }}>
+              {/* Header */}
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr", padding: "14px 28px", borderBottom: "1px solid rgba(255,255,255,.08)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em" }}>
+                <div style={{ color: "rgba(255,255,255,.4)" }}>Certification</div>
+                <div style={{ color: "rgba(255,255,255,.4)" }}>Traditional Consultant</div>
+                <div style={{ color: "var(--gold2)" }}>GovCert</div>
+                <div style={{ color: "rgba(34,197,94,.7)" }}>You Save</div>
               </div>
-            ))}
+              {/* Rows */}
+              {[
+                { cert: "GSA Multiple Award Schedule", consultant: "$6,000 – $50,000", price: "$1,999", save: "Up to 96%", popular: true },
+                { cert: "8(a) Business Development", consultant: "$3,000 – $5,000", price: "$2,499", save: "Up to 50%", popular: true },
+                { cert: "WOSB / SDVOSB", consultant: "$1,500 – $3,000", price: "$999", save: "Up to 67%", popular: false },
+                { cert: "HUBZone", consultant: "$1,500 – $3,000", price: "$999", save: "Up to 67%", popular: false },
+                { cert: "Bundle: 8(a) + GSA MAS", consultant: "$10,000 – $30,000", price: "$3,499", save: "Up to 88%", popular: false },
+              ].map(row => (
+                <div key={row.cert} style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr", padding: "16px 28px", borderBottom: "1px solid rgba(255,255,255,.05)", alignItems: "center" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,.03)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 500, color: "#fff" }}>{row.cert}</span>
+                    {row.popular && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 100, background: "rgba(200,155,60,.2)", color: "var(--gold2)", fontWeight: 600 }}>POPULAR</span>}
+                  </div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,.35)", textDecoration: "line-through" }}>{row.consultant}</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "var(--gold2)", fontWeight: 400 }}>{row.price}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#22C55E" }}>{row.save}</div>
+                </div>
+              ))}
+            </div>
+            {/* Callouts */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginTop: 20 }}>
+              {[
+                { icon: "⚡", text: "Days, not months" },
+                { icon: "🤖", text: "AI-powered, 24/7" },
+                { icon: "🔄", text: "Unlimited revisions" },
+                { icon: "🔍", text: "GovCert Review included" },
+              ].map(c => (
+                <div key={c.text} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "rgba(255,255,255,.03)", borderRadius: "var(--r)", border: "1px solid rgba(255,255,255,.06)" }}>
+                  <span style={{ fontSize: 16 }}>{c.icon}</span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,.5)", fontWeight: 500 }}>{c.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Part 2: Stay Certified — Maintenance Tiers */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold2)", marginBottom: 16 }}>Stay Certified — Monthly Maintenance</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+              {[
+                { name: "Essential", price: "$49", period: "/mo", annual: "$499/yr", features: ["SAM.gov registration monitoring", "Certification expiration alerts", "Secure document vault", "1 GovCert Review per month"], featured: false },
+                { name: "Professional", price: "$99", period: "/mo", annual: "$999/yr", features: ["Everything in Essential", "Unlimited GovCert Reviews", "Data call response assistance", "Compliance calendar", "Advisor chat support"], featured: true },
+                { name: "Enterprise", price: "$199", period: "/mo", annual: "$1,999/yr", features: ["Everything in Professional", "Priority support", "Multi-certification management", "Advisor dashboard access", "Custom compliance reporting"], featured: false },
+              ].map(plan => (
+                <div key={plan.name} style={{
+                  background: plan.featured ? "rgba(200,155,60,.08)" : "rgba(255,255,255,.03)",
+                  border: `1px solid ${plan.featured ? "rgba(200,155,60,.3)" : "rgba(255,255,255,.08)"}`,
+                  borderRadius: "var(--rl)", padding: 28, transition: "all .25s cubic-bezier(.4,0,.2,1)",
+                  transform: plan.featured ? "scale(1.02)" : "none",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = plan.featured ? "scale(1.04)" : "translateY(-3px)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = plan.featured ? "scale(1.02)" : "none"; }}>
+                  {plan.featured && <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold2)", marginBottom: 8 }}>Recommended</div>}
+                  <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.4)", fontWeight: 600, marginBottom: 8 }}>{plan.name}</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
+                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 40, color: "#fff", fontWeight: 400, letterSpacing: "-.03em" }}>{plan.price}</span>
+                    <span style={{ fontSize: 14, color: "rgba(255,255,255,.4)" }}>{plan.period}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,.3)", marginBottom: 20 }}>or {plan.annual}</div>
+                  <div style={{ marginBottom: 24 }}>
+                    {plan.features.map(f => (
+                      <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+                        <span style={{ color: "var(--gold2)", fontSize: 11 }}>✓</span>
+                        <span style={{ fontSize: 12.5, color: "rgba(255,255,255,.55)" }}>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <a href="/register" style={{
+                    display: "block", textAlign: "center", padding: "11px",
+                    background: plan.featured ? "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)" : "rgba(255,255,255,.06)",
+                    border: `1px solid ${plan.featured ? "transparent" : "rgba(255,255,255,.1)"}`,
+                    borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none",
+                    transition: "all .25s cubic-bezier(.4,0,.2,1)"
+                  }}>
+                    Start Free →
+                  </a>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

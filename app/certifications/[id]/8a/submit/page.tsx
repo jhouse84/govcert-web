@@ -442,6 +442,25 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                   {downloading ? "Preparing..." : "\u2B07 Download Package"}
                 </button>
                 <a
+                  href={`/certifications/${certId}/8a/review`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "12px 24px",
+                    background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+                    border: "none",
+                    borderRadius: "var(--r)",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "#fff",
+                    textDecoration: "none",
+                    boxShadow: "0 4px 16px rgba(99,102,241,.3)",
+                  }}
+                >
+                  🔍 Run GovCert Analysis
+                </a>
+                <a
                   href="https://certify.sba.gov"
                   target="_blank"
                   rel="noopener noreferrer"

@@ -769,6 +769,10 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                 style={{ padding: "12px 20px", background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, textDecoration: "none" }}>
                 ← Back to Dashboard
               </a>
+              <a href={`/certifications/${certId}/review`}
+                style={{ padding: "12px 24px", background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", boxShadow: "0 4px 16px rgba(99,102,241,.3)" }}>
+                🔍 Run GovCert Analysis
+              </a>
               <a href="https://eoffer.gsa.gov" target="_blank" rel="noopener noreferrer"
                 style={{ padding: "12px 28px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, textDecoration: "none", boxShadow: "0 4px 24px rgba(200,155,60,.4)" }}>
                 Open GSA eOffer →

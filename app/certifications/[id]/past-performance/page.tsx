@@ -32,6 +32,9 @@ const EMPTY_CONTRACT = {
   referencePhone: "",
   referenceTitle: "",
   ppqStatus: "NOT_SENT" as PPQStatus,
+  ppqSentAt: "" as string,
+  ppqOpenedAt: "" as string,
+  ppqCompletedAt: "" as string,
   narrative: "",
   id: "",
 };
@@ -54,6 +57,29 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   const [uploadingCPARS, setUploadingCPARS] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // PPQ Flow Modal state
+  const [ppqModal, setPpqModal] = useState<{
+    open: boolean;
+    step: 1 | 2 | 3;
+    contractIndex: number | null;
+    referenceName: string;
+    referenceEmail: string;
+    referenceTitle: string;
+    referenceAgency: string;
+    relationship: string;
+    emailSubject: string;
+    emailBody: string;
+    drafting: boolean;
+    sending: boolean;
+    showDisclaimer: boolean;
+  }>({
+    open: false, step: 1, contractIndex: null,
+    referenceName: "", referenceEmail: "", referenceTitle: "",
+    referenceAgency: "", relationship: "",
+    emailSubject: "", emailBody: "",
+    drafting: false, sending: false, showDisclaimer: true,
+  });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -86,6 +112,9 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
           referencePhone: pp.referencePhone || "",
           referenceTitle: pp.referenceTitle || "",
           ppqStatus: (pp.ppqs?.[0]?.status || "NOT_SENT") as PPQStatus,
+          ppqSentAt: pp.ppqs?.[0]?.sentAt || "",
+          ppqOpenedAt: pp.ppqs?.[0]?.openedAt || "",
+          ppqCompletedAt: pp.ppqs?.[0]?.completedAt || "",
           narrative: pp.narrative || "",
         }));
         setContracts(mapped);
@@ -251,6 +280,81 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
       console.error(err);
     } finally {
       setSendingPPQ(null);
+    }
+  }
+
+  function openPPQModal(index: number) {
+    const contract = contracts[index];
+    setPpqModal({
+      open: true, step: 1, contractIndex: index,
+      referenceName: `${contract.referenceFirstName} ${contract.referenceLastName}`.trim(),
+      referenceEmail: contract.referenceEmail,
+      referenceTitle: contract.referenceTitle,
+      referenceAgency: contract.agencyName,
+      relationship: "",
+      emailSubject: "", emailBody: "",
+      drafting: false, sending: false, showDisclaimer: true,
+    });
+  }
+
+  async function draftPPQEmail() {
+    if (ppqModal.contractIndex === null) return;
+    const contract = contracts[ppqModal.contractIndex];
+    setPpqModal(prev => ({ ...prev, drafting: true }));
+    try {
+      const data = await apiRequest("/api/ppq/draft-email", {
+        method: "POST",
+        body: JSON.stringify({
+          pastPerformanceId: contract.id,
+          referenceEmail: ppqModal.referenceEmail,
+          referenceName: ppqModal.referenceName,
+          referenceTitle: ppqModal.referenceTitle,
+          referenceAgency: ppqModal.referenceAgency,
+          relationship: ppqModal.relationship,
+          contractDetails: contract.sowDescription,
+          certType: cert?.type || "GSA_MAS",
+          businessName: cert?.client?.businessName || "",
+          senderName: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
+        })
+      });
+      setPpqModal(prev => ({
+        ...prev, step: 2, drafting: false,
+        emailSubject: data.subject || "",
+        emailBody: data.body || "",
+      }));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to draft email. Please try again.");
+      setPpqModal(prev => ({ ...prev, drafting: false }));
+    }
+  }
+
+  async function sendPPQWithCustomEmail() {
+    if (ppqModal.contractIndex === null) return;
+    const contract = contracts[ppqModal.contractIndex];
+    setPpqModal(prev => ({ ...prev, sending: true }));
+    try {
+      await apiRequest("/api/ppq", {
+        method: "POST",
+        body: JSON.stringify({
+          pastPerformanceId: contract.id,
+          referenceEmail: ppqModal.referenceEmail,
+          referenceName: ppqModal.referenceName,
+          referenceTitle: ppqModal.referenceTitle,
+          referenceAgency: ppqModal.referenceAgency,
+          customEmailBody: ppqModal.emailBody,
+          customEmailSubject: ppqModal.emailSubject,
+          senderName: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
+        })
+      });
+      const updated = [...contracts];
+      updated[ppqModal.contractIndex] = { ...contract, ppqStatus: "SENT" };
+      setContracts(updated);
+      setPpqModal(prev => ({ ...prev, step: 3, sending: false }));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to send PPQ. Please try again.");
+      setPpqModal(prev => ({ ...prev, sending: false }));
     }
   }
 
@@ -582,7 +686,14 @@ Scope of Work: ${contract.sowDescription}`,
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                     {contract.hasCPARS === true && <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: contract.cparsUploaded ? "var(--green-bg)" : "var(--cream2)", color: contract.cparsUploaded ? "var(--green)" : "var(--ink3)" }}>{contract.cparsUploaded ? "✓ CPARS" : "CPARS Pending"}</span>}
-                    {contract.hasCPARS === false && <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: statusStyle.bg, color: statusStyle.color }}>PPQ: {statusStyle.label}</span>}
+                    {contract.hasCPARS === false && (
+                      <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: statusStyle.bg, color: statusStyle.color }}>
+                        PPQ: {statusStyle.label}
+                        {contract.ppqStatus === "SENT" && contract.ppqSentAt && ` · ${new Date(contract.ppqSentAt).toLocaleDateString()}`}
+                        {contract.ppqStatus === "OPENED" && contract.ppqOpenedAt && ` · ${new Date(contract.ppqOpenedAt).toLocaleDateString()}`}
+                        {contract.ppqStatus === "COMPLETED" && contract.ppqCompletedAt && ` · ${new Date(contract.ppqCompletedAt).toLocaleDateString()}`}
+                      </span>
+                    )}
                     {contract.hasCPARS === null && <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: "var(--amber-bg)", color: "var(--amber)" }}>Action needed</span>}
                     {contract.narrative && <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: "var(--green-bg)", color: "var(--green)" }}>✓ Narrative</span>}
                     <span style={{ fontSize: 16, color: "var(--gold)" }}>{isExpanded ? "▲" : "▼"}</span>
@@ -664,10 +775,10 @@ Scope of Work: ${contract.sowDescription}`,
                             <div style={{ display: "inline-flex", padding: "4px 12px", borderRadius: 100, background: statusStyle.bg, color: statusStyle.color, fontSize: 12, fontWeight: 500, marginBottom: 10 }}>{statusStyle.label}</div>
                             {(contract.ppqStatus === "NOT_SENT" || contract.ppqStatus === "PENDING") && (
                               <div>
-                                <div style={{ fontSize: 11.5, color: "var(--ink3)", marginBottom: 10, lineHeight: 1.5 }}>GovCert will email a GSA-standard PPQ form. Your reference completes it online.</div>
-                                <button onClick={() => sendPPQ(index)} disabled={!contract.referenceEmail || sendingPPQ === contract.id}
-                                  style={{ width: "100%", padding: "10px", background: contract.referenceEmail ? "var(--navy)" : "var(--cream2)", border: "none", borderRadius: "var(--r)", color: contract.referenceEmail ? "var(--gold2)" : "var(--ink4)", fontSize: 13, fontWeight: 500, cursor: contract.referenceEmail ? "pointer" : "not-allowed" }}>
-                                  {sendingPPQ === contract.id ? "Sending..." : "📧 Send PPQ to Reference"}
+                                <div style={{ fontSize: 11.5, color: "var(--ink3)", marginBottom: 10, lineHeight: 1.5 }}>GovCert drafts a personalized PPQ request email using AI. You review and edit before sending.</div>
+                                <button onClick={() => openPPQModal(index)} disabled={!contract.referenceEmail}
+                                  style={{ width: "100%", padding: "10px", background: contract.referenceEmail ? "var(--gold)" : "var(--cream2)", border: "none", borderRadius: "var(--r)", color: contract.referenceEmail ? "#fff" : "var(--ink4)", fontSize: 13, fontWeight: 500, cursor: contract.referenceEmail ? "pointer" : "not-allowed", boxShadow: contract.referenceEmail ? "0 4px 16px rgba(200,155,60,.3)" : "none" }}>
+                                  Send PPQ Request
                                 </button>
                                 {!contract.referenceEmail && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 6 }}>Add reference email first</div>}
                               </div>
@@ -766,6 +877,202 @@ Scope of Work: ${contract.sowDescription}`,
           </div>
         </div>
       </div>
+
+      {/* PPQ Flow Modal */}
+      {ppqModal.open && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={() => !ppqModal.drafting && !ppqModal.sending && setPpqModal(prev => ({ ...prev, open: false }))}
+            style={{ position: "absolute", inset: 0, background: "rgba(11,25,41,.7)", backdropFilter: "blur(4px)" }} />
+          <div style={{ position: "relative", width: ppqModal.step === 2 ? 680 : 520, maxHeight: "90vh", overflowY: "auto", background: "#fff", borderRadius: 16, boxShadow: "0 24px 80px rgba(0,0,0,.25)", padding: ppqModal.step === 3 ? "48px 40px" : "32px 36px" }}>
+
+            {/* Step indicator */}
+            {ppqModal.step !== 3 && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+                {[1, 2].map(s => (
+                  <div key={s} style={{ flex: 1, height: 3, borderRadius: 100, background: s <= ppqModal.step ? "var(--gold)" : "var(--cream2)" }} />
+                ))}
+              </div>
+            )}
+
+            {/* Close button */}
+            <button onClick={() => !ppqModal.drafting && !ppqModal.sending && setPpqModal(prev => ({ ...prev, open: false }))}
+              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--ink4)", padding: 4 }}>
+              ✕
+            </button>
+
+            {/* Step 1: Reference Details */}
+            {ppqModal.step === 1 && (
+              <div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>Send PPQ Request</h2>
+                <p style={{ fontSize: 13.5, color: "var(--ink3)", marginBottom: 24, lineHeight: 1.5 }}>
+                  Provide reference details and context. GovCert will draft a personalized email for you to review.
+                </p>
+
+                {/* Disclaimer popout */}
+                {ppqModal.showDisclaimer && (
+                  <div style={{ padding: "14px 18px", background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.2)", borderRadius: 10, marginBottom: 20, display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>&#9432;</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, color: "var(--navy)", fontWeight: 500, marginBottom: 4 }}>Better context = better email</div>
+                      <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
+                        The more detail you provide about your project and your reference&apos;s role, the better the PPQ email will be. Include specific deliverables, project outcomes, and the nature of your working relationship.
+                      </div>
+                    </div>
+                    <button onClick={() => setPpqModal(prev => ({ ...prev, showDisclaimer: false }))}
+                      style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "var(--ink4)", padding: 0, flexShrink: 0 }}>✕</button>
+                  </div>
+                )}
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Reference Name *</label>
+                    <input type="text" value={ppqModal.referenceName}
+                      onChange={e => setPpqModal(prev => ({ ...prev, referenceName: e.target.value }))}
+                      placeholder="Jane Smith"
+                      style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Reference Email *</label>
+                    <input type="email" value={ppqModal.referenceEmail}
+                      onChange={e => setPpqModal(prev => ({ ...prev, referenceEmail: e.target.value }))}
+                      placeholder="jane.smith@agency.gov"
+                      style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Title / Role</label>
+                    <input type="text" value={ppqModal.referenceTitle}
+                      onChange={e => setPpqModal(prev => ({ ...prev, referenceTitle: e.target.value }))}
+                      placeholder="Program Manager"
+                      style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Organization / Agency</label>
+                    <input type="text" value={ppqModal.referenceAgency}
+                      onChange={e => setPpqModal(prev => ({ ...prev, referenceAgency: e.target.value }))}
+                      placeholder="Department of Navy"
+                      style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>How do you know this person? What was their role on this project?</label>
+                  <textarea value={ppqModal.relationship}
+                    onChange={e => setPpqModal(prev => ({ ...prev, relationship: e.target.value }))}
+                    placeholder="e.g. Jane was the Contracting Officer's Representative on our IT modernization project at NAVAIR. She oversaw our team's delivery of a cloud migration platform and was our primary point of contact for 18 months."
+                    style={{ width: "100%", minHeight: 100, padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }} />
+                </div>
+
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                  <button onClick={() => setPpqModal(prev => ({ ...prev, open: false }))}
+                    style={{ padding: "10px 20px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink3)", cursor: "pointer" }}>
+                    Cancel
+                  </button>
+                  <button onClick={draftPPQEmail}
+                    disabled={!ppqModal.referenceName.trim() || !ppqModal.referenceEmail.trim() || ppqModal.drafting}
+                    style={{
+                      padding: "10px 28px",
+                      background: (!ppqModal.referenceName.trim() || !ppqModal.referenceEmail.trim()) ? "var(--cream2)" : "var(--gold)",
+                      border: "none", borderRadius: "var(--r)",
+                      color: (!ppqModal.referenceName.trim() || !ppqModal.referenceEmail.trim()) ? "var(--ink4)" : "#fff",
+                      fontSize: 13, fontWeight: 500,
+                      cursor: (!ppqModal.referenceName.trim() || !ppqModal.referenceEmail.trim() || ppqModal.drafting) ? "not-allowed" : "pointer",
+                      boxShadow: ppqModal.referenceName.trim() && ppqModal.referenceEmail.trim() ? "0 4px 16px rgba(200,155,60,.3)" : "none",
+                    }}>
+                    {ppqModal.drafting ? "Drafting Email..." : "Draft Email with AI \u2192"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Review Email */}
+            {ppqModal.step === 2 && (
+              <div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>Review & Send</h2>
+                <p style={{ fontSize: 13.5, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.5 }}>
+                  Review the AI-drafted email below. Edit anything you&apos;d like, then send.
+                </p>
+
+                {/* Email envelope */}
+                <div style={{ background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 10, padding: "20px 22px", marginBottom: 20 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, fontSize: 13, color: "var(--ink3)" }}>
+                    <span style={{ fontWeight: 500, minWidth: 36 }}>To:</span>
+                    <span style={{ color: "var(--navy)", fontWeight: 500 }}>{ppqModal.referenceEmail}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, fontSize: 13, color: "var(--ink3)" }}>
+                    <span style={{ fontWeight: 500, minWidth: 36 }}>From:</span>
+                    <span style={{ color: "var(--navy)" }}>{user?.firstName} {user?.lastName} via GovCert</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 0, fontSize: 13, color: "var(--ink3)" }}>
+                    <span style={{ fontWeight: 500, minWidth: 36 }}>Subj:</span>
+                    <input type="text" value={ppqModal.emailSubject}
+                      onChange={e => setPpqModal(prev => ({ ...prev, emailSubject: e.target.value }))}
+                      style={{ flex: 1, padding: "6px 10px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", fontFamily: "'DM Sans', sans-serif", background: "#fff" }} />
+                  </div>
+                </div>
+
+                {/* Email body editor */}
+                <div style={{ marginBottom: 16 }}>
+                  <textarea value={ppqModal.emailBody}
+                    onChange={e => setPpqModal(prev => ({ ...prev, emailBody: e.target.value }))}
+                    style={{ width: "100%", minHeight: 260, padding: "16px 18px", border: "1px solid var(--border2)", borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.7, resize: "vertical", outline: "none", boxSizing: "border-box" as const, color: "var(--ink)" }} />
+                </div>
+
+                {/* PPQ form link preview */}
+                <div style={{ padding: "12px 16px", background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.15)", borderRadius: 8, marginBottom: 20, fontSize: 12, color: "var(--ink3)" }}>
+                  <span style={{ fontWeight: 500 }}>Included in email:</span> A gold &quot;Complete the PPQ&quot; button linking to the online questionnaire form, plus your sign-off ({user?.firstName} {user?.lastName}, {cert?.client?.businessName}).
+                </div>
+
+                <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
+                  <button onClick={() => setPpqModal(prev => ({ ...prev, step: 1 }))}
+                    style={{ padding: "10px 20px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink3)", cursor: "pointer" }}>
+                    ← Back
+                  </button>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={draftPPQEmail} disabled={ppqModal.drafting}
+                      style={{ padding: "10px 18px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: ppqModal.drafting ? "not-allowed" : "pointer" }}>
+                      {ppqModal.drafting ? "Regenerating..." : "Regenerate Email"}
+                    </button>
+                    <button onClick={sendPPQWithCustomEmail} disabled={ppqModal.sending || !ppqModal.emailBody.trim()}
+                      style={{
+                        padding: "10px 28px",
+                        background: ppqModal.emailBody.trim() ? "var(--gold)" : "var(--cream2)",
+                        border: "none", borderRadius: "var(--r)",
+                        color: ppqModal.emailBody.trim() ? "#fff" : "var(--ink4)",
+                        fontSize: 13, fontWeight: 500,
+                        cursor: (ppqModal.sending || !ppqModal.emailBody.trim()) ? "not-allowed" : "pointer",
+                        boxShadow: ppqModal.emailBody.trim() ? "0 4px 16px rgba(200,155,60,.3)" : "none",
+                      }}>
+                      {ppqModal.sending ? "Sending..." : "Send PPQ Request \u2192"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Sent Confirmation */}
+            {ppqModal.step === 3 && (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--green-bg)", border: "2px solid var(--green-b)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 28 }}>
+                  &#10003;
+                </div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>PPQ Request Sent</h2>
+                <p style={{ fontSize: 15, color: "var(--ink3)", marginBottom: 6, lineHeight: 1.6 }}>
+                  PPQ request sent to <strong style={{ color: "var(--navy)" }}>{ppqModal.referenceName}</strong> at <strong style={{ color: "var(--navy)" }}>{ppqModal.referenceEmail}</strong>.
+                </p>
+                <div style={{ fontSize: 13, color: "var(--ink4)", lineHeight: 1.7, marginBottom: 28 }}>
+                  <p>They&apos;ll receive a link to complete the questionnaire online.</p>
+                  <p>You&apos;ll be notified when they respond.</p>
+                </div>
+                <button onClick={() => setPpqModal(prev => ({ ...prev, open: false }))}
+                  style={{ padding: "12px 36px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

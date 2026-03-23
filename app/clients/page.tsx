@@ -117,7 +117,7 @@ export default function ClientsPage() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Client Management</div>
               <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Clients</h1>
-              <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>{clients.length} client{clients.length !== 1 ? "s" : ""} in your workspace</p>
+              <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>{clients.length} client{clients.length !== 1 ? "s" : ""} across all workspaces</p>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => { setShowInviteModal(true); setInviteSuccess(""); setInviteError(""); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: "transparent", border: "1px solid var(--gold)", borderRadius: "var(--r)", color: "var(--gold)", fontSize: 14, fontWeight: 500, cursor: "pointer", transition: "all .2s" }}>

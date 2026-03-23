@@ -75,6 +75,7 @@ export default function UsagePage() {
   const [summary, setSummary] = useState<UsageSummary | null>(null);
   const [history, setHistory] = useState<MonthlyHistory | null>(null);
   const [integrations, setIntegrations] = useState<ClientIntegration[]>([]);
+  const [perUserData, setPerUserData] = useState<any[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -92,14 +93,16 @@ export default function UsagePage() {
   async function fetchData() {
     setLoading(true);
     try {
-      const [summaryRes, historyRes, integrationsRes] = await Promise.allSettled([
+      const [summaryRes, historyRes, integrationsRes, perUserRes] = await Promise.allSettled([
         apiRequest("/api/usage/summary"),
         apiRequest("/api/usage/history"),
         apiRequest("/api/usage/integrations"),
+        apiRequest("/api/usage/per-user"),
       ]);
       if (summaryRes.status === "fulfilled") setSummary(summaryRes.value);
       if (historyRes.status === "fulfilled") setHistory(historyRes.value);
       if (integrationsRes.status === "fulfilled") setIntegrations(integrationsRes.value);
+      if (perUserRes.status === "fulfilled") setPerUserData(Array.isArray(perUserRes.value) ? perUserRes.value : []);
     } catch (err) {
       console.error("Failed to fetch usage data:", err);
     } finally {
@@ -123,6 +126,38 @@ export default function UsagePage() {
     } catch {
       return dateStr;
     }
+  }
+
+  function formatActionName(action: string) {
+    return action.replace(/_/g, " ").replace(/^\w/, (c: string) => c.toUpperCase());
+  }
+
+  function exportCSV() {
+    const rows: string[][] = [["Date", "Service", "Action", "User", "Cost", "Tokens"]];
+    if (summary && summary.serviceBreakdown) {
+      const now = new Date();
+      const monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      summary.serviceBreakdown.forEach((s) => {
+        rows.push([monthLabel, s.service, "", "", s.cost.toFixed(2), String(s.calls)]);
+      });
+    }
+    if (perUserData.length > 0) {
+      const now = new Date();
+      const monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      perUserData.forEach((u: any) => {
+        const name = `${u.user?.firstName || ""} ${u.user?.lastName || ""}`.trim();
+        const topAction = u.topActions && u.topActions.length > 0 ? u.topActions[0].action : "";
+        rows.push([monthLabel, "Anthropic AI", topAction, name, (u.totalCost || 0).toFixed(2), String(u.totalTokens || 0)]);
+      });
+    }
+    const csvContent = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `usage-${new Date().toISOString().slice(0, 7)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   if (!user) return null;
@@ -179,12 +214,24 @@ export default function UsagePage() {
       <div style={{ flex: 1, overflow: "auto" }}>
         <div style={{ padding: "40px 48px" }}>
           {/* Header */}
-          <div style={{ marginBottom: 40 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Administration</div>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>
-              Usage &amp; Costs
-            </h1>
-            <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Monitor integration and AI usage across your organization</p>
+          <div style={{ marginBottom: 40, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Administration</div>
+              <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>
+                Usage &amp; Costs
+              </h1>
+              <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Monitor integration and AI usage across your organization</p>
+            </div>
+            <button onClick={exportCSV} style={{
+              padding: "10px 24px", background: "var(--navy)", color: "#fff", border: "none",
+              borderRadius: 8, fontSize: 13.5, fontWeight: 500, cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(11,25,41,.2)", transition: "all .2s", marginTop: 20,
+              display: "flex", alignItems: "center", gap: 8,
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#0D1F35"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--navy)"; }}>
+              Export to CSV
+            </button>
           </div>
 
           {/* Loading state */}
@@ -334,7 +381,7 @@ export default function UsagePage() {
               </div>
 
               {/* Connected Integrations */}
-              <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)", border: "1px solid var(--border)" }}>
+              <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)", border: "1px solid var(--border)", marginBottom: 24 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Connections</div>
                 <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 24 }}>Connected Integrations</h2>
                 {integrations.length > 0 ? (
@@ -378,6 +425,50 @@ export default function UsagePage() {
                   </div>
                 ) : (
                   <EmptyState message="No connected integrations found" />
+                )}
+              </div>
+
+              {/* Cost by User */}
+              <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)", border: "1px solid var(--border)" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Users</div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 24 }}>Cost by User</h2>
+                {perUserData.length > 0 ? (
+                  <div style={{ overflowX: "auto" as const }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 13.5 }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid var(--border)" }}>
+                          <th style={{ textAlign: "left" as const, padding: "10px 12px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink3)" }}>User</th>
+                          <th style={{ textAlign: "right" as const, padding: "10px 12px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink3)" }}>Total Cost</th>
+                          <th style={{ textAlign: "right" as const, padding: "10px 12px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink3)" }}>Tokens</th>
+                          <th style={{ textAlign: "right" as const, padding: "10px 12px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink3)" }}>Calls</th>
+                          <th style={{ textAlign: "left" as const, padding: "10px 12px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink3)" }}>Top Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...perUserData]
+                          .sort((a: any, b: any) => (b.totalCost || 0) - (a.totalCost || 0))
+                          .map((u: any) => {
+                            const name = `${u.user?.firstName || ""} ${u.user?.lastName || ""}`.trim() || "Unknown";
+                            const email = u.user?.email || "";
+                            const topAction = u.topActions && u.topActions.length > 0 ? formatActionName(u.topActions[0].action) : "\u2014";
+                            return (
+                              <tr key={u.userId} style={{ borderBottom: "1px solid var(--border)" }}>
+                                <td style={{ padding: "12px" }}>
+                                  <div style={{ fontWeight: 500, color: "var(--navy)" }}>{name}</div>
+                                  <div style={{ fontSize: 11.5, color: "var(--ink4)" }}>{email}</div>
+                                </td>
+                                <td style={{ padding: "12px", textAlign: "right" as const, fontWeight: 600, color: "var(--navy)" }}>${(u.totalCost || 0).toFixed(2)}</td>
+                                <td style={{ padding: "12px", textAlign: "right" as const, color: "var(--ink3)" }}>{(u.totalTokens || 0).toLocaleString()}</td>
+                                <td style={{ padding: "12px", textAlign: "right" as const, color: "var(--ink3)" }}>{(u.callCount || 0).toLocaleString()}</td>
+                                <td style={{ padding: "12px", color: "var(--ink3)" }}>{topAction}</td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <EmptyState message="No per-user usage data available" />
                 )}
               </div>
             </>

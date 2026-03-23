@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const [reviewStats, setReviewStats] = useState({ total: 0, avgScore: 0, notReady: 0, competitive: 0, strong: 0, needsWork: 0 });
   const [invites, setInvites] = useState<any[]>([]);
   const [inviteStats, setInviteStats] = useState({ total: 0, accepted: 0, registered: 0, pending: 0, expired: 0 });
+  const [usageData, setUsageData] = useState<any>(null);
   const [newInviteEmail, setNewInviteEmail] = useState("");
   const [sendingInvite, setSendingInvite] = useState(false);
   const [inviteSent, setInviteSent] = useState("");
@@ -30,6 +31,7 @@ export default function DashboardPage() {
     fetchStats();
     fetchReviews();
     fetchInvites();
+    fetchUsage();
   }, []);
 
   async function fetchStats() {
@@ -75,6 +77,32 @@ export default function DashboardPage() {
     } catch (err) {
       console.error("Failed to fetch invites:", err);
     }
+  }
+
+  async function fetchUsage() {
+    try {
+      const data = await apiRequest("/api/usage/realtime");
+      setUsageData(data);
+    } catch (err) {
+      console.error("Failed to fetch usage data:", err);
+    }
+  }
+
+  function formatActionName(action: string) {
+    return action.replace(/_/g, " ").replace(/^\w/, (c: string) => c.toUpperCase());
+  }
+
+  function timeAgo(dateStr: string) {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "just now";
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDays = Math.floor(diffHr / 24);
+    return `${diffDays}d ago`;
   }
 
   function getScoreColor(score: number) {
@@ -180,6 +208,133 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+          {/* Platform Economics */}
+          {usageData && (
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Economics</div>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 20 }}>Platform Economics</h2>
+
+              {/* Row 1 — Metric Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
+                {(() => {
+                  const todayCost = usageData.today?.cost || 0;
+                  const yesterdayCost = usageData.yesterday?.cost || 0;
+                  const todayDiff = todayCost - yesterdayCost;
+                  const thisMonthCost = usageData.thisMonth?.cost || 0;
+                  const momPct = usageData.monthOverMonth || 0;
+                  const revenue = usageData.revenue || 0;
+                  const profitMargin = usageData.profitMargin || "0%";
+                  return [
+                    {
+                      label: "AI Spend Today",
+                      value: `$${todayCost.toFixed(2)}`,
+                      trend: todayDiff >= 0
+                        ? { text: `+$${todayDiff.toFixed(2)} vs yesterday`, color: todayDiff > 0 ? "#e74c3c" : "var(--ink4)", arrow: todayDiff > 0 ? "\u25B2" : "" }
+                        : { text: `-$${Math.abs(todayDiff).toFixed(2)} vs yesterday`, color: "#27ae60", arrow: "\u25BC" },
+                    },
+                    {
+                      label: "AI Spend This Month",
+                      value: `$${thisMonthCost.toFixed(2)}`,
+                      trend: { text: `${momPct >= 0 ? "+" : ""}${momPct.toFixed(1)}% MoM`, color: momPct > 0 ? "#e74c3c" : "#27ae60", arrow: momPct > 0 ? "\u25B2" : "\u25BC" },
+                    },
+                    {
+                      label: "Revenue This Month",
+                      value: `$${revenue.toFixed(2)}`,
+                      trend: { text: "From purchases", color: "var(--ink4)", arrow: "" },
+                    },
+                    {
+                      label: "Profit Margin",
+                      value: profitMargin,
+                      trend: { text: "Current period", color: "var(--ink4)", arrow: "" },
+                    },
+                  ];
+                })().map((card) => (
+                  <div key={card.label} style={{ background: "#fff", borderRadius: 12, padding: "24px 20px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", border: "1px solid rgba(200,155,60,.08)", borderTop: "3px solid var(--gold)", transition: "all .2s", cursor: "default" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.1)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)"; }}>
+                    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: "var(--navy)", fontWeight: 400, lineHeight: 1 }}>{card.value}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "8px 0 4px" }}>{card.label}</div>
+                    <div style={{ fontSize: 11.5, color: card.trend.color }}>
+                      {card.trend.arrow && <span style={{ marginRight: 3 }}>{card.trend.arrow}</span>}
+                      {card.trend.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Row 2 — Top Cost Actions + Recent Activity */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+                {/* Top Cost Actions */}
+                <div style={{ background: "#fff", borderRadius: 12, padding: "28px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", border: "1px solid rgba(200,155,60,.08)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Costs</div>
+                  <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400, marginBottom: 20 }}>Top Cost Actions</h3>
+                  {usageData.topCostActions && usageData.topCostActions.length > 0 ? (() => {
+                    const maxCost = Math.max(...usageData.topCostActions.map((a: any) => a.totalCost || 0), 1);
+                    return (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {usageData.topCostActions.map((action: any, idx: number) => (
+                          <div key={idx}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{formatActionName(action.action)}</span>
+                              <span style={{ fontSize: 12, color: "var(--ink3)" }}>{action.count} calls &middot; ${(action.totalCost || 0).toFixed(2)}</span>
+                            </div>
+                            <div style={{ height: 22, background: "var(--cream)", borderRadius: 6, overflow: "hidden" }}>
+                              <div style={{
+                                height: "100%",
+                                width: `${Math.max(((action.totalCost || 0) / maxCost) * 100, 3)}%`,
+                                background: "linear-gradient(90deg, #C89B3C, #E8B84B)",
+                                borderRadius: 6,
+                                transition: "width .4s ease",
+                              }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })() : (
+                    <div style={{ textAlign: "center" as const, padding: "24px 0", color: "var(--ink4)", fontSize: 13 }}>No cost data yet</div>
+                  )}
+                </div>
+
+                {/* Recent Activity */}
+                <div style={{ background: "#fff", borderRadius: 12, padding: "28px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", border: "1px solid rgba(200,155,60,.08)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Activity</div>
+                  <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400, marginBottom: 20 }}>Recent Activity</h3>
+                  {usageData.recentActivity && usageData.recentActivity.length > 0 ? (
+                    <div style={{ maxHeight: 300, overflowY: "auto" as const }}>
+                      {usageData.recentActivity.map((item: any, idx: number) => (
+                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: idx < usageData.recentActivity.length - 1 ? "1px solid var(--border)" : "none" }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{item.userName || "Unknown"}</div>
+                            <div style={{ fontSize: 11.5, color: "var(--ink4)" }}>{formatActionName(item.action || "")}</div>
+                          </div>
+                          <div style={{ textAlign: "right" as const }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>${(item.cost || 0).toFixed(2)}</div>
+                            <div style={{ fontSize: 11, color: "var(--ink4)" }}>{item.createdAt ? timeAgo(item.createdAt) : ""}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: "center" as const, padding: "24px 0", color: "var(--ink4)", fontSize: 13 }}>No recent activity</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 3 — Link to full analytics */}
+              <a href="/usage" style={{
+                display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 24px",
+                background: "var(--navy)", color: "#fff", borderRadius: 8, textDecoration: "none",
+                fontSize: 13.5, fontWeight: 500, transition: "all .2s",
+                boxShadow: "0 2px 8px rgba(11,25,41,.2)",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#0D1F35"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(11,25,41,.3)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "var(--navy)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(11,25,41,.2)"; }}>
+                View Full Usage Analytics <span style={{ color: "var(--gold)" }}>&rarr;</span>
+              </a>
+            </div>
+          )}
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
             <div style={{ background: "#fff", borderRadius: 12, padding: "28px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", border: "1px solid rgba(200,155,60,.08)" }}>
               <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Actions</div>

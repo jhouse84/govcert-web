@@ -429,6 +429,12 @@ function PortalEligibilityPageInner() {
       // Run assessment
       const result = await apiRequest(`/api/eligibility/${clientId}/assess`, { method: "POST" });
       console.log("Assessment result:", result);
+      // Mark onboarding complete so portal home shows dashboard
+      try {
+        const userData = JSON.parse(localStorage.getItem("user") || "{}");
+        localStorage.setItem(`govcert_onboarded_${userData.id || userData.email}`, "true");
+        localStorage.setItem("govcert_onboarded", "true");
+      } catch {}
       router.push("/portal/eligibility/results");
     } catch (err: any) {
       console.error("Assessment failed:", err);

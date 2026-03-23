@@ -223,11 +223,10 @@ export default function EligibilityResultsPage() {
     if (!token) { router.push("/login"); return; }
     if (userData) {
       const parsed = JSON.parse(userData);
-      if (parsed.role === "ADMIN" || parsed.role === "ADVISOR") {
-        router.push("/dashboard");
-        return;
-      }
       setUser(parsed);
+      // Mark onboarding complete — user has reached results page
+      localStorage.setItem(`govcert_onboarded_${parsed.id || parsed.email}`, "true");
+      localStorage.setItem("govcert_onboarded", "true");
     }
     fetchData();
   }, []);

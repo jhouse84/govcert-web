@@ -30,10 +30,10 @@ export default function PortalPage() {
       const parsed = JSON.parse(userData);
       setUser(parsed);
 
-      // First-time user: redirect to eligibility wizard with welcome video
-      // Use user-specific key so switching accounts doesn't skip onboarding
+      // First-time user: redirect to eligibility wizard
+      // Check both user-specific and legacy keys
       const onboardKey = `govcert_onboarded_${parsed.id || parsed.email}`;
-      const onboarded = localStorage.getItem(onboardKey);
+      const onboarded = localStorage.getItem(onboardKey) || localStorage.getItem("govcert_onboarded");
       if (!onboarded) {
         router.push("/portal/eligibility?welcome=true");
         return;

@@ -40,9 +40,8 @@ export default function CompanyProfilePage() {
   const [saved, setSaved] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Auto-save
+  // Auto-save (silent)
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [autoSaving, setAutoSaving] = useState(false);
   const formDataRef = useRef<Record<string, string>>(formData);
   const clientIdRef = useRef<string | null>(clientId);
 
@@ -86,49 +85,53 @@ export default function CompanyProfilePage() {
     setHasChanges(changed);
   }, [formData, original]);
 
-  // Auto-save: debounce 2 seconds after any change
+  // Auto-save: debounce 1.5 seconds after any change — completely silent
   const autoSave = useCallback(async () => {
     const cId = clientIdRef.current;
-    if (!cId) return;
-    setAutoSaving(true);
+    const data = formDataRef.current;
+    if (!cId || !data.businessName) return; // Don't save if no client or empty form
     try {
       await apiRequest(`/api/clients/${cId}`, {
         method: "PUT",
-        body: JSON.stringify(formDataRef.current),
+        body: JSON.stringify(data),
       });
-      setOriginal({ ...formDataRef.current });
+      setOriginal({ ...data });
       setHasChanges(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
     } catch (err: any) {
       console.error("Auto-save failed:", err.message);
-    } finally {
-      setAutoSaving(false);
     }
   }, []);
 
   useEffect(() => {
-    if (!hasChanges) return;
+    if (!hasChanges || !clientId) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
       autoSave();
-    }, 2000);
+    }, 1500);
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [formData, hasChanges, autoSave]);
+  }, [formData, hasChanges, autoSave, clientId]);
 
-  // Warn before navigating away with unsaved changes
+  // Save immediately when tab loses focus or user navigates away
   useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (hasChanges) {
-        e.preventDefault();
-        e.returnValue = "";
+    const handler = () => {
+      if (document.visibilityState === "hidden" && clientIdRef.current) {
+        // Fire and forget — save current form state
+        const token = localStorage.getItem("token");
+        if (token) {
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/clients/${clientIdRef.current}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(formDataRef.current),
+            keepalive: true,
+          }).catch(() => {});
+        }
       }
     };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [hasChanges]);
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, []);
 
   async function fetchClient() {
     try {
@@ -185,7 +188,7 @@ export default function CompanyProfilePage() {
       setHasChanges(false);
       setTimeout(() => setSaved(false), 3000);
     } catch (err: any) {
-      alert("Failed to save: " + (err.message || "Unknown error"));
+      console.error("Save failed:", err.message);
     } finally {
       setSaving(false);
     }
@@ -367,19 +370,8 @@ export default function CompanyProfilePage() {
               Your company information feeds all certification applications. Keep it up to date — changes here are reflected across every application.
             </p>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {saved && <span style={{ fontSize: 12, color: "var(--green)", fontWeight: 600 }}>✓ Saved!</span>}
-            <button onClick={saveProfile} disabled={saving || autoSaving || !hasChanges}
-              style={{
-                padding: "10px 28px",
-                background: hasChanges ? "var(--gold)" : "var(--cream2)",
-                border: "none", borderRadius: "var(--r)", fontSize: 14, fontWeight: 600,
-                color: hasChanges ? "#fff" : "var(--ink4)",
-                cursor: hasChanges ? "pointer" : "not-allowed",
-                boxShadow: hasChanges ? "0 4px 20px rgba(200,155,60,.3)" : "none",
-              }}>
-              {saving || autoSaving ? "Saving..." : "Save Profile"}
-            </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 11, color: "var(--ink4)" }}>Auto-saves as you type</span>
           </div>
         </div>
 
@@ -535,28 +527,7 @@ export default function CompanyProfilePage() {
           </div>
         ))}
 
-        {/* Bottom save bar */}
-        {hasChanges && (
-          <div style={{
-            position: "sticky", bottom: 20, background: "var(--navy)", borderRadius: "var(--rl)",
-            padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center",
-            boxShadow: "0 8px 40px rgba(0,0,0,.25)", zIndex: 50,
-          }}>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,.6)" }}>
-              {autoSaving ? "Auto-saving..." : "You have unsaved changes — auto-save in 2s"}
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => { setFormData({ ...original }); }}
-                style={{ padding: "8px 20px", background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, cursor: "pointer" }}>
-                Discard
-              </button>
-              <button onClick={saveProfile} disabled={saving}
-                style={{ padding: "8px 28px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", boxShadow: "0 4px 20px rgba(200,155,60,.3)" }}>
-                {saving ? "Saving..." : "Save Profile"}
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Auto-save is silent — no sticky bar needed */}
       </div>
     </div>
   );

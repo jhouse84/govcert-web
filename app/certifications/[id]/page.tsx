@@ -322,9 +322,14 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
                 </div>
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,.45)", marginTop: 4 }}>{completedCount} of {sections.length} sections complete</div>
               </div>
-              <a href={`/certifications/${certId}/submit`} style={{ padding: "12px 24px", background: pct === 100 ? "var(--gold)" : "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
-                {pct === 100 ? "Generate eOffer Package" : "View Submission Package"}
-              </a>
+              <div style={{ display: "flex", gap: 10 }}>
+                <a href={`/certifications/${certId}/${isEightA ? "8a/review" : "review"}`} style={{ padding: "12px 20px", background: "rgba(99,102,241,.15)", border: "1px solid rgba(99,102,241,.3)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
+                  🔍 GovCert Review
+                </a>
+                <a href={`/certifications/${certId}/${isEightA ? "8a/submit" : "submit"}`} style={{ padding: "12px 24px", background: pct === 100 ? "var(--gold)" : "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
+                  {isEightA ? (pct === 100 ? "View SBA Package" : "Submit to SBA") : (pct === 100 ? "Generate eOffer Package" : "View Submission Package")}
+                </a>
+              </div>
             </div>
             <div style={{ height: 6, background: "rgba(255,255,255,.1)", borderRadius: 100, overflow: "hidden" }}>
               <div style={{ height: "100%", width: `${pct}%`, background: "var(--gold)", borderRadius: 100, transition: "width .5s" }} />

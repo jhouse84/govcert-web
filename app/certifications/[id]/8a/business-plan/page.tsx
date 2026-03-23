@@ -57,6 +57,13 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
   const [bpScore, setBpScore] = useState<number | null>(null);
   const [bpSuggestions, setBpSuggestions] = useState<string[]>([]);
 
+  // Document-first flow
+  const [docCount, setDocCount] = useState(0);
+  const [prefilling, setPrefilling] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -79,6 +86,11 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
       if (data.application?.businessPlanAnswers) {
         try { setBpAnswers(JSON.parse(data.application.businessPlanAnswers)); } catch {}
       }
+      // Check uploaded document count
+      try {
+        const docs = await apiRequest(`/api/upload/documents?clientId=${data.clientId}`);
+        setDocCount(Array.isArray(docs) ? docs.length : 0);
+      } catch {}
       const completed: Record<string, boolean> = {};
       const app = data.application;
       if (app) {
@@ -95,6 +107,92 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
       setError("Failed to load certification data.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  const API = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
+
+  async function prefillFromDocuments() {
+    if (!cert?.clientId) return;
+    setPrefilling(true);
+    setError(null);
+    try {
+      const data = await apiRequest("/api/applications/ai/extract", {
+        method: "POST",
+        body: JSON.stringify({
+          proposalText: "__USE_CLIENT_DOCUMENTS__",
+          businessName: cert?.client?.businessName || "",
+          certType: "EIGHT_A",
+          clientId: cert.clientId,
+        }),
+      });
+      // Map extracted businessInfo + sections to guided answers
+      const newAnswers: Record<string, string> = { ...bpAnswers };
+      const bi = data.businessInfo || {};
+      const sec = data.sections || {};
+
+      if (bi.coreServiceAreas?.length && !newAnswers.whatDoYouDo) {
+        newAnswers.whatDoYouDo = bi.coreServiceAreas.join(", ");
+      }
+      if (bi.entityType && !newAnswers.legalStructure) {
+        newAnswers.legalStructure = `${bi.entityType}${bi.foundedYear ? `, established ${bi.foundedYear}` : ""}`;
+      }
+      if (sec.overview && !newAnswers.whatDoYouDo) {
+        newAnswers.whatDoYouDo = sec.overview;
+      }
+      if (bi.keyDifferentiators?.length && !newAnswers.competitiveEdge) {
+        newAnswers.competitiveEdge = bi.keyDifferentiators.join(". ");
+      }
+      if ((bi.annualRevenue || bi.employeeCount) && !newAnswers.currentRevenue) {
+        newAnswers.currentRevenue = [
+          bi.annualRevenue ? `Revenue: ${bi.annualRevenue}` : "",
+          bi.employeeCount ? `${bi.employeeCount} employees` : "",
+        ].filter(Boolean).join(", ");
+      }
+      if (sec.marketing && !newAnswers.marketingApproach) {
+        newAnswers.marketingApproach = sec.marketing;
+      }
+      if (sec.employees && !newAnswers.teamStrength) {
+        newAnswers.teamStrength = sec.employees;
+      }
+      if (sec.capabilities && !newAnswers.whatDoYouDo) {
+        newAnswers.whatDoYouDo = sec.capabilities;
+      }
+
+      setBpAnswers(newAnswers);
+      setPrefilled(true);
+    } catch (err: any) {
+      setError("Document scan failed: " + (err.message || "Try uploading more documents."));
+    } finally {
+      setPrefilling(false);
+    }
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !cert?.clientId) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("clientId", cert.clientId);
+      fd.append("category", "PAST_PROPOSAL");
+      fd.append("description", "Uploaded for business plan AI extraction");
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API}/api/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      setDocCount(prev => prev + 1);
+      // Wait for AI classification then pre-fill
+      setTimeout(() => prefillFromDocuments(), 3000);
+    } catch (err: any) {
+      setError("Upload failed: " + (err.message || "Unknown error"));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -296,6 +394,52 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
           {/* GATHER MODE — Guided questions */}
           {mode === "gather" && (
             <div>
+              {/* Step 1: Document-first panel */}
+              <div style={{ background: "linear-gradient(135deg, rgba(99,102,241,.06) 0%, rgba(200,155,60,.06) 100%)", border: "1px solid rgba(99,102,241,.15)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 16 }}>
+                  <span style={{ fontSize: 28, flexShrink: 0 }}>📄</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "var(--navy)", marginBottom: 4 }}>
+                      Step 1: Let AI read your documents
+                    </div>
+                    <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 0 }}>
+                      {docCount > 0
+                        ? `You have ${docCount} document${docCount !== 1 ? "s" : ""} uploaded. Click "Scan Documents" to have AI pre-fill the answers below from your proposals, capability statements, and business documents. Then review and edit before generating your plan.`
+                        : "Upload a proposal, capability statement, business plan, or company overview and our AI will pre-fill answers for you. This saves significant time."}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {docCount > 0 && (
+                    <button onClick={prefillFromDocuments} disabled={prefilling}
+                      style={{
+                        padding: "10px 24px",
+                        background: prefilling ? "var(--ink4)" : "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+                        border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff",
+                        cursor: prefilling ? "wait" : "pointer",
+                        boxShadow: "0 4px 16px rgba(99,102,241,.3)",
+                      }}>
+                      {prefilling ? "Scanning your documents..." : `🤖 Scan ${docCount} Document${docCount !== 1 ? "s" : ""} & Pre-fill Answers`}
+                    </button>
+                  )}
+                  <input ref={fileRef} type="file" accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.csv,.pptx" style={{ display: "none" }} onChange={handleFileUpload} />
+                  <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                    style={{
+                      padding: "10px 20px", background: "#fff",
+                      border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, fontWeight: 500,
+                      color: "var(--ink3)", cursor: "pointer",
+                    }}>
+                    {uploading ? "Uploading..." : "+ Upload a Document"}
+                  </button>
+                </div>
+                {prefilled && (
+                  <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--green)", fontWeight: 500 }}>
+                    ✓ AI has pre-filled answers from your documents. Review and edit below, then click "Generate Business Plan."
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Generate header */}
               <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "16px 20px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>Answer a few questions and AI will generate all 8 business plan sections.</div>

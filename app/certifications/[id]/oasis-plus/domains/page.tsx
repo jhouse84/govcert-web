@@ -90,7 +90,7 @@ export default function OASISDomainSelectionPage({ params }: { params: Promise<{
       });
       setSaved(true);
       if (andNavigate) {
-        router.push(`/certifications/${certId}/oasis-plus/scorecard`);
+        router.push(`/certifications/${certId}/oasis-plus/contract-history`);
       }
     } catch (err: any) {
       setError(err.message || "Failed to save.");

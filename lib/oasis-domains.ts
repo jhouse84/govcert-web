@@ -174,6 +174,7 @@ export const OASIS_SCORING_CATEGORIES = [
 
 export const OASIS_SECTIONS = [
   { id: "domains", label: "Domain Selection" },
+  { id: "contract-history", label: "Contract History" },
   { id: "scorecard", label: "Self-Scoring Worksheet" },
   { id: "qualifying-projects", label: "Qualifying Projects" },
   { id: "past-performance", label: "Past Performance" },

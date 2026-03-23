@@ -121,6 +121,16 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
       charLimit: null,
     },
     {
+      id: "contract-history",
+      label: "Contract History",
+      desc: "Upload and AI-analyze your contract history to identify qualifying projects",
+      icon: "📂",
+      href: `/certifications/${certId}/oasis-plus/contract-history`,
+      complete: !!app?.oasisContractHistory,
+      chars: null,
+      charLimit: null,
+    },
+    {
       id: "scorecard",
       label: "Self-Scoring Worksheet",
       desc: "Interactive scoring matrix for each selected domain",

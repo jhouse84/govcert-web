@@ -8,6 +8,7 @@ import EligibilityScorecard from "@/components/EligibilityScorecard";
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
   EIGHT_A: "8(a) Business Development",
+  OASIS_PLUS: "GSA OASIS+",
   WOSB: "Women-Owned Small Business",
   HUBZONE: "HUBZone",
   MBE: "Minority Business Enterprise",
@@ -89,8 +90,22 @@ export default function PortalPage() {
     router.push("/login");
   }
 
-  function getSectionProgress(app: any) {
-    const sections = [
+  function getSectionProgress(app: any, certType?: string) {
+    const sections = certType === "OASIS_PLUS" ? [
+      !!app?.oasisDomains,
+      !!app?.oasisScorecardData,
+      !!app?.oasisQPData,
+      !!app?.oasisPPData,
+      !!app?.oasisFEPData,
+      !!app?.oasisSystemsData,
+    ] : certType === "EIGHT_A" ? [
+      !!app?.socialDisadvantage,
+      !!app?.economicDisadvantage,
+      !!app?.businessPlan,
+      !!app?.narrativeCorp,
+      (app?.pastPerformance?.length || 0) >= 3,
+      !!app?.financialData,
+    ] : [
       !!app?.narrativeCorp,
       !!app?.narrativeQCP,
       !!app?.narrativeExp,
@@ -344,6 +359,7 @@ export default function PortalPage() {
                   {[
                     { type: "GSA_MAS", label: "GSA Multiple Award Schedule", badge: "GSA", badgeColor: "#1A6644", badgeBg: "#E6F4EE", desc: "Pre-negotiated federal contracts. The fastest path to government revenue.", available: true },
                     { type: "EIGHT_A", label: "8(a) Business Development", badge: "SBA", badgeColor: "#1A3F7A", badgeBg: "#E8EEF8", desc: "Nine-year program for socially and economically disadvantaged businesses.", available: true },
+                    { type: "OASIS_PLUS", label: "GSA OASIS+", badge: "GSA", badgeColor: "#1A6644", badgeBg: "#E6F4EE", desc: "Best-in-Class IDIQ for professional services across 13 domains. $60B+ vehicle with rolling admissions.", available: true },
                     { type: "WOSB", label: "WOSB / EDWOSB", badge: "SBA", badgeColor: "#8A5E10", badgeBg: "#FBF0DC", desc: "Women-Owned Small Business certification for set-aside contracts.", available: false },
                     { type: "HUBZONE", label: "HUBZone", badge: "SBA", badgeColor: "#1A3F7A", badgeBg: "#E8EEF8", desc: "10% price evaluation preference for businesses in underutilized zones.", available: false },
                     { type: "SDVOSB", label: "SDVOSB / VOSB", badge: "VA", badgeColor: "#5A1A6A", badgeBg: "#F0E8F8", desc: "Service-Disabled Veteran-Owned Small Business certification.", available: false },
@@ -381,7 +397,7 @@ export default function PortalPage() {
                               method: "POST",
                               body: JSON.stringify({ clientId, type: cert.type, status: "IN_PROGRESS" }),
                             });
-                            const wizardBase = cert.type === "EIGHT_A" ? `/certifications/${newCert.id}/8a/social-disadvantage` : `/certifications/${newCert.id}/corporate`;
+                            const wizardBase = cert.type === "OASIS_PLUS" ? `/certifications/${newCert.id}/oasis-plus/domains` : cert.type === "EIGHT_A" ? `/certifications/${newCert.id}/8a/social-disadvantage` : `/certifications/${newCert.id}/corporate`;
                             router.push(wizardBase);
                           } catch (err: any) {
                             if (err.message?.includes("already has")) {
@@ -424,7 +440,7 @@ export default function PortalPage() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {certs.map(cert => {
-                  const progress = getSectionProgress(cert.application);
+                  const progress = getSectionProgress(cert.application, cert.type);
                   return (
                     <div key={cert.id} style={{ background: "#fff", border: "1px solid rgba(200,155,60,.08)", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)" }}>
                       <div style={{ padding: "22px 28px", background: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -448,7 +464,14 @@ export default function PortalPage() {
                       <div style={{ padding: "20px 28px" }}>
                         <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--ink3)", marginBottom: 14 }}>Application Sections</div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-                          {(cert.type === "EIGHT_A" ? [
+                          {(cert.type === "OASIS_PLUS" ? [
+                            { key: "oasisDomains", label: "Domain Selection", icon: "🎯", hasData: !!cert.application?.oasisDomains, href: `/certifications/${cert.id}/oasis-plus/domains` },
+                            { key: "oasisScorecard", label: "Self-Scoring Worksheet", icon: "📊", hasData: !!cert.application?.oasisScorecardData, href: `/certifications/${cert.id}/oasis-plus/scorecard` },
+                            { key: "oasisQP", label: "Qualifying Projects", icon: "📋", hasData: !!cert.application?.oasisQPData, href: `/certifications/${cert.id}/oasis-plus/qualifying-projects` },
+                            { key: "oasisPP", label: "Past Performance", icon: "⭐", hasData: !!cert.application?.oasisPPData, href: `/certifications/${cert.id}/oasis-plus/past-performance` },
+                            { key: "oasisFEP", label: "Federal Experience", icon: "🏛️", hasData: !!cert.application?.oasisFEPData, href: `/certifications/${cert.id}/oasis-plus/federal-experience` },
+                            { key: "oasisSystems", label: "Systems & Certifications", icon: "🔒", hasData: !!cert.application?.oasisSystemsData, href: `/certifications/${cert.id}/oasis-plus/systems-certs` },
+                          ] : cert.type === "EIGHT_A" ? [
                             { key: "socialDisadvantage", label: "Social Disadvantage Narrative", icon: "👥", hasData: !!cert.application?.socialDisadvantage, href: `/certifications/${cert.id}/8a/social-disadvantage` },
                             { key: "economicDisadvantage", label: "Economic Disadvantage", icon: "💵", hasData: !!cert.application?.economicDisadvantage, href: `/certifications/${cert.id}/8a/economic-disadvantage` },
                             { key: "businessPlan", label: "Business Plan", icon: "📝", hasData: !!cert.application?.businessPlan, href: `/certifications/${cert.id}/8a/business-plan` },
@@ -484,9 +507,9 @@ export default function PortalPage() {
                             Open Full Application →
                           </a>
                           {progress.pct === 100 && (
-                            <a href={cert.type === "EIGHT_A" ? `/certifications/${cert.id}/8a/submit` : `/certifications/${cert.id}/submit`}
+                            <a href={cert.type === "OASIS_PLUS" ? `/certifications/${cert.id}/oasis-plus/submit` : cert.type === "EIGHT_A" ? `/certifications/${cert.id}/8a/submit` : `/certifications/${cert.id}/submit`}
                               style={{ flex: 1, padding: "12px", background: "var(--gold)", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, textDecoration: "none", textAlign: "center" as const, boxShadow: "0 4px 16px rgba(200,155,60,.3)" }}>
-                              {cert.type === "EIGHT_A" ? "View 8(a) Application Package →" : "View eOffer Package →"}
+                              {cert.type === "OASIS_PLUS" ? "View OSP Submission Package →" : cert.type === "EIGHT_A" ? "View 8(a) Application Package →" : "View eOffer Package →"}
                             </a>
                           )}
                         </div>

@@ -68,7 +68,7 @@ export default function LandingPage() {
             Certifications that<br /><strong style={{ fontWeight: 500, color: "var(--gold2)" }}>open doors</strong>
           </h1>
           <p style={{ fontSize: 18, color: "rgba(255,255,255,.60)", maxWidth: 580, margin: "0 auto 38px", fontWeight: 300, lineHeight: 1.65 }}>
-            Automate your 8(a), GSA MAS, WOSB, HUBZone, and MBE certification applications — from document collection to submission.
+            Automate your 8(a), GSA MAS, OASIS+, WOSB, HUBZone, and MBE certification applications — from document collection to submission.
           </p>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
@@ -185,6 +185,7 @@ export default function LandingPage() {
             {[
               { badge: "SBA", badgeColor: "#1A3F7A", badgeBg: "#E8EEF8", title: "8(a) Business Development", body: "Nine-year program for socially and economically disadvantaged businesses. Access to sole-source contracts up to $4M." },
               { badge: "GSA", badgeColor: "#1A6644", badgeBg: "#E6F4EE", title: "GSA Multiple Award Schedule", body: "Pre-negotiated contracts with federal agencies. The fastest path to consistent government revenue." },
+              { badge: "GSA", badgeColor: "#1A6644", badgeBg: "#E6F4EE", title: "GSA OASIS+", body: "Best-in-Class IDIQ for professional services across 13 domains. $60B+ vehicle with scorecard-based evaluation." },
               { badge: "SBA", badgeColor: "#8A5E10", badgeBg: "#FBF0DC", title: "WOSB / EDWOSB", body: "Women-Owned Small Business certification. Access to set-aside contracts in underrepresented industries." },
               { badge: "SBA", badgeColor: "#1A3F7A", badgeBg: "#E8EEF8", title: "HUBZone", body: "Historically Underutilized Business Zone program. 10% price evaluation preference on full and open competitions." },
               { badge: "State", badgeColor: "#5A1A6A", badgeBg: "#F0E8F8", title: "MBE / DBE", body: "Minority and Disadvantaged Business Enterprise certifications for state and local government contracts." },
@@ -231,6 +232,7 @@ export default function LandingPage() {
               {[
                 { cert: "GSA Multiple Award Schedule", consultant: "$6,000 – $50,000", price: "$1,999", save: "Up to 96%", popular: true },
                 { cert: "8(a) Business Development", consultant: "$3,000 – $5,000", price: "$2,499", save: "Up to 50%", popular: true },
+                { cert: "GSA OASIS+", consultant: "$10,000 – $35,000", price: "$2,999", save: "Up to 91%", popular: true },
                 { cert: "Bundle: 8(a) + GSA MAS", consultant: "$10,000 – $30,000", price: "$3,499", save: "Up to 88%", popular: false },
               ].map(row => (
                 <div key={row.cert} style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr", padding: "16px 28px", borderBottom: "1px solid rgba(255,255,255,.05)", alignItems: "center" }}

@@ -7,6 +7,7 @@ import { trackPageView } from "@/lib/activity";
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
   EIGHT_A: "8(a) Business Development",
+  OASIS_PLUS: "GSA OASIS+",
   WOSB: "Women-Owned Small Business",
   HUBZONE: "HUBZone",
   MBE: "Minority Business Enterprise",
@@ -106,6 +107,70 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
   const needsSpringboard = yearsInBusiness < 2;
 
   const isEightA = cert?.type === "EIGHT_A";
+  const isOASIS = cert?.type === "OASIS_PLUS";
+
+  const oasisPlusSections = [
+    {
+      id: "domains",
+      label: "Domain Selection",
+      desc: "Select OASIS+ domains and solicitation type for your proposal",
+      icon: "🎯",
+      href: `/certifications/${certId}/oasis-plus/domains`,
+      complete: !!app?.oasisDomains,
+      chars: null,
+      charLimit: null,
+    },
+    {
+      id: "scorecard",
+      label: "Self-Scoring Worksheet",
+      desc: "Interactive scoring matrix for each selected domain",
+      icon: "📊",
+      href: `/certifications/${certId}/oasis-plus/scorecard`,
+      complete: !!app?.oasisScorecardData,
+      chars: null,
+      charLimit: null,
+    },
+    {
+      id: "qualifying-projects",
+      label: "Qualifying Projects",
+      desc: "Up to 5 qualifying projects with narratives and AAV calculations",
+      icon: "📋",
+      href: `/certifications/${certId}/oasis-plus/qualifying-projects`,
+      complete: !!app?.oasisQPData,
+      chars: null,
+      charLimit: null,
+    },
+    {
+      id: "past-performance-oasis",
+      label: "Past Performance",
+      desc: "CPARS ratings and references for each qualifying project",
+      icon: "⭐",
+      href: `/certifications/${certId}/oasis-plus/past-performance`,
+      complete: !!app?.oasisPPData,
+      chars: null,
+      charLimit: null,
+    },
+    {
+      id: "federal-experience",
+      label: "Federal Experience",
+      desc: "Additional federal prime contracts beyond qualifying projects",
+      icon: "🏛️",
+      href: `/certifications/${certId}/oasis-plus/federal-experience`,
+      complete: !!app?.oasisFEPData,
+      chars: null,
+      charLimit: null,
+    },
+    {
+      id: "systems-certs",
+      label: "Systems & Certifications",
+      desc: "Business systems, facility clearances, and third-party certifications",
+      icon: "🔒",
+      href: `/certifications/${certId}/oasis-plus/systems-certs`,
+      complete: !!app?.oasisSystemsData,
+      chars: null,
+      charLimit: null,
+    },
+  ];
 
   const gsaSections = [
     {
@@ -237,7 +302,7 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
     },
   ];
 
-  const sections = isEightA ? eightASections : gsaSections;
+  const sections = isOASIS ? oasisPlusSections : isEightA ? eightASections : gsaSections;
 
   const completedCount = sections.filter(s => s.complete).length;
   const pct = Math.round(completedCount / sections.length * 100);
@@ -325,11 +390,11 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,.45)", marginTop: 4 }}>{completedCount} of {sections.length} sections complete</div>
               </div>
               <div style={{ display: "flex", gap: 10 }}>
-                <a href={`/certifications/${certId}/${isEightA ? "8a/review" : "review"}`} style={{ padding: "12px 20px", background: "rgba(99,102,241,.15)", border: "1px solid rgba(99,102,241,.3)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
+                <a href={`/certifications/${certId}/${isOASIS ? "oasis-plus/review" : isEightA ? "8a/review" : "review"}`} style={{ padding: "12px 20px", background: "rgba(99,102,241,.15)", border: "1px solid rgba(99,102,241,.3)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
                   🔍 GovCert Review
                 </a>
-                <a href={`/certifications/${certId}/${isEightA ? "8a/submit" : "submit"}`} style={{ padding: "12px 24px", background: pct === 100 ? "var(--gold)" : "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
-                  {isEightA ? (pct === 100 ? "View SBA Package" : "Submit to SBA") : (pct === 100 ? "Generate eOffer Package" : "View Submission Package")}
+                <a href={`/certifications/${certId}/${isOASIS ? "oasis-plus/submit" : isEightA ? "8a/submit" : "submit"}`} style={{ padding: "12px 24px", background: pct === 100 ? "var(--gold)" : "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
+                  {isOASIS ? (pct === 100 ? "View OSP Package" : "Prepare Submission") : isEightA ? (pct === 100 ? "View SBA Package" : "Submit to SBA") : (pct === 100 ? "Generate eOffer Package" : "View Submission Package")}
                 </a>
               </div>
             </div>

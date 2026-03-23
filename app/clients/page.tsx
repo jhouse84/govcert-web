@@ -142,13 +142,13 @@ export default function ClientsPage() {
             </div>
           ) : (
             <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "10px 20px", borderBottom: "1px solid var(--border)", background: "var(--cream)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 160px", padding: "10px 20px", borderBottom: "1px solid var(--border)", background: "var(--cream)" }}>
                 {["Client Name", "EIN", "Entity Type", "Status", ""].map(h => (
                   <div key={h} style={{ fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".07em", color: "var(--ink3)" }}>{h}</div>
                 ))}
               </div>
               {clients.map((client, i) => (
-                <div key={client.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "16px 20px", borderBottom: i < clients.length - 1 ? "1px solid var(--border)" : "none", alignItems: "center", transition: "background .1s" }}
+                <div key={client.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 160px", padding: "16px 20px", borderBottom: i < clients.length - 1 ? "1px solid var(--border)" : "none", alignItems: "center", transition: "background .1s" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "var(--cream)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <div>
@@ -160,8 +160,18 @@ export default function ClientsPage() {
                   <div>
                     <span style={{ display: "inline-flex", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: "var(--green-bg)", color: "var(--green)" }}>Active</span>
                   </div>
-                  <div>
-                    <a href={`/clients/${client.id}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>View →</a>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <a href={`/clients/${client.id}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>View</a>
+                    <button onClick={async () => {
+                      if (!confirm(`Delete "${client.businessName}" and ALL related data (certifications, documents, applications)? This cannot be undone.`)) return;
+                      try {
+                        await apiRequest(`/api/clients/${client.id}`, { method: "DELETE" });
+                        setClients((prev: any) => prev.filter((c: any) => c.id !== client.id));
+                      } catch (err: any) { alert("Delete failed: " + err.message); }
+                    }}
+                      style={{ fontSize: 11, color: "var(--red)", background: "none", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "3px 8px", cursor: "pointer" }}>
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}

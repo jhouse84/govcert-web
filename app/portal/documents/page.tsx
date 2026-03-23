@@ -71,23 +71,35 @@ interface RecommendedDoc {
 }
 
 const RECOMMENDED_DOCS: RecommendedDoc[] = [
-  // Universal
-  { name: "Financial Statements (P&L, Balance Sheet) \u2014 last 3 years", why: "Required for size standard calculation and financial capability assessment across all certifications.", category: "FINANCIAL_STATEMENT" },
-  { name: "Tax Returns (business) \u2014 last 3 years", why: "Verifies revenue history and supports size standard compliance.", category: "TAX_RETURN" },
-  { name: "Capability Statement", why: "Demonstrates your company\u2019s core competencies, past performance, and differentiators.", category: "CAPABILITY_STATEMENT" },
-  { name: "Organizational Chart", why: "Shows management structure and key personnel for organizational narratives.", category: "ORG_CHART" },
-  { name: "Business Licenses & Registrations", why: "Proves your business is legally registered and in good standing.", category: "CERTIFICATION_DOCUMENT" },
-  // GSA MAS
-  { name: "Commercial Price List / Rate Card", why: "Required for CSP-1 pricing and labor category rate justification.", category: "RATE_CARD", certTypes: ["GSA_MAS"] },
-  { name: "Past Proposals or SOWs", why: "Demonstrates relevant experience and technical writing capability.", category: "PAST_PROPOSAL", certTypes: ["GSA_MAS"] },
-  { name: "CPARS Reports", why: "Provides government-verified past performance ratings.", category: "CPARS_REPORT", certTypes: ["GSA_MAS"] },
-  { name: "Quality Management System (QMS) documentation", why: "Supports quality control plan requirements in your GSA application.", category: "QMS_MANUAL", certTypes: ["GSA_MAS"] },
-  // 8(a)
-  { name: "Personal Financial Statement (SBA Form 413)", why: "Required by SBA to assess economic disadvantage of the applicant.", category: "FINANCIAL_STATEMENT", certTypes: ["SBA_8A"] },
-  { name: "Personal Tax Returns \u2014 last 3 years", why: "Used to verify personal income for economic disadvantage determination.", category: "TAX_RETURN", certTypes: ["SBA_8A"] },
-  { name: "Social Disadvantage Narrative supporting documents", why: "Evidence supporting your social disadvantage claim (letters, records, etc.).", category: "CERTIFICATION_DOCUMENT", certTypes: ["SBA_8A"] },
-  { name: "Business Plan", why: "SBA requires a detailed business plan showing growth potential and strategy.", category: "OTHER", certTypes: ["SBA_8A"] },
-  { name: "Resumes of key personnel", why: "Demonstrates management capability and relevant experience of leadership.", category: "OTHER", certTypes: ["SBA_8A"] },
+  // ── Universal (all certifications) ──
+  { name: "Financial Statements (P&L, Balance Sheet) \u2014 last 3 years", why: "Revenue verification, size standard calculation, financial capability assessment.", category: "FINANCIAL_STATEMENT" },
+  { name: "Business Tax Returns \u2014 last 3 years", why: "Revenue history, business structure verification, size standard compliance.", category: "TAX_RETURN" },
+  { name: "Personal Tax Returns (owner) \u2014 last 3 years", why: "Economic disadvantage assessment, owner income verification.", category: "TAX_RETURN" },
+  { name: "Capability Statement", why: "Company overview, core competencies, past performance summary.", category: "CAPABILITY_STATEMENT" },
+  { name: "Organizational Chart", why: "Management structure, key personnel, reporting hierarchy.", category: "ORG_CHART" },
+  { name: "Business Licenses & Registrations", why: "Legal entity verification, state registrations, good standing proof.", category: "CERTIFICATION_DOCUMENT" },
+  { name: "Invoices (recent projects)", why: "Rate card development, pricing justification, service descriptions.", category: "OTHER" },
+  { name: "Contracts (government or commercial)", why: "Past performance evidence, contract values, scope of work.", category: "CONTRACT" },
+  { name: "Employee Resumes (key personnel)", why: "Staff qualifications, certifications, experience documentation.", category: "OTHER" },
+  { name: "Company Website / Marketing Materials", why: "Service descriptions, client testimonials, market positioning.", category: "OTHER" },
+  { name: "Insurance Certificates", why: "Business insurance, liability coverage verification.", category: "CERTIFICATION_DOCUMENT" },
+  { name: "Bank Statements", why: "Financial stability, cash flow evidence, working capital verification.", category: "FINANCIAL_STATEMENT" },
+
+  // ── GSA MAS ──
+  { name: "Commercial Price List / Rate Card", why: "GSA pricing baseline, labor category rates for CSP-1.", category: "RATE_CARD", certTypes: ["GSA_MAS"] },
+  { name: "Past Proposals or SOWs", why: "Technical writing samples, scope of work examples, proposal quality.", category: "PAST_PROPOSAL", certTypes: ["GSA_MAS"] },
+  { name: "CPARS Reports", why: "Government performance ratings, past performance verification.", category: "CPARS_REPORT", certTypes: ["GSA_MAS"] },
+  { name: "QMS Manual or SOPs", why: "Quality control plan evidence, ISO/CMMI documentation.", category: "QMS_MANUAL", certTypes: ["GSA_MAS"] },
+  { name: "Subcontractor Agreements", why: "Teaming arrangements, subcontractor management documentation.", category: "CONTRACT", certTypes: ["GSA_MAS"] },
+
+  // ── 8(a) ──
+  { name: "Personal Financial Statement (SBA Form 413)", why: "Net worth calculation, economic disadvantage determination.", category: "FINANCIAL_STATEMENT", certTypes: ["SBA_8A"] },
+  { name: "Social Disadvantage Narrative drafts", why: "Personal narrative supporting evidence for social disadvantage claim.", category: "CERTIFICATION_DOCUMENT", certTypes: ["SBA_8A"] },
+  { name: "Business Plan", why: "Growth strategy, market analysis, 5-year projections.", category: "OTHER", certTypes: ["SBA_8A"] },
+  { name: "Resumes of ALL owners", why: "Owner qualifications, management capability demonstration.", category: "OTHER", certTypes: ["SBA_8A"] },
+  { name: "Proof of Citizenship", why: "US citizenship verification for all disadvantaged owners.", category: "CERTIFICATION_DOCUMENT", certTypes: ["SBA_8A"] },
+  { name: "Corporate Meeting Minutes", why: "Evidence of owner control and decision-making authority.", category: "OTHER", certTypes: ["SBA_8A"] },
+  { name: "Operating Agreement / Bylaws", why: "Ownership structure, control provisions, governance documentation.", category: "CERTIFICATION_DOCUMENT", certTypes: ["SBA_8A"] },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════

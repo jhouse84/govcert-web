@@ -15,11 +15,25 @@ const EIGHT_A_SECTIONS = [
 ];
 
 const BP_SECTIONS = [
-  { id: "description", label: "Business Description", hint: "Company overview, legal structure, history, and mission. What does your company do?", maxChars: 3000 },
-  { id: "productsServices", label: "Products / Services", hint: "Detailed description of the products and services you offer, including NAICS codes and target SINs.", maxChars: 3000 },
-  { id: "targetMarket", label: "Target Market", hint: "Who are your customers? Federal, state, local agencies? Commercial clients? Geographic focus?", maxChars: 2000 },
-  { id: "marketingStrategy", label: "Marketing Strategy", hint: "How will you reach your target market? Teaming arrangements, GSA Advantage, agency outreach?", maxChars: 2000 },
-  { id: "growthProjections", label: "Growth Projections", hint: "Revenue projections for the next 3-5 years. Employee growth. Capability expansion plans.", maxChars: 2500 },
+  { id: "executiveSummary", label: "Executive Summary", hint: "Company mission, core offerings, target market, and growth objectives.", maxChars: 1500 },
+  { id: "companyDescription", label: "Company Description", hint: "Legal structure, history, ownership, location, and unique value proposition.", maxChars: 2000 },
+  { id: "servicesProducts", label: "Services / Products", hint: "Detailed description of services/products, competitive advantages, delivery methodology.", maxChars: 2000 },
+  { id: "marketAnalysis", label: "Market Analysis", hint: "Target market size, federal contracting landscape, competitive analysis, market trends.", maxChars: 2500 },
+  { id: "organizationManagement", label: "Organization & Management", hint: "Management team, organizational structure, key personnel qualifications.", maxChars: 2000 },
+  { id: "marketingStrategy", label: "Marketing Strategy", hint: "How you market to federal agencies, teaming arrangements, GSA Advantage, agency outreach.", maxChars: 2000 },
+  { id: "financialProjections", label: "Financial Projections", hint: "3-year revenue projections, profit targets, capital requirements, funding sources.", maxChars: 2000 },
+  { id: "growthTargets", label: "Growth Targets", hint: "Specific measurable goals for the 8(a) program term: contract targets, capability expansion.", maxChars: 1500 },
+];
+
+const GUIDED_BP_QUESTIONS = [
+  { id: "whatDoYouDo", question: "What does your company do? What specific services or products do you offer?" },
+  { id: "legalStructure", question: "What is your legal structure (LLC, Corp, etc.) and when was the company established?" },
+  { id: "targetAgencies", question: "Which federal agencies or prime contractors are your primary targets?" },
+  { id: "competitiveEdge", question: "What makes your company different from competitors? What's your unique value proposition?" },
+  { id: "currentRevenue", question: "What is your current annual revenue and how many employees do you have?" },
+  { id: "growthPlan", question: "Where do you want the company to be in 3-5 years? Revenue targets? New capabilities?" },
+  { id: "marketingApproach", question: "How do you currently find and win business? What marketing channels do you use?" },
+  { id: "teamStrength", question: "Describe your key personnel — their qualifications, certifications, and roles." },
 ];
 
 export default function BusinessPlanPage({ params }: { params: Promise<{ id: string }> }) {
@@ -37,6 +51,11 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
 
   const [sections, setSections] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState<string | null>(null);
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const [mode, setMode] = useState<"gather" | "refine">("gather");
+  const [bpAnswers, setBpAnswers] = useState<Record<string, string>>({});
+  const [bpScore, setBpScore] = useState<number | null>(null);
+  const [bpSuggestions, setBpSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -54,7 +73,11 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
         try {
           const parsed = JSON.parse(data.application.businessPlanData);
           setSections(parsed);
+          if (Object.values(parsed).some((v: any) => v?.trim())) setMode("refine");
         } catch {}
+      }
+      if (data.application?.businessPlanAnswers) {
+        try { setBpAnswers(JSON.parse(data.application.businessPlanAnswers)); } catch {}
       }
       const completed: Record<string, boolean> = {};
       const app = data.application;
@@ -72,6 +95,33 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
       setError("Failed to load certification data.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function generateAllSections() {
+    setGeneratingAll(true);
+    setError(null);
+    try {
+      const data = await apiRequest("/api/applications/ai/8a/business-plan", {
+        method: "POST",
+        body: JSON.stringify({
+          answers: bpAnswers,
+          clientId: cert?.clientId,
+        }),
+      });
+      // Map response to sections
+      const newSections: Record<string, string> = {};
+      BP_SECTIONS.forEach(s => {
+        if (data[s.id]) newSections[s.id] = data[s.id];
+      });
+      setSections(prev => ({ ...prev, ...newSections }));
+      if (data.strengthScore) setBpScore(data.strengthScore);
+      if (data.suggestions) setBpSuggestions(data.suggestions);
+      setMode("refine");
+    } catch (err: any) {
+      setError("AI generation failed: " + (err.message || "Please try again."));
+    } finally {
+      setGeneratingAll(false);
     }
   }
 
@@ -120,6 +170,7 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
           certType: cert.type,
           currentStep: cert.application?.currentStep || 1,
           businessPlanData: JSON.stringify(sections),
+          businessPlanAnswers: JSON.stringify(bpAnswers),
         }),
       });
       setSaved(true);
@@ -226,6 +277,91 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
             </div>
           )}
 
+          {/* Mode switcher */}
+          <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+            {[{ id: "gather" as const, label: "Answer Questions", icon: "📝", desc: "Quick guided questions" }, { id: "refine" as const, label: "Edit Sections", icon: "✨", desc: `${filledCount}/${BP_SECTIONS.length} drafted` }].map(m => (
+              <button key={m.id} onClick={() => setMode(m.id)}
+                style={{
+                  flex: 1, padding: "14px 18px", background: mode === m.id ? "#fff" : "var(--cream)",
+                  border: `2px solid ${mode === m.id ? "var(--gold)" : "var(--border)"}`,
+                  borderRadius: "var(--rl)", cursor: "pointer", textAlign: "left" as const,
+                }}>
+                <div style={{ fontSize: 16, marginBottom: 4 }}>{m.icon}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>{m.label}</div>
+                <div style={{ fontSize: 12, color: "var(--ink3)" }}>{m.desc}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* GATHER MODE — Guided questions */}
+          {mode === "gather" && (
+            <div>
+              <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "16px 20px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>Answer a few questions and AI will generate all 8 business plan sections.</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>{GUIDED_BP_QUESTIONS.filter(q => bpAnswers[q.id]?.trim()).length}/{GUIDED_BP_QUESTIONS.length} answered</div>
+                </div>
+                <button onClick={generateAllSections} disabled={generatingAll || GUIDED_BP_QUESTIONS.filter(q => bpAnswers[q.id]?.trim()).length < 3}
+                  style={{
+                    padding: "10px 24px",
+                    background: GUIDED_BP_QUESTIONS.filter(q => bpAnswers[q.id]?.trim()).length >= 3 ? "var(--gold)" : "rgba(255,255,255,.1)",
+                    border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff",
+                    cursor: GUIDED_BP_QUESTIONS.filter(q => bpAnswers[q.id]?.trim()).length >= 3 ? "pointer" : "not-allowed",
+                    boxShadow: GUIDED_BP_QUESTIONS.filter(q => bpAnswers[q.id]?.trim()).length >= 3 ? "0 4px 16px rgba(200,155,60,.3)" : "none",
+                  }}>
+                  {generatingAll ? "Generating all 8 sections..." : "Generate Business Plan \u2728"}
+                </button>
+              </div>
+              {GUIDED_BP_QUESTIONS.map((q, i) => (
+                <div key={q.id} style={{ background: "#fff", border: `1px solid ${bpAnswers[q.id]?.trim() ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", padding: "18px 22px", marginBottom: 10, boxShadow: "var(--shadow)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", background: bpAnswers[q.id]?.trim() ? "var(--green)" : "var(--cream2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: bpAnswers[q.id]?.trim() ? "#fff" : "var(--ink4)", fontWeight: 700 }}>
+                      {bpAnswers[q.id]?.trim() ? "\u2713" : i + 1}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{q.question}</span>
+                  </div>
+                  <textarea value={bpAnswers[q.id] || ""} onChange={e => setBpAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                    placeholder="Type your answer..." rows={2}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }} />
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+                <button onClick={generateAllSections} disabled={generatingAll || GUIDED_BP_QUESTIONS.filter(q => bpAnswers[q.id]?.trim()).length < 3}
+                  style={{
+                    padding: "14px 40px",
+                    background: GUIDED_BP_QUESTIONS.filter(q => bpAnswers[q.id]?.trim()).length >= 3 ? "var(--gold)" : "var(--cream2)",
+                    border: "none", borderRadius: "var(--r)", fontSize: 16, fontWeight: 600,
+                    color: GUIDED_BP_QUESTIONS.filter(q => bpAnswers[q.id]?.trim()).length >= 3 ? "#fff" : "var(--ink4)",
+                    cursor: GUIDED_BP_QUESTIONS.filter(q => bpAnswers[q.id]?.trim()).length >= 3 ? "pointer" : "not-allowed",
+                    boxShadow: GUIDED_BP_QUESTIONS.filter(q => bpAnswers[q.id]?.trim()).length >= 3 ? "0 4px 24px rgba(200,155,60,.4)" : "none",
+                  }}>
+                  {generatingAll ? "AI is writing your business plan..." : "Generate All 8 Sections \u2728"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* REFINE MODE — Edit sections */}
+          {mode === "refine" && (<>
+          {/* Score + Progress */}
+          {bpScore !== null && (
+            <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
+              <div style={{ background: "#fff", border: `2px solid ${bpScore >= 7 ? "var(--green)" : "var(--gold)"}`, borderRadius: "var(--rl)", padding: "16px 24px", textAlign: "center" as const, minWidth: 100 }}>
+                <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--ink4)", marginBottom: 4 }}>Strength</div>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: bpScore >= 7 ? "var(--green)" : "var(--gold)" }}>{bpScore}</div>
+                <div style={{ fontSize: 11, color: "var(--ink4)" }}>/10</div>
+              </div>
+              {bpSuggestions.length > 0 && (
+                <div style={{ flex: 1, background: "rgba(200,155,60,.04)", border: "1px solid rgba(200,155,60,.15)", borderRadius: "var(--rl)", padding: "14px 18px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--gold)", marginBottom: 6 }}>Suggestions</div>
+                  {bpSuggestions.map((s, i) => (
+                    <div key={i} style={{ fontSize: 12, color: "var(--ink2)", lineHeight: 1.5, marginBottom: 3 }}>&bull; {s}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Progress bar */}
           <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "16px 24px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -299,6 +435,8 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
           ))}
+          </>
+          )}
 
           {/* Save / Next */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20 }}>

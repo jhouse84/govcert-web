@@ -124,17 +124,46 @@ export default function OASISPastPerformancePage({ params }: { params: Promise<{
       return;
     }
     setSendingPPQ(entry.qpId);
+    setError(null);
     try {
-      await apiRequest("/api/ppq", {
+      // First ensure we have an application record
+      const appData = await apiRequest("/api/applications", {
         method: "POST",
         body: JSON.stringify({
           certificationId: certId,
           clientId: cert?.clientId,
+          certType: "OASIS_PLUS",
+          oasisPPData: JSON.stringify(ppEntries),
+        }),
+      });
+
+      // Create a PastPerformance record (the PPQ system needs one)
+      const pp = await apiRequest(`/api/applications/${appData.id}/past-performance`, {
+        method: "POST",
+        body: JSON.stringify({
+          agencyName: entry.contractNumber || "OASIS+ Reference",
           contractNumber: entry.contractNumber,
-          refName: entry.refName,
-          refTitle: entry.refTitle,
-          refEmail: entry.refEmail,
-          refPhone: entry.refPhone,
+          description: entry.narrative,
+          referenceFirstName: entry.refName?.split(" ")[0] || "",
+          referenceLastName: entry.refName?.split(" ").slice(1).join(" ") || "",
+          referenceEmail: entry.refEmail,
+          referencePhone: entry.refPhone,
+          referenceTitle: entry.refTitle,
+          performanceType: "CORPORATE",
+        }),
+      });
+
+      // Now send the PPQ
+      const referenceName = entry.refName || "Reference";
+      await apiRequest("/api/ppq", {
+        method: "POST",
+        body: JSON.stringify({
+          pastPerformanceId: pp.id,
+          referenceEmail: entry.refEmail,
+          referenceName,
+          referenceTitle: entry.refTitle || "",
+          referenceAgency: entry.contractNumber || "",
+          contractorName: cert?.client?.businessName || "",
         }),
       });
       alert(`PPQ sent to ${entry.refEmail}`);

@@ -47,8 +47,8 @@ const PLANS = [
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [step, setStep] = useState<1 | 2 | 3>(2); // Skip plan selection — everyone starts free
+  const [selectedPlan, setSelectedPlan] = useState<string | null>("PLATFORM");
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", confirmPassword: "", businessName: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -132,7 +132,6 @@ export default function RegisterPage() {
           {/* Step indicator */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16 }}>
             {[
-              { n: 1, label: "Choose Plan" },
               { n: 2, label: "Create Account" },
               { n: 3, label: "Verify Email" },
             ].map((s, i) => (
@@ -143,7 +142,7 @@ export default function RegisterPage() {
                   </div>
                   <span style={{ fontSize: 12, color: step >= s.n ? "rgba(255,255,255,.7)" : "rgba(255,255,255,.3)", transition: "all .3s" }}>{s.label}</span>
                 </div>
-                {i < 2 && <div style={{ width: 32, height: 1, background: step > s.n ? "var(--gold)" : "rgba(255,255,255,.15)", transition: "background .3s" }} />}
+                {i < 1 && <div style={{ width: 32, height: 1, background: step > s.n ? "var(--gold)" : "rgba(255,255,255,.15)", transition: "background .3s" }} />}
               </div>
             ))}
           </div>

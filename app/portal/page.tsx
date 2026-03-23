@@ -53,20 +53,31 @@ export default function PortalPage() {
 
   async function fetchMyCerts() {
     try {
-      const data = await apiRequest("/api/certifications");
-      setCerts(data);
-      if (data && data.length > 0 && data[0].clientId) {
-        setClientId(data[0].clientId);
-        fetchEligibility(data[0].clientId);
+      // First find the user's OWN client, then fetch only that client's certs
+      let myClientId: string | null = null;
+
+      // Try clients endpoint first (workspace-scoped for customers)
+      try {
+        const clients = await apiRequest("/api/clients");
+        if (clients && clients.length > 0) {
+          // For customers with multiple clients (shouldn't happen), take the first
+          myClientId = clients[0].id;
+        }
+      } catch {}
+
+      if (myClientId) {
+        setClientId(myClientId);
+        // Fetch only THIS client's certifications
+        const allCerts = await apiRequest("/api/certifications");
+        const myCerts = Array.isArray(allCerts)
+          ? allCerts.filter((c: any) => c.clientId === myClientId)
+          : [];
+        setCerts(myCerts);
+        fetchEligibility(myClientId);
       } else {
-        // Try to find client directly
-        try {
-          const clients = await apiRequest("/api/clients");
-          if (clients && clients.length > 0) {
-            setClientId(clients[0].id);
-            fetchEligibility(clients[0].id);
-          }
-        } catch {}
+        // No client found — new user or orphaned
+        const data = await apiRequest("/api/certifications");
+        setCerts(Array.isArray(data) ? data : []);
       }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }

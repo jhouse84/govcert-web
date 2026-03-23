@@ -384,7 +384,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Integrations</div>
                 <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400 }}>Connected Data Sources</h2>
                 <p style={{ fontSize: 13, color: "var(--ink3)", marginTop: 4, lineHeight: 1.5 }}>
-                  Connect your financial and payroll tools so GovCert can pull real data into your certification applications.
+                  Integration status for this client's connected data sources.
                 </p>
               </div>
             </div>
@@ -392,235 +392,28 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
               {INTEGRATIONS.map(integration => {
                 const isOAuth = OAUTH_INTEGRATIONS.includes(integration.id);
-                const isConnected = !!oauthStatus[integration.id];
+                const isConnected = isOAuth ? !!oauthStatus[integration.id] : !!samData;
                 const connectedAt = oauthStatus[integration.id]?.connectedAt;
 
-                // OAuth integrations (QuickBooks, Gusto)
-                if (isOAuth) {
-                  return (
-                    <div key={integration.id} style={{ padding: "20px", border: `1px solid ${isConnected ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", background: isConnected ? "var(--green-bg)" : "var(--cream)", transition: "all .15s" }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span style={{ fontSize: 24 }}>{integration.icon}</span>
-                          <div>
-                            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>{integration.name}</div>
-                            {isConnected && connectedAt && (
-                              <div style={{ fontSize: 11, color: "var(--green)", marginTop: 2 }}>
-                                Connected {new Date(connectedAt).toLocaleDateString()}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        {isConnected && (
-                          <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: "var(--green-bg)", color: "var(--green)", border: "1px solid var(--green-b)" }}>
-                            ✓ Connected
-                          </span>
-                        )}
-                      </div>
-
-                      <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.5, marginBottom: 14 }}>{integration.desc}</p>
-
-                      {isConnected ? (
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button
-                            onClick={() => disconnectOAuth(integration.id)}
-                            disabled={disconnecting === integration.id}
-                            style={{ padding: "7px 14px", background: "transparent", border: "1px solid var(--red-b)", borderRadius: "var(--r)", color: "var(--red)", fontSize: 12, cursor: "pointer", opacity: disconnecting === integration.id ? 0.6 : 1 }}>
-                            {disconnecting === integration.id ? "Disconnecting..." : "Disconnect"}
-                          </button>
-                          <button
-                            onClick={() => connectOAuth(integration.id)}
-                            style={{ padding: "7px 14px", background: "transparent", border: "1px solid var(--green-b)", borderRadius: "var(--r)", color: "var(--green)", fontSize: 12, cursor: "pointer" }}>
-                            Reconnect
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => connectOAuth(integration.id)}
-                          style={{ padding: "9px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: "pointer", width: "100%" }}>
-                          Connect {integration.name} →
-                        </button>
-                      )}
-                    </div>
-                  );
-                }
-
-                // SAM.gov card
-                if (integration.id === "sam") {
-                  return (
-                    <div key={integration.id} style={{ padding: "20px", border: `1px solid ${samData ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", background: samData ? "var(--green-bg)" : "var(--cream)", transition: "all .15s" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                        <span style={{ fontSize: 24 }}>{integration.icon}</span>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>{integration.name}</div>
-                          {samData && (
-                            <div style={{ fontSize: 11, color: "var(--green)", marginTop: 2 }}>Data loaded</div>
-                          )}
+                return (
+                  <div key={integration.id} style={{ padding: "20px", border: `1px solid ${isConnected ? "rgba(39,174,96,.2)" : "var(--border)"}`, borderRadius: 12, background: isConnected ? "rgba(39,174,96,.04)" : "var(--cream)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                      <span style={{ fontSize: 24 }}>{integration.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>{integration.name}</div>
+                        <div style={{ fontSize: 11, color: isConnected ? "var(--green, #27ae60)" : "var(--ink4)", marginTop: 2 }}>
+                          {isConnected
+                            ? connectedAt ? `Connected ${new Date(connectedAt).toLocaleDateString()}` : "Connected"
+                            : "Not connected"}
                         </div>
                       </div>
-                      <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.5, marginBottom: 14 }}>{integration.desc}</p>
-
-                      {samError && (
-                        <div style={{ padding: "8px 12px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--red)", marginBottom: 10 }}>
-                          {samError}
-                        </div>
-                      )}
-
-                      <button
-                        onClick={syncSam}
-                        disabled={samLoading}
-                        style={{ padding: "9px 20px", background: integration.color, border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: samLoading ? "not-allowed" : "pointer", width: "100%", opacity: samLoading ? 0.7 : 1 }}>
-                        {samLoading ? "Looking up..." : "Sync from SAM.gov →"}
-                      </button>
-
-                      {samData && (
-                        <div style={{ marginTop: 14, padding: "12px", background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--r)" }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 8 }}>SAM.gov Entity Details</div>
-                          {[
-                            { label: "Registration Status", value: samData.registrationStatus },
-                            { label: "Expiration Date", value: samData.expirationDate ? new Date(samData.expirationDate).toLocaleDateString() : null },
-                            { label: "Legal Business Name", value: samData.legalBusinessName },
-                            { label: "UEI", value: samData.uei },
-                            { label: "CAGE Code", value: samData.cageCode },
-                          ].map(row => row.value ? (
-                            <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid var(--border)", fontSize: 12 }}>
-                              <span style={{ color: "var(--ink4)", fontWeight: 500 }}>{row.label}</span>
-                              <span style={{ color: "var(--ink)" }}>{row.value}</span>
-                            </div>
-                          ) : null)}
-                          {samData.naicsCodes && samData.naicsCodes.length > 0 && (
-                            <div style={{ marginTop: 8 }}>
-                              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink4)", marginBottom: 4 }}>NAICS Codes</div>
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                {samData.naicsCodes.map((code: any, i: number) => (
-                                  <span key={i} style={{ padding: "2px 8px", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: "var(--r)", fontSize: 11, color: "var(--ink3)" }}>
-                                    {typeof code === "string" ? code : code.code}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 10, fontWeight: 600, background: isConnected ? "rgba(39,174,96,.1)" : "rgba(149,165,166,.1)", color: isConnected ? "#27ae60" : "#95a5a6", textTransform: "uppercase" as const, letterSpacing: ".04em" }}>
+                        {isConnected ? "✓ Active" : "Inactive"}
+                      </span>
                     </div>
-                  );
-                }
-
-                // FPDS card
-                if (integration.id === "fpds") {
-                  return (
-                    <div key={integration.id} style={{ padding: "20px", border: `1px solid ${fpdsData ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", background: fpdsData ? "var(--green-bg)" : "var(--cream)", transition: "all .15s" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                        <span style={{ fontSize: 24 }}>{integration.icon}</span>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>{integration.name}</div>
-                          {fpdsData?.contracts && (
-                            <div style={{ fontSize: 11, color: "var(--green)", marginTop: 2 }}>{fpdsData.contracts.length} contract{fpdsData.contracts.length !== 1 ? "s" : ""} found</div>
-                          )}
-                        </div>
-                      </div>
-                      <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.5, marginBottom: 14 }}>{integration.desc}</p>
-
-                      {fpdsError && (
-                        <div style={{ padding: "8px 12px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--red)", marginBottom: 10 }}>
-                          {fpdsError}
-                        </div>
-                      )}
-
-                      <button
-                        onClick={syncFpds}
-                        disabled={fpdsLoading}
-                        style={{ padding: "9px 20px", background: integration.color, border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: fpdsLoading ? "not-allowed" : "pointer", width: "100%", opacity: fpdsLoading ? 0.7 : 1 }}>
-                        {fpdsLoading ? "Importing..." : "Import Contracts →"}
-                      </button>
-
-                      {fpdsData?.contracts && fpdsData.contracts.length > 0 && (
-                        <div style={{ marginTop: 14, padding: "12px", background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--r)", maxHeight: 240, overflowY: "auto" }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 8 }}>Past Contracts</div>
-                          {fpdsData.contracts.map((contract: any, i: number) => (
-                            <div key={i} style={{ padding: "8px 0", borderBottom: i < fpdsData.contracts.length - 1 ? "1px solid var(--border)" : "none" }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                <div>
-                                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{contract.contractNumber || contract.piid || `Contract #${i + 1}`}</div>
-                                  <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 2 }}>{contract.agency || contract.departmentName || "Federal Agency"}</div>
-                                  {contract.description && <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 2 }}>{contract.description}</div>}
-                                </div>
-                                {contract.amount && (
-                                  <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", fontFamily: "monospace" }}>
-                                    ${Number(contract.amount).toLocaleString()}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-
-                // SBA card
-                if (integration.id === "sba") {
-                  return (
-                    <div key={integration.id} style={{ padding: "20px", border: `1px solid ${sbaData ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", background: sbaData ? "var(--green-bg)" : "var(--cream)", transition: "all .15s" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                        <span style={{ fontSize: 24 }}>{integration.icon}</span>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>{integration.name}</div>
-                          {sbaData && (
-                            <div style={{ fontSize: 11, color: "var(--green)", marginTop: 2 }}>Data loaded</div>
-                          )}
-                        </div>
-                      </div>
-                      <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.5, marginBottom: 14 }}>{integration.desc}</p>
-
-                      {sbaError && (
-                        <div style={{ padding: "8px 12px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--red)", marginBottom: 10 }}>
-                          {sbaError}
-                        </div>
-                      )}
-
-                      <button
-                        onClick={syncSba}
-                        disabled={sbaLoading}
-                        style={{ padding: "9px 20px", background: integration.color, border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: sbaLoading ? "not-allowed" : "pointer", width: "100%", opacity: sbaLoading ? 0.7 : 1 }}>
-                        {sbaLoading ? "Checking..." : "Check Certifications →"}
-                      </button>
-
-                      {sbaData?.certifications && sbaData.certifications.length > 0 && (
-                        <div style={{ marginTop: 14, padding: "12px", background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--r)" }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 8 }}>SBA Certifications</div>
-                          {sbaData.certifications.map((cert: any, i: number) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: i < sbaData.certifications.length - 1 ? "1px solid var(--border)" : "none" }}>
-                              <div>
-                                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{cert.type || cert.name}</div>
-                                {cert.expirationDate && (
-                                  <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 1 }}>Expires {new Date(cert.expirationDate).toLocaleDateString()}</div>
-                                )}
-                              </div>
-                              <span style={{
-                                padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500,
-                                background: cert.status === "Active" || cert.status === "active" ? "var(--green-bg)" : "var(--amber-bg)",
-                                color: cert.status === "Active" || cert.status === "active" ? "var(--green)" : "var(--amber)",
-                                border: `1px solid ${cert.status === "Active" || cert.status === "active" ? "var(--green-b)" : "var(--amber-b)"}`,
-                              }}>
-                                {cert.status}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {sbaData && (!sbaData.certifications || sbaData.certifications.length === 0) && (
-                        <div style={{ marginTop: 14, padding: "12px", background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--r)", textAlign: "center", color: "var(--ink4)", fontSize: 12 }}>
-                          No SBA certifications found for this entity.
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-
-                return null;
+                    <p style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.5 }}>{integration.desc}</p>
+                  </div>
+                );
               })}
             </div>
           </div>

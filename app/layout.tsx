@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import ChatWidgetWrapper from "@/components/ChatWidgetWrapper";
+import SessionTimeout from "@/components/SessionTimeout";
 
 export const metadata: Metadata = {
   title: "GovCert — Government Certification Automation",
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <ChatWidgetWrapper />
+        <SessionTimeout />
       </body>
     </html>
   );

@@ -285,6 +285,45 @@ export default function RegisterPage() {
                   <input type="password" value={form.password} onChange={e => update("password", e.target.value)} required
                     placeholder="Min. 8 characters"
                     style={{ width: "100%", padding: "12px 14px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.12)", borderRadius: "var(--r)", fontSize: 14, color: "#fff", outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif", transition: "all .25s cubic-bezier(.4,0,.2,1)" }} />
+
+                  {/* Password Strength Indicator */}
+                  {form.password.length > 0 && (() => {
+                    const checks = [
+                      { label: "At least 8 characters", pass: form.password.length >= 8 },
+                      { label: "Uppercase letter", pass: /[A-Z]/.test(form.password) },
+                      { label: "Number", pass: /\d/.test(form.password) },
+                      { label: "Special character", pass: /[^A-Za-z0-9]/.test(form.password) },
+                    ];
+                    const passed = checks.filter(c => c.pass).length;
+                    const strengthLabel = passed <= 1 ? "Weak" : passed <= 2 ? "Fair" : passed <= 3 ? "Good" : "Strong";
+                    const strengthColor = passed <= 1 ? "#e74c3c" : passed <= 2 ? "#E8A838" : passed <= 3 ? "#E8B84B" : "#27ae60";
+                    return (
+                      <div style={{ marginTop: 10 }}>
+                        {/* Strength bar */}
+                        <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                          {[1, 2, 3, 4].map(i => (
+                            <div key={i} style={{
+                              flex: 1, height: 4, borderRadius: 2,
+                              background: i <= passed ? strengthColor : "rgba(255,255,255,.1)",
+                              transition: "background .25s",
+                            }} />
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 11, color: strengthColor, fontWeight: 600, marginBottom: 6, letterSpacing: ".03em" }}>
+                          {strengthLabel}
+                        </div>
+                        {/* Checklist */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                          {checks.map((c, i) => (
+                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: c.pass ? "rgba(39,174,96,.8)" : "rgba(255,255,255,.3)" }}>
+                              <span style={{ fontSize: 11, fontWeight: 700 }}>{c.pass ? "\u2713" : "\u2717"}</span>
+                              {c.label}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div style={{ marginBottom: 28 }}>
@@ -301,7 +340,7 @@ export default function RegisterPage() {
                   By creating an account you agree to GovCert's Terms of Service and Privacy Policy. Your account will be secured and your data encrypted.
                 </div>
 
-                <button type="submit" disabled={loading || (!!form.confirmPassword && form.password !== form.confirmPassword)}
+                <button type="submit" disabled={loading || (!!form.confirmPassword && form.password !== form.confirmPassword) || form.password.length < 8 || !/[A-Z]/.test(form.password) || !/\d/.test(form.password) || !/[^A-Za-z0-9]/.test(form.password)}
                   style={{
                     width: "100%", padding: "13px",
                     background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 50%, #C89B3C 100%)",

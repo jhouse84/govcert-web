@@ -75,6 +75,15 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [clientReviews, setClientReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
 
+  // Document access consent state
+  const [docGrants, setDocGrants] = useState<any[]>([]);
+  const [docAccessLoading, setDocAccessLoading] = useState(true);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestReason, setRequestReason] = useState("");
+  const [requestScope, setRequestScope] = useState("All Documents");
+  const [requestExpiration, setRequestExpiration] = useState("30 days");
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+
   // Eligibility assessment state
   const [eligibility, setEligibility] = useState<any>(null);
   const [eligibilityLoading, setEligibilityLoading] = useState(true);
@@ -91,6 +100,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     fetchOAuthStatus();
     fetchEligibility();
     fetchClientReviews();
+    fetchDocGrants();
 
     // Show success banner if redirected back from OAuth
     const connected = searchParams.get("connected");
@@ -239,6 +249,40 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     }
   }
 
+  async function fetchDocGrants() {
+    setDocAccessLoading(true);
+    try {
+      const data = await apiRequest("/api/documents/my-grants");
+      setDocGrants(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to fetch doc grants:", err);
+    } finally {
+      setDocAccessLoading(false);
+    }
+  }
+
+  async function submitAccessRequest() {
+    setRequestSubmitting(true);
+    try {
+      await apiRequest("/api/documents/request-access", {
+        method: "POST",
+        body: JSON.stringify({
+          clientId,
+          reason: requestReason,
+          scope: requestScope,
+          expiration: requestExpiration,
+        }),
+      });
+      setShowRequestModal(false);
+      setRequestReason("");
+      fetchDocGrants();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRequestSubmitting(false);
+    }
+  }
+
   function getReviewScoreColor(score: number) {
     if (score >= 80) return "#27ae60";
     if (score >= 60) return "#C89B3C";
@@ -350,6 +394,167 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             <div style={{ background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", padding: "12px 18px", marginBottom: 20, fontSize: 13, color: "var(--green)", fontWeight: 500, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>{successBanner}</span>
               <button onClick={() => setSuccessBanner(null)} style={{ background: "none", border: "none", color: "var(--green)", cursor: "pointer", fontSize: 16 }}>✕</button>
+            </div>
+          )}
+
+          {/* Document Access Consent Banner */}
+          {!docAccessLoading && (() => {
+            const clientGrant = docGrants.find((g: any) => g.clientId === clientId || g.client?.id === clientId);
+            const pendingGrant = docGrants.find((g: any) => (g.clientId === clientId || g.client?.id === clientId) && g.status === "PENDING");
+            const activeGrant = docGrants.find((g: any) => (g.clientId === clientId || g.client?.id === clientId) && (g.status === "GRANTED" || g.status === "ACTIVE"));
+
+            if (activeGrant) {
+              return (
+                <div style={{
+                  background: "var(--green-bg, rgba(39,174,96,.08))", border: "1px solid var(--green-b, rgba(39,174,96,.2))",
+                  borderRadius: "var(--r, 8px)", padding: "14px 20px", marginBottom: 20,
+                  display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12,
+                }}>
+                  <span style={{ fontSize: 14, color: "var(--green, #27ae60)", fontWeight: 500 }}>
+                    &#9989; Document access granted by {activeGrant.granterName || activeGrant.granter?.firstName || "customer"} on {new Date(activeGrant.grantedAt || activeGrant.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                  <a href={`/documents?clientId=${clientId}`} style={{
+                    padding: "6px 16px", fontSize: 13, fontWeight: 600, color: "var(--green, #27ae60)",
+                    border: "1px solid var(--green-b, rgba(39,174,96,.3))", borderRadius: 6,
+                    textDecoration: "none", background: "transparent",
+                  }}>
+                    Documents
+                  </a>
+                </div>
+              );
+            }
+
+            if (pendingGrant) {
+              return (
+                <div style={{
+                  background: "var(--amber-bg, rgba(232,168,56,.08))", border: "1px solid var(--amber-b, rgba(232,168,56,.2))",
+                  borderRadius: "var(--r, 8px)", padding: "14px 20px", marginBottom: 20,
+                  fontSize: 14, color: "var(--amber, #E8A838)", fontWeight: 500,
+                }}>
+                  &#9203; Access request pending — waiting for customer approval
+                </div>
+              );
+            }
+
+            // No grant — show locked banner with request button
+            return (
+              <div style={{
+                background: "rgba(11,25,41,.04)", border: "1px solid rgba(11,25,41,.1)",
+                borderRadius: "var(--r, 8px)", padding: "14px 20px", marginBottom: 20,
+                display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12,
+              }}>
+                <span style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500 }}>
+                  &#128274; Document access requires customer consent
+                </span>
+                <button onClick={() => setShowRequestModal(true)} style={{
+                  padding: "8px 20px", fontSize: 13, fontWeight: 600,
+                  background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
+                  border: "none", borderRadius: 8, color: "#fff", cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(200,155,60,.25)",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}>
+                  Request Access
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* Request Access Modal */}
+          {showRequestModal && (
+            <div style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(11,25,41,.5)", backdropFilter: "blur(4px)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <div style={{
+                background: "#fff", borderRadius: 16, padding: "32px 28px",
+                maxWidth: 460, width: "90%",
+                boxShadow: "0 20px 60px rgba(11,25,41,.2)",
+              }}>
+                <h3 style={{
+                  fontFamily: "'Cormorant Garamond', serif", fontSize: 22,
+                  color: "var(--navy)", fontWeight: 500, marginBottom: 20,
+                }}>
+                  Request Document Access
+                </h3>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--navy)", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: ".04em" }}>Reason</label>
+                  <textarea
+                    value={requestReason}
+                    onChange={e => setRequestReason(e.target.value)}
+                    placeholder="Explain why you need access to this client's documents..."
+                    rows={3}
+                    style={{
+                      width: "100%", padding: "10px 14px", fontSize: 14,
+                      border: "1px solid rgba(11,25,41,.15)", borderRadius: 8,
+                      resize: "vertical" as const, fontFamily: "'DM Sans', sans-serif",
+                      boxSizing: "border-box" as const, outline: "none",
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--navy)", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: ".04em" }}>Scope</label>
+                  <select
+                    value={requestScope}
+                    onChange={e => setRequestScope(e.target.value)}
+                    style={{
+                      width: "100%", padding: "10px 14px", fontSize: 14,
+                      border: "1px solid rgba(11,25,41,.15)", borderRadius: 8,
+                      fontFamily: "'DM Sans', sans-serif", background: "#fff",
+                      boxSizing: "border-box" as const, outline: "none",
+                    }}
+                  >
+                    <option value="All Documents">All Documents</option>
+                    <option value="Financial Only">Financial Only</option>
+                    <option value="Single Document">Single Document</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--navy)", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: ".04em" }}>Expiration</label>
+                  <select
+                    value={requestExpiration}
+                    onChange={e => setRequestExpiration(e.target.value)}
+                    style={{
+                      width: "100%", padding: "10px 14px", fontSize: 14,
+                      border: "1px solid rgba(11,25,41,.15)", borderRadius: 8,
+                      fontFamily: "'DM Sans', sans-serif", background: "#fff",
+                      boxSizing: "border-box" as const, outline: "none",
+                    }}
+                  >
+                    <option value="7 days">7 days</option>
+                    <option value="30 days">30 days</option>
+                    <option value="90 days">90 days</option>
+                    <option value="No expiration">No expiration</option>
+                  </select>
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setShowRequestModal(false)} style={{
+                    flex: 1, padding: "11px", fontSize: 14, fontWeight: 500,
+                    background: "transparent", border: "1px solid rgba(11,25,41,.15)",
+                    borderRadius: 8, color: "rgba(11,25,41,.6)", cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={submitAccessRequest}
+                    disabled={requestSubmitting || !requestReason.trim()}
+                    style={{
+                      flex: 1, padding: "11px", fontSize: 14, fontWeight: 600,
+                      background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
+                      border: "none", borderRadius: 8, color: "#fff", cursor: "pointer",
+                      boxShadow: "0 2px 12px rgba(200,155,60,.3)",
+                      fontFamily: "'DM Sans', sans-serif",
+                      opacity: requestSubmitting || !requestReason.trim() ? 0.6 : 1,
+                    }}>
+                    {requestSubmitting ? "Submitting..." : "Submit Request"}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

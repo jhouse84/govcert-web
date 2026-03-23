@@ -172,6 +172,13 @@ export default function PortalDocumentsPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  // Access requests state
+  const [accessRequests, setAccessRequests] = useState<any[]>([]);
+  const [activeGrants, setActiveGrants] = useState<any[]>([]);
+  const [auditLog, setAuditLog] = useState<any[]>([]);
+  const [accessLoading, setAccessLoading] = useState(false);
+  const [accessActionLoading, setAccessActionLoading] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* ── Auth + data fetch ── */
@@ -205,6 +212,54 @@ export default function PortalDocumentsPage() {
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }, []);
+
+  /* ── Access Requests fetch ── */
+  const fetchAccessData = useCallback(async (cId: string) => {
+    if (!cId) return;
+    setAccessLoading(true);
+    try {
+      const [reqData, auditData] = await Promise.all([
+        apiRequest(`/api/documents/access-requests?clientId=${cId}`),
+        apiRequest(`/api/documents/audit-log?clientId=${cId}`),
+      ]);
+      const allReqs = Array.isArray(reqData) ? reqData : [];
+      setAccessRequests(allReqs.filter((r: any) => r.status === "PENDING"));
+      setActiveGrants(allReqs.filter((r: any) => r.status === "GRANTED" || r.status === "ACTIVE"));
+      setAuditLog(Array.isArray(auditData) ? auditData : []);
+    } catch (err) { console.error("Access requests fetch error:", err); }
+    finally { setAccessLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (clientId) fetchAccessData(clientId);
+  }, [clientId, fetchAccessData]);
+
+  async function handleGrantAccess(requestId: string) {
+    setAccessActionLoading(requestId);
+    try {
+      await apiRequest(`/api/documents/grant-access/${requestId}`, { method: "POST" });
+      fetchAccessData(clientId);
+    } catch (err) { console.error(err); }
+    finally { setAccessActionLoading(null); }
+  }
+
+  async function handleDenyAccess(requestId: string) {
+    setAccessActionLoading(requestId);
+    try {
+      await apiRequest(`/api/documents/deny-access/${requestId}`, { method: "POST" });
+      fetchAccessData(clientId);
+    } catch (err) { console.error(err); }
+    finally { setAccessActionLoading(null); }
+  }
+
+  async function handleRevokeAccess(grantId: string) {
+    setAccessActionLoading(grantId);
+    try {
+      await apiRequest(`/api/documents/revoke-access/${grantId}`, { method: "POST" });
+      fetchAccessData(clientId);
+    } catch (err) { console.error(err); }
+    finally { setAccessActionLoading(null); }
+  }
 
   /* ── Upload handler ── */
   async function handleUpload() {
@@ -895,6 +950,201 @@ export default function PortalDocumentsPage() {
               </button>
             </div>
           )}
+
+          {/* ═══════════════════════════════════════════════════════════════
+               ACCESS REQUESTS SECTION
+               ═══════════════════════════════════════════════════════════════ */}
+          <div style={{ marginTop: 40 }}>
+            <h2 style={{
+              fontFamily: "'Cormorant Garamond', serif", fontSize: 26,
+              color: "var(--navy)", fontWeight: 500, marginBottom: 20,
+            }}>
+              Access Requests
+            </h2>
+
+            {accessLoading ? (
+              <div style={{ padding: 24, textAlign: "center" as const, color: "rgba(11,25,41,.4)", fontSize: 14 }}>Loading access requests...</div>
+            ) : (
+              <>
+                {/* Pending Requests */}
+                {accessRequests.length > 0 && (
+                  <div style={{ marginBottom: 28 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--navy)", marginBottom: 12 }}>
+                      Pending Requests ({accessRequests.length})
+                    </h3>
+                    <div style={{ display: "grid", gap: 12 }}>
+                      {accessRequests.map((req: any) => (
+                        <div key={req.id} style={{
+                          background: "#fff", borderRadius: 12,
+                          border: "1px solid rgba(200,155,60,.2)",
+                          boxShadow: "0 1px 4px rgba(11,25,41,.04)",
+                          padding: "20px 24px",
+                          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+                          flexWrap: "wrap" as const,
+                        }}>
+                          <div style={{ flex: 1, minWidth: 200 }}>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--navy)", marginBottom: 4 }}>
+                              {req.requesterName || req.requester?.firstName + " " + req.requester?.lastName || "Unknown"}
+                            </div>
+                            <div style={{ fontSize: 12, color: "rgba(11,25,41,.45)", marginBottom: 6 }}>
+                              {req.requesterRole || req.requester?.role || "Advisor"} &middot; {new Date(req.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </div>
+                            {req.reason && (
+                              <div style={{ fontSize: 13, color: "rgba(11,25,41,.6)", lineHeight: 1.5, marginBottom: 4 }}>
+                                <strong>Reason:</strong> {req.reason}
+                              </div>
+                            )}
+                            {req.scope && (
+                              <div style={{ fontSize: 12, color: "rgba(11,25,41,.45)" }}>
+                                Scope: {req.scope}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button
+                              onClick={() => handleGrantAccess(req.id)}
+                              disabled={accessActionLoading === req.id}
+                              style={{
+                                padding: "8px 20px", fontSize: 13, fontWeight: 600,
+                                background: "var(--green, #27ae60)", color: "#fff",
+                                border: "none", borderRadius: 8, cursor: "pointer",
+                                opacity: accessActionLoading === req.id ? 0.6 : 1,
+                                fontFamily: "'DM Sans', sans-serif",
+                              }}>
+                              Grant Access
+                            </button>
+                            <button
+                              onClick={() => handleDenyAccess(req.id)}
+                              disabled={accessActionLoading === req.id}
+                              style={{
+                                padding: "8px 20px", fontSize: 13, fontWeight: 600,
+                                background: "var(--red, #e74c3c)", color: "#fff",
+                                border: "none", borderRadius: 8, cursor: "pointer",
+                                opacity: accessActionLoading === req.id ? 0.6 : 1,
+                                fontFamily: "'DM Sans', sans-serif",
+                              }}>
+                              Deny Access
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Grants */}
+                {activeGrants.length > 0 && (
+                  <div style={{ marginBottom: 28 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--navy)", marginBottom: 12 }}>
+                      Active Grants ({activeGrants.length})
+                    </h3>
+                    <div style={{ display: "grid", gap: 10 }}>
+                      {activeGrants.map((grant: any) => (
+                        <div key={grant.id} style={{
+                          background: "#fff", borderRadius: 10,
+                          border: "1px solid var(--green-b, rgba(39,174,96,.2))",
+                          padding: "14px 20px",
+                          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+                          flexWrap: "wrap" as const,
+                        }}>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>
+                              {grant.requesterName || grant.requester?.firstName + " " + grant.requester?.lastName || "Unknown"}
+                            </div>
+                            <div style={{ fontSize: 12, color: "rgba(11,25,41,.4)" }}>
+                              {grant.scope || "All Documents"} &middot; Granted {new Date(grant.grantedAt || grant.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRevokeAccess(grant.id)}
+                            disabled={accessActionLoading === grant.id}
+                            style={{
+                              padding: "7px 16px", fontSize: 12, fontWeight: 600,
+                              background: "transparent",
+                              color: "var(--amber, #E8A838)",
+                              border: "1px solid var(--amber-b, rgba(232,168,56,.3))",
+                              borderRadius: 6, cursor: "pointer",
+                              opacity: accessActionLoading === grant.id ? 0.6 : 1,
+                              fontFamily: "'DM Sans', sans-serif",
+                            }}>
+                            Revoke Access
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {accessRequests.length === 0 && activeGrants.length === 0 && (
+                  <div style={{
+                    background: "#fff", borderRadius: 12, border: "1px solid rgba(11,25,41,.08)",
+                    padding: "32px 24px", textAlign: "center" as const,
+                  }}>
+                    <div style={{ fontSize: 14, color: "rgba(11,25,41,.4)" }}>No pending access requests or active grants.</div>
+                  </div>
+                )}
+
+                {/* Audit Log */}
+                {auditLog.length > 0 && (
+                  <div style={{ marginTop: 28 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--navy)", marginBottom: 12 }}>
+                      Audit Log
+                    </h3>
+                    <div style={{
+                      background: "#fff", borderRadius: 12, border: "1px solid rgba(11,25,41,.08)",
+                      overflow: "hidden", boxShadow: "0 1px 4px rgba(11,25,41,.03)",
+                    }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ background: "var(--cream, #F5F1E8)" }}>
+                            <th style={{ padding: "10px 16px", textAlign: "left" as const, fontWeight: 600, color: "var(--navy)", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: ".04em" }}>Date</th>
+                            <th style={{ padding: "10px 16px", textAlign: "left" as const, fontWeight: 600, color: "var(--navy)", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: ".04em" }}>User</th>
+                            <th style={{ padding: "10px 16px", textAlign: "left" as const, fontWeight: 600, color: "var(--navy)", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: ".04em" }}>Action</th>
+                            <th style={{ padding: "10px 16px", textAlign: "left" as const, fontWeight: 600, color: "var(--navy)", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: ".04em" }}>Document</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {auditLog.map((entry: any, i: number) => {
+                            const actionColors: Record<string, string> = {
+                              VIEW: "var(--blue, #1A3F7A)",
+                              DOWNLOAD: "#0B1929",
+                              CONSENT_GRANT: "var(--green, #27ae60)",
+                              CONSENT_DENY: "var(--red, #e74c3c)",
+                              CONSENT_REVOKE: "var(--amber, #E8A838)",
+                            };
+                            const color = actionColors[entry.action] || "var(--ink3)";
+                            return (
+                              <tr key={i} style={{ borderTop: "1px solid rgba(11,25,41,.06)" }}>
+                                <td style={{ padding: "10px 16px", color: "rgba(11,25,41,.55)" }}>
+                                  {new Date(entry.createdAt || entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                </td>
+                                <td style={{ padding: "10px 16px", color: "rgba(11,25,41,.7)", fontWeight: 500 }}>
+                                  {entry.userName || entry.user?.firstName + " " + entry.user?.lastName || "—"}
+                                </td>
+                                <td style={{ padding: "10px 16px" }}>
+                                  <span style={{
+                                    display: "inline-block", padding: "2px 10px",
+                                    borderRadius: 4, fontSize: 11, fontWeight: 600,
+                                    color: color, background: `${color}14`,
+                                    letterSpacing: ".02em",
+                                  }}>
+                                    {entry.action}
+                                  </span>
+                                </td>
+                                <td style={{ padding: "10px 16px", color: "rgba(11,25,41,.55)" }}>
+                                  {entry.documentName || entry.document?.filename || "—"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
         </div>
       </div>

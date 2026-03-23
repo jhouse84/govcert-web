@@ -121,6 +121,7 @@ function PortalEligibilityPageInner() {
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -242,6 +243,14 @@ function PortalEligibilityPageInner() {
           if (intake.completedSteps && intake.completedSteps > 0) setStep(Math.min(intake.completedSteps + 1, 7) as any);
         }
       } catch { /* no existing intake */ }
+
+      // Load existing uploaded documents for this client
+      try {
+        const docs = await apiRequest(`/api/upload/documents?clientId=${cId}`);
+        if (docs && docs.length > 0) {
+          setUploadedDocs(docs.map((d: any) => ({ document: d, aiAnalysis: d.aiAnalysis, documentYear: d.documentYear, category: d.category })));
+        }
+      } catch { /* no docs yet */ }
     } catch (err) {
       console.error(err);
     } finally {
@@ -315,6 +324,38 @@ function PortalEligibilityPageInner() {
     }
   }
 
+  async function pollForAIAnalysis(docId: string) {
+    const token = localStorage.getItem("token");
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
+    let attempts = 0;
+    const maxAttempts = 15;
+    const poll = async () => {
+      attempts++;
+      try {
+        const res = await fetch(`${apiUrl}/api/upload/documents/${docId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const doc = await res.json();
+        if (doc.aiAnalysis) {
+          setUploadedDocs(prev => prev.map(d =>
+            (d.document?.id === docId || d.id === docId)
+              ? { ...d, document: doc, aiAnalysis: doc.aiAnalysis, documentYear: doc.documentYear, category: doc.category }
+              : d
+          ));
+          setAnalyzingIds(prev => { const next = new Set(prev); next.delete(docId); return next; });
+          return;
+        }
+      } catch {}
+      if (attempts < maxAttempts) {
+        setTimeout(poll, 3000);
+      } else {
+        setAnalyzingIds(prev => { const next = new Set(prev); next.delete(docId); return next; });
+      }
+    };
+    setTimeout(poll, 2000);
+  }
+
   async function handleUpload() {
     if (uploadFiles.length === 0 || !clientId) return;
     setUploading(true);
@@ -335,7 +376,12 @@ function PortalEligibilityPageInner() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `Upload failed for ${file.name}`);
-        results.push({ ...data, category: uploadCategory });
+        results.push(data);
+        // Start polling for AI analysis
+        if (data.document?.id) {
+          setAnalyzingIds(prev => new Set(prev).add(data.document.id));
+          pollForAIAnalysis(data.document.id);
+        }
       }
       setUploadedDocs(prev => [...prev, ...results]);
       setUploadFiles([]);
@@ -930,15 +976,65 @@ function PortalEligibilityPageInner() {
                 {uploadedDocs.length > 0 && (
                   <div>
                     <label style={labelStyle}>Uploaded Documents</label>
-                    {uploadedDocs.map((doc, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "var(--cream)", borderRadius: "var(--r)", marginBottom: 4, border: "1px solid var(--border)" }}>
-                        <span style={{ fontSize: 14 }}>{"\uD83D\uDCC4"}</span>
-                        <span style={{ fontSize: 13, color: "var(--ink)", flex: 1 }}>{doc.originalName || doc.name || "Document"}</span>
-                        <span style={{ fontSize: 11, color: "var(--ink4)", background: "rgba(200,155,60,.1)", padding: "2px 8px", borderRadius: 4 }}>{doc.category}</span>
-                      </div>
-                    ))}
+                    {uploadedDocs.map((doc, i) => {
+                      const docRecord = doc.document || doc;
+                      const docId = docRecord.id;
+                      const isAnalyzing = analyzingIds.has(docId);
+                      let analysis: any = null;
+                      try {
+                        const raw = doc.aiAnalysis || docRecord.aiAnalysis;
+                        if (raw) analysis = typeof raw === "string" ? JSON.parse(raw) : raw;
+                      } catch {}
+                      const year = doc.documentYear || docRecord.documentYear;
+                      const category = doc.category || docRecord.category || "OTHER";
+                      return (
+                        <div key={i} style={{ background: "var(--cream)", borderRadius: "var(--r)", marginBottom: 8, border: "1px solid var(--border)", overflow: "hidden" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+                            <span style={{ fontSize: 14 }}>{"\uD83D\uDCC4"}</span>
+                            <span style={{ fontSize: 13, color: "var(--ink)", flex: 1, fontWeight: 500 }}>{docRecord.originalName || docRecord.name || "Document"}</span>
+                            {year && (
+                              <span style={{ fontSize: 11, color: "#0B1929", background: "rgba(39,174,96,.12)", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>{year}</span>
+                            )}
+                            <span style={{ fontSize: 11, color: "var(--ink4)", background: "rgba(200,155,60,.1)", padding: "2px 8px", borderRadius: 4 }}>{category.replace(/_/g, " ")}</span>
+                          </div>
+                          {isAnalyzing && (
+                            <div style={{ padding: "8px 14px 10px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ width: 14, height: 14, border: "2px solid var(--border)", borderTopColor: "var(--gold)", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                              <span style={{ fontSize: 12, color: "var(--ink4)" }}>AI is reviewing this document...</span>
+                            </div>
+                          )}
+                          {analysis && (
+                            <div style={{ padding: "10px 14px 12px", borderTop: "1px solid var(--border)", background: "rgba(200,155,60,.03)" }}>
+                              <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 6 }}>{analysis.description}</div>
+                              {analysis.usage && (
+                                <div style={{ fontSize: 11, color: "var(--ink4)", marginBottom: 6 }}>
+                                  <strong>Cert use:</strong> {analysis.usage}
+                                </div>
+                              )}
+                              {analysis.keyDataPoints && analysis.keyDataPoints.length > 0 && (
+                                <div style={{ fontSize: 11, color: "var(--ink3)" }}>
+                                  {analysis.keyDataPoints.map((pt: string, j: number) => (
+                                    <div key={j} style={{ padding: "1px 0" }}>&#x2022; {pt}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {analysis.usefulness && (
+                                <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                                  <div style={{ fontSize: 10, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Usefulness</div>
+                                  <div style={{ flex: 1, maxWidth: 80, height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                                    <div style={{ width: `${(analysis.usefulness / 10) * 100}%`, height: "100%", background: analysis.usefulness >= 7 ? "#27ae60" : analysis.usefulness >= 4 ? "var(--gold)" : "#c0392b", borderRadius: 2 }} />
+                                  </div>
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink3)" }}>{analysis.usefulness}/10</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               </div>
             )}
 
@@ -1034,7 +1130,24 @@ function PortalEligibilityPageInner() {
                   </div>
                   <div style={{ fontSize: 13, color: "var(--ink3)" }}>
                     {uploadedDocs.length > 0
-                      ? <span>{uploadedDocs.length} document(s) uploaded</span>
+                      ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <div style={{ marginBottom: 4 }}>{uploadedDocs.length} document(s) uploaded</div>
+                          {uploadedDocs.map((doc, i) => {
+                            const docRecord = doc.document || doc;
+                            const year = doc.documentYear || docRecord.documentYear;
+                            const cat = (doc.category || docRecord.category || "OTHER").replace(/_/g, " ");
+                            return (
+                              <div key={i} style={{ fontSize: 12, display: "flex", gap: 6, alignItems: "center" }}>
+                                <span>{"\uD83D\uDCC4"}</span>
+                                <span style={{ flex: 1 }}>{docRecord.originalName || docRecord.name || "Document"}</span>
+                                {year && <span style={{ fontSize: 10, color: "#27ae60", fontWeight: 600 }}>{year}</span>}
+                                <span style={{ fontSize: 10, color: "var(--ink4)" }}>{cat}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )
                       : <span>No documents uploaded yet</span>
                     }
                   </div>

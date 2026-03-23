@@ -750,18 +750,25 @@ export default function PortalDocumentsPage() {
                   <tbody>
                     {documents.map((doc: any) => {
                       const catColor = CATEGORY_COLORS[doc.category] || CATEGORY_COLORS.OTHER;
-                      const aiText = AI_CLASSIFICATION[doc.category] || AI_CLASSIFICATION.OTHER;
+                      const fallbackAiText = AI_CLASSIFICATION[doc.category] || AI_CLASSIFICATION.OTHER;
+                      let parsedAi: any = null;
+                      try {
+                        if (doc.aiAnalysis) parsedAi = typeof doc.aiAnalysis === "string" ? JSON.parse(doc.aiAnalysis) : doc.aiAnalysis;
+                      } catch {}
                       return (
                         <tr key={doc.id} style={{ borderBottom: "1px solid rgba(11,25,41,.04)" }}>
                           {/* Icon */}
                           <td style={{ padding: "12px 8px 12px 12px", fontSize: 18, width: 36 }}>
                             {getFileIcon(doc.originalName || doc.fileName || "")}
                           </td>
-                          {/* Filename */}
+                          {/* Filename + Year */}
                           <td style={{ padding: "12px 12px", fontWeight: 500, color: "#0B1929", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
                             {doc.originalName || doc.fileName || "Untitled"}
+                            {doc.documentYear && (
+                              <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, color: "#27ae60", background: "rgba(39,174,96,.1)", padding: "1px 6px", borderRadius: 3 }}>{doc.documentYear}</span>
+                            )}
                           </td>
-                          {/* Category badge + AI classification */}
+                          {/* Category badge */}
                           <td style={{ padding: "12px 12px" }}>
                             <span style={{
                               display: "inline-block", padding: "3px 10px",
@@ -784,14 +791,25 @@ export default function PortalDocumentsPage() {
                           <td style={{ padding: "12px 12px", color: "rgba(11,25,41,.55)", whiteSpace: "nowrap" as const }}>
                             {formatBytes(doc.fileSize || doc.size || 0)}
                           </td>
-                          {/* AI Classification */}
+                          {/* AI Analysis */}
                           <td style={{ padding: "12px 12px", maxWidth: 260 }}>
-                            <div style={{
-                              fontStyle: "italic", fontSize: 11, color: "rgba(11,25,41,.45)",
-                              lineHeight: 1.5,
-                            }}>
-                              {aiText}
-                            </div>
+                            {parsedAi ? (
+                              <div style={{ fontSize: 11, color: "rgba(11,25,41,.55)", lineHeight: 1.5 }}>
+                                <div>{parsedAi.description}</div>
+                                {parsedAi.keyDataPoints && parsedAi.keyDataPoints.length > 0 && (
+                                  <div style={{ marginTop: 3, color: "rgba(11,25,41,.4)" }}>
+                                    {parsedAi.keyDataPoints.map((pt: string, j: number) => <div key={j}>&#x2022; {pt}</div>)}
+                                  </div>
+                                )}
+                                {parsedAi.usefulness && (
+                                  <div style={{ marginTop: 3, fontSize: 10, color: "rgba(11,25,41,.35)" }}>Usefulness: {parsedAi.usefulness}/10</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div style={{ fontStyle: "italic", fontSize: 11, color: "rgba(11,25,41,.45)", lineHeight: 1.5 }}>
+                                {fallbackAiText}
+                              </div>
+                            )}
                           </td>
                           {/* Download */}
                           <td style={{ padding: "12px 8px", whiteSpace: "nowrap" as const }}>

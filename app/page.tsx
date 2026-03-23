@@ -231,8 +231,6 @@ export default function LandingPage() {
               {[
                 { cert: "GSA Multiple Award Schedule", consultant: "$6,000 – $50,000", price: "$1,999", save: "Up to 96%", popular: true },
                 { cert: "8(a) Business Development", consultant: "$3,000 – $5,000", price: "$2,499", save: "Up to 50%", popular: true },
-                { cert: "WOSB / SDVOSB", consultant: "$1,500 – $3,000", price: "$999", save: "Up to 67%", popular: false },
-                { cert: "HUBZone", consultant: "$1,500 – $3,000", price: "$999", save: "Up to 67%", popular: false },
                 { cert: "Bundle: 8(a) + GSA MAS", consultant: "$10,000 – $30,000", price: "$3,499", save: "Up to 88%", popular: false },
               ].map(row => (
                 <div key={row.cert} style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr", padding: "16px 28px", borderBottom: "1px solid rgba(255,255,255,.05)", alignItems: "center" }}

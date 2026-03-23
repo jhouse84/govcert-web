@@ -40,7 +40,7 @@ export default function LandingPage() {
           </span>
         </a>
         <div style={{ display: "flex", gap: 28 }}>
-          {["Features", "Certifications", "Pricing"].map(l => (
+          {["Demo", "Features", "Certifications", "Pricing"].map(l => (
             <a key={l} href={`#${l.toLowerCase()}`} style={{ color: "rgba(255,255,255,.6)", textDecoration: "none", fontSize: 13.5, transition: "color .25s cubic-bezier(.4,0,.2,1)", letterSpacing: ".01em" }}
               onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,.9)")}
               onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,.6)")}>{l}</a>
@@ -91,10 +91,13 @@ export default function LandingPage() {
                 Start an Application →
               </a>
             </div>
-            <a href="#features" style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textDecoration: "none", transition: "color .25s cubic-bezier(.4,0,.2,1)" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,.8)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,.5)")}>
-              See How It Works
+            <a href="#demo" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,.6)", fontSize: 14, textDecoration: "none", transition: "color .25s cubic-bezier(.4,0,.2,1)" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,.9)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,.6)")}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", background: "rgba(200,155,60,.25)", border: "1px solid rgba(200,155,60,.4)" }}>
+                <svg width="10" height="12" viewBox="0 0 10 12" fill="none"><path d="M1 1L9 6L1 11V1Z" fill="white" /></svg>
+              </span>
+              Watch the Demo
             </a>
           </div>
         </div>
@@ -109,16 +112,34 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* VIDEO — HOW IT WORKS */}
-      <div style={{ background: "var(--cream)", padding: "72px 0" }}>
-        <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 48px", textAlign: "center" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 12 }}>See How It Works</div>
-          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(28px,3.5vw,42px)", color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 24, letterSpacing: "-.03em" }}>Your path to certification, simplified</h2>
+      {/* DEMO VIDEO */}
+      <div id="demo" style={{ background: "var(--cream)", padding: "88px 0" }}>
+        <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 48px", textAlign: "center" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 12 }}>See It In Action</div>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(28px,3.5vw,42px)", color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 10, letterSpacing: "-.03em" }}>Watch the full platform demo</h2>
+          <p style={{ fontSize: 15, color: "var(--ink3)", maxWidth: 600, margin: "0 auto 28px", fontWeight: 300, lineHeight: 1.6 }}>
+            Built by the founders of House Strategies Group — a government contracting firm that spent months assembling certification applications by hand. We knew there had to be an easier way.
+          </p>
           <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)", border: "1px solid rgba(200,155,60,.12)", background: "var(--navy)" }}>
-            <iframe src="https://www.youtube.com/embed/DHH112pNJJM" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            <iframe src="https://www.youtube.com/embed/SVfWc-31Xbw" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
           </div>
-          <p style={{ fontSize: 14, color: "var(--ink3)", marginTop: 20, fontWeight: 300, lineHeight: 1.6 }}>
-            Learn how GovCert's AI-powered platform helps small businesses identify which certifications they qualify for and automates the application process.
+          <div style={{ marginTop: 28, display: "flex", justifyContent: "center", gap: 14 }}>
+            <a href="/register" style={{
+              padding: "14px 34px",
+              background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 50%, #C89B3C 100%)",
+              backgroundSize: "200% auto",
+              animation: "goldShimmer 3s linear infinite",
+              border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 15, fontWeight: 500, textDecoration: "none",
+              boxShadow: "0 4px 24px rgba(200,155,60,.4)",
+              transition: "all .25s cubic-bezier(.4,0,.2,1)"
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "none"; }}>
+              Start Your Certification →
+            </a>
+          </div>
+          <p style={{ fontSize: 12, color: "var(--ink4)", marginTop: 14, fontWeight: 300 }}>
+            Free to start. No credit card required.
           </p>
         </div>
       </div>

@@ -100,7 +100,7 @@ export default function LandingPage() {
         </div>
         {/* Stats glass panel */}
         <div style={{ position: "absolute", bottom: 60, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 48, zIndex: 2, background: "rgba(255,255,255,.06)", backdropFilter: "blur(16px)", borderRadius: 16, padding: "24px 48px", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 4px 24px rgba(0,0,0,.15)" }}>
-          {[["500+", "Certifications Filed"], ["98%", "Approval Rate"], ["60%", "Time Saved"]].map(([v, l]) => (
+          {[["$700B+", "Federal Contracts Annually"], ["170K+", "Certified Small Businesses"], ["80%", "Faster with GovCert"]].map(([v, l]) => (
             <div key={l} style={{ textAlign: "center" }}>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: "#fff", fontWeight: 400, lineHeight: 1, letterSpacing: "-.03em" }}>{v}</div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,.45)", textTransform: "uppercase", letterSpacing: ".08em", marginTop: 4 }}>{l}</div>

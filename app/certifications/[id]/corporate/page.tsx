@@ -389,7 +389,11 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
     try {
       await saveData(narratives, guidedAnswers);
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      // Navigate to next section based on cert type
+      const nextPage = cert?.type === "EIGHT_A"
+        ? `/certifications/${certId}/8a/corporate`
+        : `/certifications/${certId}/qcp`;
+      setTimeout(() => router.push(nextPage), 500);
     } catch (err: any) {
       setError("Failed to save: " + err.message);
     } finally {

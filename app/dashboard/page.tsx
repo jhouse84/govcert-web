@@ -217,13 +217,15 @@ export default function DashboardPage() {
               {/* Row 1 — Metric Cards */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
                 {(() => {
-                  const todayCost = usageData.today?.cost || 0;
-                  const yesterdayCost = usageData.yesterday?.cost || 0;
+                  const todayCost = Number(usageData.today?.cost) || 0;
+                  const yesterdayCost = Number(usageData.yesterday?.cost) || 0;
                   const todayDiff = todayCost - yesterdayCost;
-                  const thisMonthCost = usageData.thisMonth?.cost || 0;
-                  const momPct = usageData.monthOverMonth || 0;
-                  const revenue = usageData.revenue || 0;
-                  const profitMargin = usageData.profitMargin || "0%";
+                  const thisMonthCost = Number(usageData.thisMonth?.cost) || 0;
+                  const momPctStr = String(usageData.monthOverMonth || "0%");
+                  const momPctNum = parseFloat(momPctStr) || 0;
+                  const revenueObj = usageData.revenue || {};
+                  const revenueAmount = Number(revenueObj.thisMonth || revenueObj) || 0;
+                  const profitMargin = String(usageData.profitMargin || "0%");
                   return [
                     {
                       label: "AI Spend Today",
@@ -235,11 +237,11 @@ export default function DashboardPage() {
                     {
                       label: "AI Spend This Month",
                       value: `$${thisMonthCost.toFixed(2)}`,
-                      trend: { text: `${momPct >= 0 ? "+" : ""}${momPct.toFixed(1)}% MoM`, color: momPct > 0 ? "#e74c3c" : "#27ae60", arrow: momPct > 0 ? "\u25B2" : "\u25BC" },
+                      trend: { text: `${momPctStr} MoM`, color: momPctNum > 0 ? "#e74c3c" : "#27ae60", arrow: momPctNum > 0 ? "\u25B2" : "\u25BC" },
                     },
                     {
                       label: "Revenue This Month",
-                      value: `$${revenue.toFixed(2)}`,
+                      value: `$${revenueAmount.toFixed(2)}`,
                       trend: { text: "From purchases", color: "var(--ink4)", arrow: "" },
                     },
                     {

@@ -232,6 +232,8 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
           businessName: cert?.client?.businessName || "the company",
           certType: cert?.type || "GSA_MAS",
           clientId: cert?.clientId || cert?.client?.id,
+          extractionContext: "corporate-experience",
+          extractionQuestions: GUIDED_QUESTIONS.map(q => q.question).join("\n"),
         }),
       });
 

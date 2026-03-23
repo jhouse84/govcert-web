@@ -107,6 +107,37 @@ export default function PrivacyPolicyPage() {
         </div>
 
         <div style={sectionStyle}>
+          <h2 style={h2Style}>Document Access Controls &amp; PII Protection</h2>
+          <p style={pStyle}>
+            Documents uploaded to GovCert may contain Personally Identifiable Information (PII) including tax returns, financial statements, Social Security Numbers, and personal financial data. We implement the following protections:
+          </p>
+          <ul style={ulStyle}>
+            <li style={{ marginBottom: 8 }}><strong>Consent-Based Access:</strong> Administrative users and advisors cannot view your documents without your explicit consent. You will receive a notification when access is requested and can grant, deny, or revoke access at any time from your Documents page.</li>
+            <li style={{ marginBottom: 8 }}><strong>Audit Trail:</strong> Every document access event is logged with the user identity, timestamp, IP address, and action taken. You can view this audit trail from your Documents page.</li>
+            <li style={{ marginBottom: 8 }}><strong>Authenticated File Access:</strong> Documents are not publicly accessible. All file downloads require authentication and authorization verification.</li>
+            <li style={{ marginBottom: 8 }}><strong>PII Classification:</strong> Documents are automatically classified for PII content. Documents containing sensitive financial or personal data receive additional access protections.</li>
+            <li style={{ marginBottom: 8 }}><strong>Session Security:</strong> Your session automatically expires after 30 minutes of inactivity. Failed login attempts trigger temporary account lockout for security.</li>
+          </ul>
+        </div>
+
+        <div style={sectionStyle}>
+          <h2 style={h2Style}>QuickBooks &amp; Financial Data Integration</h2>
+          <p style={pStyle}>
+            When you connect your QuickBooks account to GovCert, we access the following data via Intuit&apos;s secure OAuth 2.0 protocol:
+          </p>
+          <ul style={ulStyle}>
+            <li style={{ marginBottom: 8 }}>Company information (name, address, contact details)</li>
+            <li style={{ marginBottom: 8 }}>Profit &amp; Loss statements (up to 3 years)</li>
+            <li style={{ marginBottom: 8 }}>Balance Sheet data (assets, liabilities, equity)</li>
+            <li style={{ marginBottom: 8 }}>Employee count</li>
+            <li style={{ marginBottom: 8 }}>Accounts receivable summary</li>
+          </ul>
+          <p style={pStyle}>
+            This data is used exclusively to pre-fill certification application fields and assess eligibility. Your QuickBooks credentials are never stored on our servers — we use OAuth tokens which are encrypted at rest. You may disconnect QuickBooks at any time, which revokes our access to your financial data.
+          </p>
+        </div>
+
+        <div style={sectionStyle}>
           <h2 style={h2Style}>Data Storage and Security</h2>
           <p style={pStyle}>
             Your data is stored in a PostgreSQL database hosted on Railway with encryption at rest. All data transmission between your browser and our servers is encrypted via TLS/SSL. We implement industry-standard security measures including password hashing, JWT-based authentication, and role-based access controls.

@@ -83,19 +83,33 @@ export default function TermsOfServicePage() {
         </div>
 
         <div style={sectionStyle}>
-          <h2 style={h2Style}>3. Subscription Plans</h2>
-          <p style={pStyle}>GovCert offers the following subscription tiers:</p>
+          <h2 style={h2Style}>3. Pricing &amp; Payments</h2>
+          <p style={pStyle}>GovCert uses a two-part pricing model:</p>
           <ul style={ulStyle}>
-            <li style={{ marginBottom: 8 }}><strong>Platform Plans (Starter, Professional, Enterprise):</strong> Self-service access to the GovCert platform for managing certifications, document storage, AI-powered application assistance, and compliance tracking.</li>
-            <li style={{ marginBottom: 8 }}><strong>Consulting Add-On:</strong> Optional hands-on consulting services from our certification specialists, including application review, strategy sessions, and direct agency liaison support.</li>
+            <li style={{ marginBottom: 8 }}><strong>One-Time Application Generation Fee:</strong> A per-certification fee covers AI-powered application generation, document analysis, narrative drafting, GovCert Review scoring, and submission companion tools. This fee is charged once per certification type (e.g., GSA MAS, 8(a), OASIS+).</li>
+            <li style={{ marginBottom: 8 }}><strong>Monthly Maintenance Subscription (Optional):</strong> Ongoing certification maintenance including SAM.gov monitoring, compliance alerts, data call response assistance, and continued GovCert Review access. Available in Essential, Professional, and Enterprise tiers.</li>
           </ul>
           <p style={pStyle}>
-            Subscriptions are billed monthly or annually as selected at checkout. You may cancel your subscription at any time, and your access will continue through the end of your current billing period. Refunds are not provided for partial billing periods.
+            During beta testing periods, all features may be offered at no cost. When pricing is active, payment is required before AI-generated outputs are accessible. Input of data (answering questions, uploading documents) is always free.
           </p>
         </div>
 
         <div style={sectionStyle}>
-          <h2 style={h2Style}>4. AI-Generated Content Disclaimer</h2>
+          <h2 style={h2Style}>4. Third-Party Integrations</h2>
+          <p style={pStyle}>GovCert integrates with third-party services to enhance your experience:</p>
+          <ul style={ulStyle}>
+            <li style={{ marginBottom: 8 }}><strong>Intuit QuickBooks:</strong> When you connect your QuickBooks account, we access your financial reports (Profit &amp; Loss, Balance Sheet), company information, and employee data solely to pre-fill certification application fields. You authorize this access via Intuit&apos;s OAuth flow and may disconnect at any time.</li>
+            <li style={{ marginBottom: 8 }}><strong>SAM.gov:</strong> We query the SAM.gov Entity Management API to verify and populate your business registration data (UEI, CAGE code, address, NAICS codes).</li>
+            <li style={{ marginBottom: 8 }}><strong>Anthropic Claude AI:</strong> Your document text and application data are processed by Anthropic&apos;s Claude AI for analysis, narrative generation, and scoring. This data is processed per-request and is not used to train AI models.</li>
+            <li style={{ marginBottom: 8 }}><strong>SendGrid:</strong> Email notifications are sent via SendGrid for account verification, invitation management, PPQ requests, and system notifications.</li>
+          </ul>
+          <p style={pStyle}>
+            You may revoke access to any third-party integration at any time through your Integrations settings. Revoking access does not delete data already imported into GovCert.
+          </p>
+        </div>
+
+        <div style={sectionStyle}>
+          <h2 style={h2Style}>5. AI-Generated Content Disclaimer</h2>
           <p style={pStyle}>
             GovCert uses artificial intelligence to analyze documents, assess certification eligibility, suggest application responses, and provide guidance throughout the certification process. You acknowledge and agree that:
           </p>
@@ -109,7 +123,7 @@ export default function TermsOfServicePage() {
         </div>
 
         <div style={sectionStyle}>
-          <h2 style={h2Style}>5. Intellectual Property</h2>
+          <h2 style={h2Style}>6. Intellectual Property</h2>
           <p style={pStyle}>
             <strong>Your Data:</strong> You retain full ownership of all data, documents, and information you upload to GovCert. We do not claim any intellectual property rights over your content. You grant us a limited license to use your data solely for the purpose of providing our services to you.
           </p>
@@ -119,7 +133,7 @@ export default function TermsOfServicePage() {
         </div>
 
         <div style={sectionStyle}>
-          <h2 style={h2Style}>6. Limitation of Liability</h2>
+          <h2 style={h2Style}>7. Limitation of Liability</h2>
           <p style={pStyle}>
             To the maximum extent permitted by law, House Strategies Group LLC and its officers, directors, employees, and agents shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, business opportunities, or goodwill, arising from your use of the platform.
           </p>
@@ -132,7 +146,7 @@ export default function TermsOfServicePage() {
         </div>
 
         <div style={sectionStyle}>
-          <h2 style={h2Style}>7. Termination</h2>
+          <h2 style={h2Style}>8. Termination</h2>
           <p style={pStyle}>
             We may suspend or terminate your access to GovCert at any time if you violate these Terms, engage in fraudulent activity, or misuse the platform. Upon termination, your right to use the platform ceases immediately.
           </p>
@@ -142,21 +156,21 @@ export default function TermsOfServicePage() {
         </div>
 
         <div style={sectionStyle}>
-          <h2 style={h2Style}>8. Governing Law</h2>
+          <h2 style={h2Style}>9. Governing Law</h2>
           <p style={pStyle}>
             These Terms of Service shall be governed by and construed in accordance with the laws of the State of Florida, without regard to its conflict of law provisions. Any disputes arising under these Terms shall be resolved in the state or federal courts located in Hillsborough County, Florida.
           </p>
         </div>
 
         <div style={sectionStyle}>
-          <h2 style={h2Style}>9. Changes to These Terms</h2>
+          <h2 style={h2Style}>10. Changes to These Terms</h2>
           <p style={pStyle}>
             We reserve the right to modify these Terms of Service at any time. We will notify you of material changes by posting the updated terms on this page and, where appropriate, sending an email notification. Your continued use of the platform after changes are posted constitutes your acceptance of the updated terms.
           </p>
         </div>
 
         <div style={sectionStyle}>
-          <h2 style={h2Style}>10. Contact Information</h2>
+          <h2 style={h2Style}>11. Contact Information</h2>
           <p style={pStyle}>
             For questions about these Terms of Service, please contact us at:
           </p>

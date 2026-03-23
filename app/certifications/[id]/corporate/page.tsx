@@ -147,6 +147,7 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
           proposalText: combined,
           businessName: cert?.client?.businessName || "the company",
           certType: cert?.type || "GSA_MAS",
+          clientId: cert?.clientId || cert?.client?.id,
         }),
       });
 
@@ -219,6 +220,7 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
           annualRevenue: guidedAnswers.revenueStability || cert?.application?.annualRevenue,
           userDescription: guidedContext,
           extractedText: docsContext,
+          clientId: cert?.clientId || cert?.client?.id,
         }),
       });
       setNarratives(data.sections);
@@ -244,6 +246,7 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
             entityType: cert?.client?.entityType,
             otherSections: guidedContext + "\n\n" + Object.entries(narratives).filter(([k]) => k !== sectionId).map(([k, v]) => `${k}: ${v}`).join("\n\n"),
           },
+          clientId: cert?.clientId || cert?.client?.id,
         }),
       });
       setNarratives(prev => ({ ...prev, [sectionId]: data.text }));

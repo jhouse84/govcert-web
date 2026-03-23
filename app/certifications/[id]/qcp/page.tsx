@@ -197,6 +197,7 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
           extractedText: uploadedText,
           selectedAttributes: getAttributeSummary(),
           corporateExperience: cert?.application?.narrativeCorp,
+          clientId: cert?.clientId || cert?.client?.id,
         })
       });
       setAnswers(response.sections);
@@ -223,7 +224,8 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
             otherSections: Object.entries(answers)
               .filter(([k]) => k !== promptId && answers[k])
               .map(([k, v]) => `${k}: ${v}`).join("\n\n")
-          }
+          },
+          clientId: cert?.clientId || cert?.client?.id,
         })
       });
       setAnswers(prev => ({ ...prev, [promptId]: data.text }));

@@ -531,9 +531,13 @@ export default function DashboardPage() {
                           {(inv.status === "PENDING" || inv.status === "EXPIRED") && (
                             <button onClick={async () => {
                               try {
+                                // Delete old invite first, then create fresh one
+                                try { await apiRequest(`/api/invites/${inv.id}`, { method: "DELETE" }); } catch {}
                                 await apiRequest("/api/invites", { method: "POST", body: JSON.stringify({ email: inv.email }) });
                                 fetchInvites();
-                              } catch (err: any) { console.error(err); }
+                              } catch (err: any) {
+                                alert(err.message || "Failed to resend. User may already have an account.");
+                              }
                             }}
                               style={{ padding: "4px 10px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 500, color: "#fff", cursor: "pointer" }}>
                               Resend

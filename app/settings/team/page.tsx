@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { ADMIN_NAV } from "@/lib/admin-nav";
 
 export default function TeamPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [advisors, setAdvisors] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -131,21 +133,20 @@ export default function TeamPage() {
           </a>
         </div>
         <nav style={{ padding: "16px 12px", flex: 1 }}>
-          {[
-            { label: "Dashboard", icon: "⬛", href: "/dashboard" },
-            { label: "Clients", icon: "👥", href: "/clients" },
-            { label: "Certifications", icon: "📋", href: "/certifications" },
-          ].map(item => (
-            <a key={item.label} href={item.href} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", textDecoration: "none", fontSize: 13.5, marginBottom: 2 }}>
+          {ADMIN_NAV.map(item => {
+            const active = pathname === item.href || (item.href === "/settings/team" && pathname.startsWith("/settings/team"));
+            return (
+            <a key={item.label} href={item.href} style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)",
+              background: active ? "rgba(200,155,60,.15)" : "transparent",
+              border: active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
+              color: active ? "var(--gold2)" : "rgba(255,255,255,.5)",
+              textDecoration: "none", fontSize: 13.5, fontWeight: active ? 500 : 400, marginBottom: 2
+            }}>
               <span>{item.icon}</span>{item.label}
             </a>
-          ))}
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,.07)" }}>
-            <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 6, fontWeight: 600 }}>Settings</div>
-            <a href="/settings/team" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)", background: "rgba(200,155,60,.15)", border: "1px solid rgba(200,155,60,.25)", color: "var(--gold2)", textDecoration: "none", fontSize: 13.5, fontWeight: 500, marginBottom: 2 }}>
-              <span>👤</span> Team & Users
-            </a>
-          </div>
+            );
+          })}
         </nav>
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ padding: "10px 12px", marginBottom: 8 }}>

@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { ADMIN_NAV } from "@/lib/admin-nav";
 
 const CERT_TYPE_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
@@ -21,6 +22,7 @@ const TIER_LABELS: Record<string, string> = {
 
 export default function PricingManagementPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [pricing, setPricing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -90,18 +92,6 @@ export default function PricingManagementPage() {
     </div>
   );
 
-  const navItems = [
-    { label: "Dashboard", icon: "\u2B1B", href: "/dashboard" },
-    { label: "Eligibility", icon: "\u2705", href: "/clients" },
-    { label: "Clients", icon: "\uD83D\uDC65", href: "/clients" },
-    { label: "Certifications", icon: "\uD83D\uDCCB", href: "/certifications" },
-    { label: "Documents", icon: "\uD83D\uDCC4", href: "/documents" },
-    { label: "Calendar", icon: "\uD83D\uDCC5", href: "/calendar" },
-    { label: "Integrations", icon: "\uD83D\uDD17", href: "/integrations" },
-    { label: "Team & Users", icon: "\uD83D\uDC64", href: "/settings/team" },
-    { label: "Usage & Costs", icon: "\uD83D\uDCCA", href: "/usage" },
-    { label: "Pricing", icon: "\uD83D\uDCB0", href: "/settings/pricing", active: true },
-  ];
 
   return (
     <div style={{ minHeight: "100vh", background: "radial-gradient(ellipse at top right, rgba(200,155,60,.03) 0%, transparent 50%), var(--cream)", display: "flex" }}>
@@ -120,20 +110,23 @@ export default function PricingManagementPage() {
           </div>
         </div>
         <nav style={{ padding: "16px 12px", flex: 1 }}>
-          {navItems.map(item => (
+          {ADMIN_NAV.map(item => {
+            const active = pathname === item.href;
+            return (
             <a key={item.label} href={item.href} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8,
-              background: item.active ? "rgba(200,155,60,.15)" : "transparent",
-              border: item.active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
-              borderLeft: item.active ? "3px solid var(--gold)" : "3px solid transparent",
-              color: item.active ? "var(--gold2)" : "rgba(255,255,255,.5)",
-              textDecoration: "none", fontSize: 13.5, fontWeight: item.active ? 500 : 400,
+              background: active ? "rgba(200,155,60,.15)" : "transparent",
+              border: active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
+              borderLeft: active ? "3px solid var(--gold)" : "3px solid transparent",
+              color: active ? "var(--gold2)" : "rgba(255,255,255,.5)",
+              textDecoration: "none", fontSize: 13.5, fontWeight: active ? 500 : 400,
               marginBottom: 2, transition: "all .15s",
             }}>
               <span style={{ fontSize: 14 }}>{item.icon}</span>
               {item.label}
             </a>
-          ))}
+            );
+          })}
         </nav>
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ padding: "10px 12px", marginBottom: 8 }}>

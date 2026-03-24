@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { ADMIN_NAV } from "@/lib/admin-nav";
 
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
@@ -24,6 +25,7 @@ const STATUS_STYLES: Record<string, { bg: string; color: string; label: string }
 
 export default function CertificationsPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [certs, setCerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -53,15 +55,6 @@ export default function CertificationsPage() {
     router.push("/login");
   }
 
-  const navItems = [
-    { label: "Dashboard", href: "/dashboard", icon: "⬛" },
-    { label: "Clients", href: "/clients", icon: "👥" },
-    { label: "Certifications", href: "/certifications", icon: "📋", active: true },
-    { label: "Documents", href: "/documents", icon: "📄" },
-    { label: "Calendar", href: "/calendar", icon: "📅" },
-    { label: "Integrations", href: "/integrations", icon: "🔗" },
-    { label: "Plan", href: "/plan", icon: "📊" },
-  ];
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
@@ -78,17 +71,20 @@ export default function CertificationsPage() {
           </a>
         </div>
         <nav style={{ padding: "16px 12px", flex: 1 }}>
-          {navItems.map(item => (
+          {ADMIN_NAV.map(item => {
+            const active = pathname === item.href;
+            return (
             <a key={item.label} href={item.href} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)",
-              background: (item as any).active ? "rgba(200,155,60,.15)" : "transparent",
-              border: (item as any).active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
-              color: (item as any).active ? "var(--gold2)" : "rgba(255,255,255,.5)",
-              textDecoration: "none", fontSize: 13.5, fontWeight: (item as any).active ? 500 : 400, marginBottom: 2
+              background: active ? "rgba(200,155,60,.15)" : "transparent",
+              border: active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
+              color: active ? "var(--gold2)" : "rgba(255,255,255,.5)",
+              textDecoration: "none", fontSize: 13.5, fontWeight: active ? 500 : 400, marginBottom: 2
             }}>
               <span>{item.icon}</span>{item.label}
             </a>
-          ))}
+            );
+          })}
         </nav>
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ padding: "10px 12px", marginBottom: 8 }}>

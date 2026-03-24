@@ -55,6 +55,16 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [homeLink, setHomeLink] = useState("/portal");
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        if (payload.role === "ADMIN" || payload.role === "ADVISOR") setHomeLink("/dashboard");
+      }
+    } catch {}
+  }, []);
   const [financials, setFinancials] = useState<FinancialData>({ ...EMPTY_FINANCIAL });
   const [mode, setMode] = useState<"choose" | "review">("choose");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -249,7 +259,7 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
       {/* Sidebar */}
       <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ padding: "24px 20px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
-          <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+          <a href={homeLink} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             <div style={{ width: 32, height: 32, background: "var(--gold)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
             </div>

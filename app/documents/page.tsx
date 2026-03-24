@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { ADMIN_NAV } from "@/lib/admin-nav";
 
 const CATEGORY_OPTIONS = [
   { value: "FINANCIAL_STATEMENT", label: "Financial Statement" },
@@ -52,6 +53,7 @@ const UNASSIGNED_KEY = "__unassigned__";
 
 export default function AdminDocumentsPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [documents, setDocuments] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -227,27 +229,22 @@ export default function AdminDocumentsPage() {
           </a>
         </div>
         <nav style={{ padding: "16px 12px", flex: 1 }}>
-          {[
-            { label: "Dashboard", icon: "\u2B1B", href: "/dashboard" },
-            { label: "Clients", icon: "\u{1F465}", href: "/clients" },
-            { label: "Certifications", icon: "\u{1F4CB}", href: "/certifications" },
-            { label: "Documents", icon: "\u{1F4C4}", href: "/documents", active: true },
-            { label: "Calendar", icon: "\u{1F4C5}", href: "/calendar" },
-            { label: "Integrations", icon: "\u{1F517}", href: "/integrations" },
-            { label: "Team & Users", icon: "\u{1F464}", href: "/settings/team" },
-          ].map(item => (
+          {ADMIN_NAV.map(item => {
+            const active = pathname === item.href;
+            return (
             <a key={item.label} href={item.href} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)",
-              background: item.active ? "rgba(200,155,60,.15)" : "transparent",
-              border: item.active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
-              color: item.active ? "var(--gold2)" : "rgba(255,255,255,.5)",
-              textDecoration: "none", fontSize: 13.5, fontWeight: item.active ? 500 : 400,
+              background: active ? "rgba(200,155,60,.15)" : "transparent",
+              border: active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
+              color: active ? "var(--gold2)" : "rgba(255,255,255,.5)",
+              textDecoration: "none", fontSize: 13.5, fontWeight: active ? 500 : 400,
               marginBottom: 2, transition: "all .15s"
             }}>
               <span style={{ fontSize: 14 }}>{item.icon}</span>
               {item.label}
             </a>
-          ))}
+            );
+          })}
         </nav>
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ padding: "10px 12px", marginBottom: 8 }}>

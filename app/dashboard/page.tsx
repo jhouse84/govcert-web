@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { ADMIN_NAV } from "@/lib/admin-nav";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState({ clients: 0, certifications: 0, pending: 0, expiring: 0 });
   const [reviews, setReviews] = useState<any[]>([]);
@@ -144,31 +146,23 @@ export default function DashboardPage() {
           </div>
         </div>
         <nav style={{ padding: "16px 12px", flex: 1 }}>
-          {[
-            { label: "Dashboard", icon: "⬛", href: "/dashboard", active: true },
-            { label: "Eligibility", icon: "✅", href: "/clients" },
-            { label: "Clients", icon: "👥", href: "/clients" },
-            { label: "Certifications", icon: "📋", href: "/certifications" },
-            { label: "Documents", icon: "📄", href: "/documents" },
-            { label: "Calendar", icon: "📅", href: "/calendar" },
-            { label: "Integrations", icon: "🔗", href: "/integrations" },
-            { label: "Team & Users", icon: "👤", href: "/settings/team" },
-            { label: "Usage & Costs", icon: "📊", href: "/usage" },
-            { label: "Pricing", icon: "💰", href: "/settings/pricing" },
-          ].map(item => (
+          {ADMIN_NAV.map(item => {
+            const active = pathname === item.href;
+            return (
             <a key={item.label} href={item.href} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8,
-              background: item.active ? "rgba(200,155,60,.15)" : "transparent",
-              border: item.active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
-              borderLeft: item.active ? "3px solid var(--gold)" : "3px solid transparent",
-              color: item.active ? "var(--gold2)" : "rgba(255,255,255,.5)",
-              textDecoration: "none", fontSize: 13.5, fontWeight: item.active ? 500 : 400,
+              background: active ? "rgba(200,155,60,.15)" : "transparent",
+              border: active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
+              borderLeft: active ? "3px solid var(--gold)" : "3px solid transparent",
+              color: active ? "var(--gold2)" : "rgba(255,255,255,.5)",
+              textDecoration: "none", fontSize: 13.5, fontWeight: active ? 500 : 400,
               marginBottom: 2, transition: "all .15s"
             }}>
               <span style={{ fontSize: 14 }}>{item.icon}</span>
               {item.label}
             </a>
-          ))}
+            );
+          })}
         </nav>
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ padding: "10px 12px", marginBottom: 8 }}>
@@ -194,17 +188,18 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
             {[
-              { label: "Active Clients", value: String(stats.clients), change: "View all clients" },
-              { label: "Certifications", value: String(stats.certifications), change: "View certifications" },
-              { label: "Pending Items", value: String(stats.pending), change: stats.pending === 0 ? "All clear" : "In progress" },
-              { label: "Expiring Soon", value: String(stats.expiring), change: stats.expiring === 0 ? "No upcoming expirations" : "Review soon" },
+              { label: "Active Clients", value: String(stats.clients), change: "View all clients", href: "/clients" },
+              { label: "Certifications", value: String(stats.certifications), change: "View certifications", href: "/certifications" },
+              { label: "Pending Items", value: String(stats.pending), change: stats.pending === 0 ? "All clear" : "In progress", href: "" },
+              { label: "Expiring Soon", value: String(stats.expiring), change: stats.expiring === 0 ? "No upcoming expirations" : "Review soon", href: "" },
             ].map(stat => (
-              <div key={stat.label} style={{ background: "#fff", borderRadius: 12, padding: "24px 20px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", border: "1px solid rgba(200,155,60,.08)", borderTop: "3px solid var(--gold)", transition: "all .2s", cursor: "default" }}
+              <div key={stat.label} onClick={() => { if (stat.href) router.push(stat.href); }}
+                style={{ background: "#fff", borderRadius: 12, padding: "24px 20px", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)", border: "1px solid rgba(200,155,60,.08)", borderTop: "3px solid var(--gold)", transition: "all .2s", cursor: stat.href ? "pointer" : "default" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.1)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)"; }}>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 40, color: "var(--navy)", fontWeight: 400, lineHeight: 1 }}>{stat.value}</div>
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "8px 0 4px" }}>{stat.label}</div>
-                <div style={{ fontSize: 11.5, color: "var(--ink4)" }}>{stat.change}</div>
+                <div style={{ fontSize: 11.5, color: stat.href ? "var(--gold)" : "var(--ink4)", textDecoration: stat.href ? "underline" : "none" }}>{stat.change}</div>
               </div>
             ))}
           </div>

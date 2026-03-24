@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { ADMIN_NAV } from "@/lib/admin-nav";
 
 const INTEGRATIONS = [
   {
@@ -45,6 +46,7 @@ const OAUTH_INTEGRATIONS = ["quickbooks", "gusto"];
 
 export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { id } = React.use(params);
   const clientId = String(id);
@@ -330,15 +332,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     router.push("/login");
   }
 
-  const navItems = [
-    { label: "Dashboard", href: "/dashboard", icon: "⬛" },
-    { label: "Clients", href: "/clients", icon: "👥", active: true },
-    { label: "Certifications", href: "/certifications", icon: "📋" },
-    { label: "Documents", href: "/documents", icon: "📄" },
-    { label: "Calendar", href: "/calendar", icon: "📅" },
-    { label: "Integrations", href: "/integrations", icon: "🔗" },
-    { label: "Plan", href: "/plan", icon: "📊" },
-  ];
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>
@@ -362,16 +355,19 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           </a>
         </div>
         <nav style={{ padding: "16px 12px", flex: 1 }}>
-          {navItems.map(item => (
+          {ADMIN_NAV.map(item => {
+            const active = pathname.startsWith(item.href) && (item.href !== "/dashboard" || pathname === "/dashboard");
+            return (
             <a key={item.label} href={item.href} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--r)",
-              background: (item as any).active ? "rgba(200,155,60,.15)" : "transparent",
-              border: (item as any).active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
-              color: (item as any).active ? "var(--gold2)" : "rgba(255,255,255,.5)",
-              textDecoration: "none", fontSize: 13.5, fontWeight: (item as any).active ? 500 : 400, marginBottom: 2
+              background: active ? "rgba(200,155,60,.15)" : "transparent",
+              border: active ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
+              color: active ? "var(--gold2)" : "rgba(255,255,255,.5)",
+              textDecoration: "none", fontSize: 13.5, fontWeight: active ? 500 : 400, marginBottom: 2
             }}>
               <span>{item.icon}</span>{item.label}
             </a>
+            );
           ))}
         </nav>
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>

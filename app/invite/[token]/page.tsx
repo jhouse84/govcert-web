@@ -110,13 +110,13 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "var(--ink3)", marginBottom: 5, fontWeight: 500 }}>First Name</label>
                   <input type="text" value={form.firstName} onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))}
-                    placeholder="Tricia"
+                    placeholder="First Name"
                     style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 14, outline: "none", boxSizing: "border-box" as const }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "var(--ink3)", marginBottom: 5, fontWeight: 500 }}>Last Name</label>
                   <input type="text" value={form.lastName} onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))}
-                    placeholder="Kelly"
+                    placeholder="Last Name"
                     style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 14, outline: "none", boxSizing: "border-box" as const }} />
                 </div>
               </div>

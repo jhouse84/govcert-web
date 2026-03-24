@@ -873,71 +873,87 @@ function PortalEligibilityPageInner() {
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>
                       Let&apos;s start by reading your documents
                     </h2>
-                    <p style={{ fontSize: 14, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 28, maxWidth: 600 }}>
-                      Upload your company documents and our AI will pre-fill the entire eligibility assessment. The more you upload, the less you type.
+                    <p style={{ fontSize: 14, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 24, maxWidth: 600 }}>
+                      Drop all your company files here &mdash; our AI will read everything and pre-fill the entire assessment. The more you upload, the less you type.
                     </p>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 32 }}>
-                      {DOC_PRIORITY_CARDS.map(card => {
-                        const uploaded = uploadedDocTypes[card.category];
-                        const stars = Array(card.stars).fill(null).map((_, i) => (
-                          <span key={i} style={{ color: card.stars === 3 ? "var(--gold)" : card.stars === 2 ? "#E8B84B" : "var(--ink4)", fontSize: 12 }}>&#9733;</span>
-                        ));
-                        return (
-                          <div
-                            key={card.category}
-                            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--gold)"; e.currentTarget.style.background = "rgba(200,155,60,.06)"; }}
-                            onDragLeave={e => { e.currentTarget.style.borderColor = uploaded ? "rgba(39,174,96,.3)" : "var(--border)"; e.currentTarget.style.background = uploaded ? "rgba(39,174,96,.04)" : "#fff"; }}
-                            onDrop={e => {
-                              e.preventDefault();
-                              e.currentTarget.style.borderColor = "var(--border)";
-                              e.currentTarget.style.background = "#fff";
-                              const files = e.dataTransfer.files;
-                              if (files.length > 0) handleStep0Upload(files[0], card.category);
-                            }}
-                            style={{
-                              display: "flex", alignItems: "center", gap: 14, padding: "14px 18px",
-                              background: uploaded ? "rgba(39,174,96,.04)" : "#fff",
-                              border: `1.5px solid ${uploaded ? "rgba(39,174,96,.3)" : "var(--border)"}`,
-                              borderRadius: 10, cursor: "pointer", transition: "all .2s",
-                            }}
-                            onClick={() => {
-                              if (!uploaded) step0FileInputRefs.current[card.category]?.click();
-                            }}
-                          >
-                            <input
-                              type="file"
-                              ref={el => { step0FileInputRefs.current[card.category] = el; }}
-                              style={{ display: "none" }}
-                              onChange={e => {
-                                const file = e.target.files?.[0];
-                                if (file) handleStep0Upload(file, card.category);
-                                e.target.value = "";
-                              }}
-                            />
-                            <div style={{ width: 36, height: 36, borderRadius: 8, background: uploaded ? "rgba(39,174,96,.12)" : "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                              {uploaded ? "\u2713" : "\uD83D\uDCC4"}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                                <span style={{ display: "flex", gap: 1 }}>{stars}</span>
-                                <span style={{ fontSize: 13.5, fontWeight: 500, color: "var(--navy)" }}>{card.label}</span>
-                              </div>
-                              <div style={{ fontSize: 12, color: "var(--ink4)" }}>
-                                {uploaded ? (
-                                  <span style={{ color: "var(--green, #27ae60)", fontWeight: 500 }}>{"\u2713"} {uploaded}</span>
-                                ) : card.desc}
-                              </div>
-                            </div>
-                            {!uploaded && (
-                              <div style={{ fontSize: 12, color: "var(--gold)", fontWeight: 500, whiteSpace: "nowrap" }}>
-                                Upload
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                    {/* Big flexible drop zone */}
+                    <div
+                      onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--gold)"; e.currentTarget.style.background = "rgba(200,155,60,.06)"; }}
+                      onDragLeave={e => { e.currentTarget.style.borderColor = "var(--border2, #d0c9b8)"; e.currentTarget.style.background = "#fff"; }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        e.currentTarget.style.borderColor = "var(--border2, #d0c9b8)";
+                        e.currentTarget.style.background = "#fff";
+                        const files = Array.from(e.dataTransfer.files);
+                        files.forEach(f => handleStep0Upload(f, "AUTO"));
+                      }}
+                      onClick={() => step0FileInputRefs.current["multi"]?.click()}
+                      style={{
+                        border: "2px dashed var(--border2, #d0c9b8)", borderRadius: 14, padding: "36px 24px",
+                        textAlign: "center" as const, cursor: "pointer", transition: "all .25s", background: "#fff", marginBottom: 20,
+                      }}
+                    >
+                      <input
+                        type="file"
+                        multiple
+                        ref={el => { step0FileInputRefs.current["multi"] = el; }}
+                        style={{ display: "none" }}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg"
+                        onChange={e => {
+                          const files = Array.from(e.target.files || []);
+                          files.forEach(f => handleStep0Upload(f, "AUTO"));
+                          e.target.value = "";
+                        }}
+                      />
+                      <div style={{ fontSize: 40, marginBottom: 10 }}>{Object.keys(uploadedDocTypes).length > 0 ? "\uD83D\uDCC2" : "\uD83D\uDCC4"}</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>
+                        {Object.keys(uploadedDocTypes).length > 0
+                          ? `${Object.keys(uploadedDocTypes).length} file${Object.keys(uploadedDocTypes).length !== 1 ? "s" : ""} uploaded`
+                          : "Drag & drop your files here"}
+                      </div>
+                      <div style={{ fontSize: 13, color: "var(--ink4)", marginBottom: 8 }}>
+                        or <span style={{ color: "var(--gold)", fontWeight: 600 }}>click to browse</span> &mdash; PDF, Word, Excel, CSV, images accepted
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--ink4)" }}>
+                        Drop multiple files at once &mdash; we&apos;ll sort them automatically
+                      </div>
                     </div>
+
+                    {/* Uploaded files list */}
+                    {Object.keys(uploadedDocTypes).length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 20 }}>
+                        {Object.entries(uploadedDocTypes).map(([cat, name]) => (
+                          <div key={cat} style={{
+                            display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
+                            background: "rgba(39,174,96,.06)", border: "1px solid rgba(39,174,96,.2)",
+                            borderRadius: 6, fontSize: 12, color: "var(--navy)",
+                          }}>
+                            <span style={{ color: "#27ae60" }}>{"\u2713"}</span> {String(name)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Helpful hints — collapsible */}
+                    <details style={{ marginBottom: 28, fontSize: 13 }}>
+                      <summary style={{ cursor: "pointer", color: "var(--gold)", fontWeight: 500, marginBottom: 8 }}>
+                        {"\uD83D\uDCA1"} What documents help most?
+                      </summary>
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 6, paddingLeft: 4, paddingTop: 8 }}>
+                        {DOC_PRIORITY_CARDS.map(card => (
+                          <div key={card.category} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ display: "flex", gap: 1 }}>
+                              {Array(card.stars).fill(null).map((_, i) => (
+                                <span key={i} style={{ color: card.stars === 3 ? "var(--gold)" : card.stars === 2 ? "#E8B84B" : "var(--ink4)", fontSize: 11 }}>&#9733;</span>
+                              ))}
+                            </span>
+                            <span style={{ fontWeight: 500, color: "var(--navy)" }}>{card.label}</span>
+                            <span style={{ color: "var(--ink4)" }}>&mdash; {card.desc}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
 
                     {/* Extraction result summary */}
                     {extractionResult && (

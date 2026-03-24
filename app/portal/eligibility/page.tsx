@@ -873,9 +873,36 @@ function PortalEligibilityPageInner() {
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>
                       Let&apos;s start by reading your documents
                     </h2>
-                    <p style={{ fontSize: 14, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 24, maxWidth: 600 }}>
-                      Drop all your company files here &mdash; our AI will read everything and pre-fill the entire assessment. The more you upload, the less you type.
+                    <p style={{ fontSize: 14, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 16, maxWidth: 620 }}>
+                      Drop all your company files here &mdash; our AI will read everything and pre-fill the entire assessment. <strong style={{ color: "var(--navy)" }}>The more you upload, the less you type.</strong>
                     </p>
+
+                    {/* Stark guidance box */}
+                    <div style={{
+                      background: "linear-gradient(135deg, rgba(10,25,47,.04), rgba(200,155,60,.06))",
+                      border: "1.5px solid rgba(200,155,60,.25)", borderRadius: 10, padding: "16px 20px", marginBottom: 24,
+                    }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--navy)", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>{"\u26A0\uFE0F"}</span> For the best results, we strongly recommend uploading:
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                        <div style={{ fontSize: 13, color: "var(--ink)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                          <span style={{ color: "var(--gold)", fontWeight: 700, flexShrink: 0 }}>1.</span>
+                          <span><strong>Capability Statement</strong> &mdash; This is the single most valuable document. It contains your UEI, CAGE, NAICS, past performance, and company overview all in one place.</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: "var(--ink)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                          <span style={{ color: "var(--gold)", fontWeight: 700, flexShrink: 0 }}>2.</span>
+                          <span><strong>Tax Returns</strong> (last 3 years) &mdash; Essential for revenue history, EIN, entity type, and owner income. Required for 8(a) eligibility.</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: "var(--ink)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                          <span style={{ color: "var(--gold)", fontWeight: 700, flexShrink: 0 }}>3.</span>
+                          <span><strong>Financial Statements</strong> (P&amp;L + Balance Sheet) &mdash; Critical for net worth, assets, and revenue verification across all certifications.</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 10, fontStyle: "italic" }}>
+                        Don&apos;t have all of these? No problem &mdash; upload whatever you have and we&apos;ll work with it. You can always add more later or enter information manually.
+                      </div>
+                    </div>
 
                     {/* Big flexible drop zone */}
                     <div

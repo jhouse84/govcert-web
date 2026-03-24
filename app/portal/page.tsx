@@ -207,6 +207,37 @@ export default function PortalPage() {
             </div>
           </div>
 
+          {/* Beta Testing — Dummy Data Package */}
+          <div style={{ background: "linear-gradient(135deg, #EEF2FF 0%, #F0FDF4 100%)", border: "1px solid #C7D2FE", borderRadius: 12, padding: "20px 24px", marginBottom: 20, display: "flex", gap: 16, alignItems: "center" }}>
+            <span style={{ fontSize: 32, flexShrink: 0 }}>📦</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#4338CA", marginBottom: 4 }}>Beta Testing — Sample Data Package</div>
+              <div style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.5 }}>
+                Download sample company files to test the platform. Upload them to the Eligibility Wizard and application sections to see how GovCert works end-to-end.
+              </div>
+            </div>
+            <button onClick={async () => {
+              try {
+                const data = await apiRequest("/api/clients/beta/dummy-package");
+                // Download each file
+                for (const file of data.files) {
+                  const blob = new Blob([file.content], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = file.name;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }
+              } catch (err: any) { alert("Download failed: " + err.message); }
+            }}
+              style={{ padding: "10px 20px", background: "#4338CA", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const, boxShadow: "0 2px 10px rgba(67,56,202,.3)" }}>
+              Download Sample Files
+            </button>
+          </div>
+
           {/* Eligibility Scorecard */}
           {clientId && (
             <div style={{ marginBottom: 28 }}>

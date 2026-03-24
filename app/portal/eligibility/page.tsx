@@ -476,48 +476,55 @@ function PortalEligibilityPageInner() {
       if (!result || typeof result !== "object") throw new Error("Invalid response from extraction");
       setExtractionResult(result);
       // Map extracted data to form fields — defensive
+      // Helper: safely coerce any value to string
+      const str = (v: any): string => {
+        if (v === null || v === undefined) return "";
+        if (Array.isArray(v)) return v.join(", ");
+        if (typeof v === "object") return JSON.stringify(v);
+        return String(v);
+      };
       try { if (result.companyProfile) {
         const cp = result.companyProfile;
-        if (cp.businessName) setBusinessName(cp.businessName);
-        if (cp.ein) setEin(cp.ein);
-        if (cp.entityType) setEntityType(cp.entityType);
-        if (cp.stateOfIncorporation) setStateOfIncorporation(cp.stateOfIncorporation);
-        if (cp.address) setPrincipalAddress(cp.address);
-        if (cp.city) setCity(cp.city);
-        if (cp.state) setAddrState(cp.state);
-        if (cp.zip) setZip(cp.zip);
-        if (cp.yearEstablished) setYearEstablished(String(cp.yearEstablished));
-        if (cp.naicsCodes) setNaicsCodes(cp.naicsCodes);
+        if (cp.businessName) setBusinessName(str(cp.businessName));
+        if (cp.ein) setEin(str(cp.ein));
+        if (cp.entityType) setEntityType(str(cp.entityType));
+        if (cp.stateOfIncorporation) setStateOfIncorporation(str(cp.stateOfIncorporation));
+        if (cp.address) setPrincipalAddress(str(cp.address));
+        if (cp.city) setCity(str(cp.city));
+        if (cp.state) setAddrState(str(cp.state));
+        if (cp.zip) setZip(str(cp.zip));
+        if (cp.yearEstablished) setYearEstablished(str(cp.yearEstablished));
+        if (cp.naicsCodes) setNaicsCodes(str(cp.naicsCodes));
       }
-      if (result.ownership?.owners) {
+      if (result.ownership?.owners && Array.isArray(result.ownership.owners)) {
         const mappedOwners = result.ownership.owners.map((o: any) => ({
-          name: o.name || "",
-          ownershipPercentage: o.ownershipPercentage || "",
-          gender: o.gender || "",
-          ethnicity: o.ethnicity || "",
-          veteranStatus: o.veteranStatus || "Not a Veteran",
-          disabilityStatus: o.disabilityStatus || false,
-          usCitizen: o.usCitizen !== undefined ? o.usCitizen : true,
-          managesDailyOps: o.managesDailyOps || false,
+          name: str(o.name),
+          ownershipPercentage: str(o.ownershipPercentage),
+          gender: str(o.gender),
+          ethnicity: str(o.ethnicity),
+          veteranStatus: str(o.veteranStatus) || "Not a Veteran",
+          disabilityStatus: !!o.disabilityStatus,
+          usCitizen: o.usCitizen !== undefined ? !!o.usCitizen : true,
+          managesDailyOps: !!o.managesDailyOps,
         }));
         if (mappedOwners.length > 0) setOwners(mappedOwners);
       }
       if (result.financials) {
         const fin = result.financials;
-        if (fin.revenueYear1) setRevenueYear1(String(fin.revenueYear1));
-        if (fin.revenueYear2) setRevenueYear2(String(fin.revenueYear2));
-        if (fin.revenueYear3) setRevenueYear3(String(fin.revenueYear3));
-        if (fin.employeeCount) setEmployeeCount(String(fin.employeeCount));
-        if (fin.netWorthRange) setNetWorthRange(fin.netWorthRange);
-        if (fin.agiRange) setAgiRange(fin.agiRange);
-        if (fin.totalAssetsRange) setTotalAssetsRange(fin.totalAssetsRange);
+        if (fin.revenueYear1) setRevenueYear1(str(fin.revenueYear1));
+        if (fin.revenueYear2) setRevenueYear2(str(fin.revenueYear2));
+        if (fin.revenueYear3) setRevenueYear3(str(fin.revenueYear3));
+        if (fin.employeeCount) setEmployeeCount(str(fin.employeeCount));
+        if (fin.netWorthRange) setNetWorthRange(str(fin.netWorthRange));
+        if (fin.agiRange) setAgiRange(str(fin.agiRange));
+        if (fin.totalAssetsRange) setTotalAssetsRange(str(fin.totalAssetsRange));
       }
       if (result.performance) {
         const perf = result.performance;
-        if (perf.samRegistered) setSamRegistered(perf.samRegistered);
-        if (perf.completedContracts) setCompletedContracts(String(perf.completedContracts));
-        if (perf.cparsAvailable !== undefined) setCparsAvailable(perf.cparsAvailable);
-        if (perf.existingCerts) setExistingCerts(perf.existingCerts);
+        if (perf.samRegistered) setSamRegistered(str(perf.samRegistered));
+        if (perf.completedContracts) setCompletedContracts(str(perf.completedContracts));
+        if (perf.cparsAvailable !== undefined) setCparsAvailable(!!perf.cparsAvailable);
+        if (perf.existingCerts) setExistingCerts(Array.isArray(perf.existingCerts) ? perf.existingCerts.map(str) : [str(perf.existingCerts)]);
       }
       } catch (mapErr) { console.warn("Field mapping error (non-fatal):", mapErr); }
       // Auto-advance to step 1 after a brief delay to show the success summary

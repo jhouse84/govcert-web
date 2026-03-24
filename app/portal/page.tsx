@@ -219,14 +219,15 @@ export default function PortalPage() {
             <button onClick={async () => {
               try {
                 const data = await apiRequest("/api/clients/beta/dummy-package");
-                // Download each file with correct type
-                for (const file of data.files) {
+                // Download each file with delay to prevent browser blocking
+                for (let i = 0; i < data.files.length; i++) {
+                  const file = data.files[i];
+                  await new Promise(resolve => setTimeout(resolve, i * 300)); // 300ms delay between downloads
                   let blob;
                   if (file.contentBase64) {
-                    // Binary file (xlsx)
                     const binary = atob(file.contentBase64);
                     const bytes = new Uint8Array(binary.length);
-                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
                     const mimeTypes: Record<string, string> = { xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", csv: "text/csv", txt: "text/plain" };
                     blob = new Blob([bytes], { type: mimeTypes[file.type] || "application/octet-stream" });
                   } else {

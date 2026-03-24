@@ -119,6 +119,9 @@ function PortalEligibilityPageInner() {
   const [assessing, setAssessing] = useState(false);
   const [domainMatch, setDomainMatch] = useState<any>(null);
   const [importing, setImporting] = useState(false);
+  const [existingAssessment, setExistingAssessment] = useState<any>(null);
+  const [assessedAt, setAssessedAt] = useState<string | null>(null);
+  const [showAssessmentBanner, setShowAssessmentBanner] = useState(true);
 
   // Step 0: Document upload & extraction
   const [extracting, setExtracting] = useState(false);
@@ -301,6 +304,17 @@ function PortalEligibilityPageInner() {
           }
 
           if (intake.completedSteps && intake.completedSteps > 0) setStep(Math.min(intake.completedSteps + 1, 7));
+
+          // Detect existing assessment results
+          if (intake.assessmentResults) {
+            try {
+              const results = typeof intake.assessmentResults === "object"
+                ? intake.assessmentResults
+                : JSON.parse(intake.assessmentResults);
+              setExistingAssessment(results);
+              setAssessedAt(intake.assessedAt || null);
+            } catch {}
+          }
         }
       } catch { /* no existing intake */ }
 
@@ -961,6 +975,55 @@ function PortalEligibilityPageInner() {
               </div>
             ))}
           </div>
+
+          {/* Existing assessment banner */}
+          {existingAssessment && showAssessmentBanner && step === 0 && (
+            <div style={{
+              background: "linear-gradient(135deg, #F5F1E8 0%, #fff9ed 100%)",
+              border: "1px solid var(--gold)",
+              borderRadius: "var(--rl)",
+              padding: "20px 24px",
+              marginBottom: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap" as const,
+              gap: 12,
+            }}>
+              <div>
+                <div style={{ fontWeight: 600, color: "var(--navy)", fontSize: 15, marginBottom: 4 }}>
+                  You have a completed eligibility assessment
+                </div>
+                <div style={{ fontSize: 13, color: "var(--ink3)" }}>
+                  {assessedAt
+                    ? `Assessed on ${new Date(assessedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`
+                    : "View your results or update your information and re-assess."}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => router.push("/portal/eligibility/results")}
+                  style={{
+                    padding: "9px 20px", background: "var(--gold)", color: "#fff",
+                    border: "none", borderRadius: "var(--r)", fontWeight: 600,
+                    fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  View Results
+                </button>
+                <button
+                  onClick={() => setShowAssessmentBanner(false)}
+                  style={{
+                    padding: "9px 20px", background: "transparent", color: "var(--ink3)",
+                    border: "1px solid var(--border)", borderRadius: "var(--r)", fontWeight: 500,
+                    fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  Update & Re-assess
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Step Content */}
           <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "36px 32px", boxShadow: "var(--shadow)", border: "1px solid var(--border)", marginBottom: 24 }}>
@@ -1727,9 +1790,16 @@ function PortalEligibilityPageInner() {
                     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                   </div>
                 ) : (
-                  <button onClick={runAssessment} style={{ width: "100%", padding: "16px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 4px 24px rgba(200,155,60,.4)", letterSpacing: ".02em" }}>
-                    Run Eligibility Assessment
-                  </button>
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                    {existingAssessment && (
+                      <button onClick={() => router.push("/portal/eligibility/results")} style={{ width: "100%", padding: "16px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 4px 24px rgba(200,155,60,.4)", letterSpacing: ".02em" }}>
+                        View Eligibility Assessment
+                      </button>
+                    )}
+                    <button onClick={runAssessment} style={{ width: "100%", padding: "16px", background: existingAssessment ? "transparent" : "var(--gold)", border: existingAssessment ? "1px solid var(--gold)" : "none", borderRadius: "var(--r)", color: existingAssessment ? "var(--gold)" : "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: existingAssessment ? "none" : "0 4px 24px rgba(200,155,60,.4)", letterSpacing: ".02em" }}>
+                      {existingAssessment ? "Re-run Eligibility Assessment" : "Run Eligibility Assessment"}
+                    </button>
+                  </div>
                 )}
               </div>
             )}

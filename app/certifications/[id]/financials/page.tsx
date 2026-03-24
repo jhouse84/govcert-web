@@ -103,7 +103,7 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
         const formData = new FormData();
         formData.append("file", file);
         const token = localStorage.getItem("token");
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/extract-text`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/upload/extract-text`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: formData,

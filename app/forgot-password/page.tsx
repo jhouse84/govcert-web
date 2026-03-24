@@ -12,7 +12,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError("");
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/forgot-password`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

@@ -135,7 +135,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   function connectOAuth(provider: string) {
     const token = localStorage.getItem("token");
     // Redirect browser to backend OAuth start — backend redirects to provider
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/oauth/${provider}/start?clientId=${clientId}&token=${token}`;
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/oauth/${provider}/start?clientId=${clientId}&token=${token}`;
   }
 
   async function disconnectOAuth(provider: string) {
@@ -983,7 +983,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     setError("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/invites`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/invites`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ email, clientId }),

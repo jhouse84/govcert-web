@@ -11,7 +11,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
   useEffect(() => {
     async function verify() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-email/${token}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/auth/verify-email/${token}`);
         const data = await res.json();
         if (res.ok) {
           localStorage.setItem("token", data.token);

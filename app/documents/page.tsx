@@ -110,7 +110,7 @@ export default function AdminDocumentsPage() {
       formData.append("description", uploadForm.description);
 
       const token = localStorage.getItem("token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -504,7 +504,7 @@ export default function AdminDocumentsPage() {
                                 </div>
                               </div>
                               <div style={{ display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
-                                <a href={`${process.env.NEXT_PUBLIC_API_URL}${doc.fileUrl}`} target="_blank" rel="noopener noreferrer"
+                                <a href={`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}${doc.fileUrl}`} target="_blank" rel="noopener noreferrer"
                                   style={{ padding: "6px 14px", background: "var(--navy)", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 500, textDecoration: "none" }}>
                                   Download
                                 </a>

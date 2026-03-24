@@ -29,6 +29,7 @@ const RECOMMENDED_DOCS = [
 ];
 
 const STEPS = [
+  { n: 0, label: "Upload Documents", time: "~2 min" },
   { n: 1, label: "Business Basics", time: "~2 min" },
   { n: 2, label: "Ownership", time: "~2 min" },
   { n: 3, label: "Financials", time: "~2 min" },
@@ -36,6 +37,16 @@ const STEPS = [
   { n: 5, label: "Performance", time: "~2 min" },
   { n: 6, label: "Documents", time: "~2 min" },
   { n: 7, label: "Review", time: "~1 min" },
+];
+
+const DOC_PRIORITY_CARDS = [
+  { stars: 3, label: "Capability Statement", desc: "Company profile, UEI, CAGE, NAICS, past performance", category: "CAPABILITY_STATEMENT" },
+  { stars: 3, label: "Tax Returns (1120/1040)", desc: "Revenue history, EIN, entity type, owner income", category: "TAX_RETURN" },
+  { stars: 3, label: "Financial Statements (P&L + Balance Sheet)", desc: "Revenue, assets, net worth", category: "FINANCIAL_STATEMENT" },
+  { stars: 2, label: "SAM.gov Registration", desc: "UEI, CAGE, address, NAICS, entity type", category: "SAM_REGISTRATION" },
+  { stars: 2, label: "Past Proposals or SOWs", desc: "Services, agencies, contract values", category: "PROPOSAL" },
+  { stars: 1, label: "Org Chart / Company Overview", desc: "Employee count, management structure", category: "ORG_CHART" },
+  { stars: 1, label: "Business License", desc: "Entity type, year established, state", category: "BUSINESS_LICENSE" },
 ];
 
 const inputStyle: React.CSSProperties = {
@@ -102,12 +113,18 @@ function PortalEligibilityPageInner() {
   const [user, setUser] = useState<any>(null);
   const [clientId, setClientId] = useState<string | null>(null);
   const [client, setClient] = useState<any>(null);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [assessing, setAssessing] = useState(false);
   const [domainMatch, setDomainMatch] = useState<any>(null);
   const [importing, setImporting] = useState(false);
+
+  // Step 0: Document upload & extraction
+  const [extracting, setExtracting] = useState(false);
+  const [extractionResult, setExtractionResult] = useState<any>(null);
+  const [uploadedDocTypes, setUploadedDocTypes] = useState<Record<string, string>>({});
+  const step0FileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Step 1
   const [businessName, setBusinessName] = useState("");
@@ -283,7 +300,7 @@ function PortalEligibilityPageInner() {
             } catch {}
           }
 
-          if (intake.completedSteps && intake.completedSteps > 0) setStep(Math.min(intake.completedSteps + 1, 7) as any);
+          if (intake.completedSteps && intake.completedSteps > 0) setStep(Math.min(intake.completedSteps + 1, 7));
         }
       } catch { /* no existing intake */ }
 
@@ -397,6 +414,93 @@ function PortalEligibilityPageInner() {
       }
     };
     setTimeout(poll, 2000);
+  }
+
+  async function handleStep0Upload(file: File, category: string) {
+    if (!clientId) return;
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("clientId", clientId);
+    formData.append("category", category);
+    formData.append("description", `Eligibility intake - ${category}`);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Upload failed for ${file.name}`);
+      setUploadedDocTypes(prev => ({ ...prev, [category]: file.name }));
+      setUploadedDocs(prev => [...prev, data]);
+      if (data.document?.id) {
+        setAnalyzingIds(prev => new Set(prev).add(data.document.id));
+        pollForAIAnalysis(data.document.id);
+      }
+    } catch (err: any) {
+      alert("Upload failed: " + (err.message || "Unknown error"));
+    }
+  }
+
+  async function extractFromDocs() {
+    if (!clientId) return;
+    setExtracting(true);
+    try {
+      const result = await apiRequest(`/api/eligibility/${clientId}/extract-from-docs`, { method: "POST" });
+      setExtractionResult(result);
+      // Map extracted data to form fields
+      if (result.companyProfile) {
+        const cp = result.companyProfile;
+        if (cp.businessName) setBusinessName(cp.businessName);
+        if (cp.ein) setEin(cp.ein);
+        if (cp.entityType) setEntityType(cp.entityType);
+        if (cp.stateOfIncorporation) setStateOfIncorporation(cp.stateOfIncorporation);
+        if (cp.address) setPrincipalAddress(cp.address);
+        if (cp.city) setCity(cp.city);
+        if (cp.state) setAddrState(cp.state);
+        if (cp.zip) setZip(cp.zip);
+        if (cp.yearEstablished) setYearEstablished(String(cp.yearEstablished));
+        if (cp.naicsCodes) setNaicsCodes(cp.naicsCodes);
+      }
+      if (result.ownership?.owners) {
+        const mappedOwners = result.ownership.owners.map((o: any) => ({
+          name: o.name || "",
+          ownershipPercentage: o.ownershipPercentage || "",
+          gender: o.gender || "",
+          ethnicity: o.ethnicity || "",
+          veteranStatus: o.veteranStatus || "Not a Veteran",
+          disabilityStatus: o.disabilityStatus || false,
+          usCitizen: o.usCitizen !== undefined ? o.usCitizen : true,
+          managesDailyOps: o.managesDailyOps || false,
+        }));
+        if (mappedOwners.length > 0) setOwners(mappedOwners);
+      }
+      if (result.financials) {
+        const fin = result.financials;
+        if (fin.revenueYear1) setRevenueYear1(String(fin.revenueYear1));
+        if (fin.revenueYear2) setRevenueYear2(String(fin.revenueYear2));
+        if (fin.revenueYear3) setRevenueYear3(String(fin.revenueYear3));
+        if (fin.employeeCount) setEmployeeCount(String(fin.employeeCount));
+        if (fin.netWorthRange) setNetWorthRange(fin.netWorthRange);
+        if (fin.agiRange) setAgiRange(fin.agiRange);
+        if (fin.totalAssetsRange) setTotalAssetsRange(fin.totalAssetsRange);
+      }
+      if (result.performance) {
+        const perf = result.performance;
+        if (perf.samRegistered) setSamRegistered(perf.samRegistered);
+        if (perf.completedContracts) setCompletedContracts(String(perf.completedContracts));
+        if (perf.cparsAvailable !== undefined) setCparsAvailable(perf.cparsAvailable);
+        if (perf.existingCerts) setExistingCerts(perf.existingCerts);
+      }
+      // Auto-advance to step 1 after a brief delay to show the success summary
+      setTimeout(() => setStep(1), 2500);
+    } catch (err: any) {
+      console.error("Extraction failed:", err);
+      alert("Document extraction failed: " + (err.message || "Unknown error. You can still enter data manually."));
+    } finally {
+      setExtracting(false);
+    }
   }
 
   async function handleUpload() {
@@ -728,7 +832,7 @@ function PortalEligibilityPageInner() {
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 0, marginBottom: 40, flexWrap: "wrap" }}>
             {STEPS.map((s, i) => (
               <div key={s.n} style={{ display: "flex", alignItems: "center" }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: step > s.n ? "pointer" : "default" }} onClick={() => { if (step > s.n) setStep(s.n); }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: step > s.n ? "pointer" : "default" }} onClick={() => { if (step > s.n) setStep(s.n as any); }}>
                   <div style={{
                     width: 32, height: 32, borderRadius: "50%",
                     background: step > s.n ? "var(--gold)" : step === s.n ? "#fff" : "transparent",
@@ -738,7 +842,7 @@ function PortalEligibilityPageInner() {
                     color: step > s.n ? "#fff" : step === s.n ? "var(--gold)" : "var(--ink4)",
                     transition: "all .3s",
                   }}>
-                    {step > s.n ? "\u2713" : s.n}
+                    {step > s.n ? "\u2713" : s.n === 0 ? "\u2B06" : s.n}
                   </div>
                   <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 11, fontWeight: 500, color: step >= s.n ? "var(--ink)" : "var(--ink4)", whiteSpace: "nowrap" }}>{s.label}</div>
@@ -754,6 +858,153 @@ function PortalEligibilityPageInner() {
 
           {/* Step Content */}
           <div style={{ background: "#fff", borderRadius: "var(--rl)", padding: "36px 32px", boxShadow: "var(--shadow)", border: "1px solid var(--border)", marginBottom: 24 }}>
+
+            {/* STEP 0: Upload Documents */}
+            {step === 0 && (
+              <div>
+                {!clientId ? (
+                  <div style={{ textAlign: "center", padding: "40px 0", color: "var(--ink4)" }}>
+                    <div style={{ width: 32, height: 32, border: "3px solid var(--border)", borderTopColor: "var(--gold)", borderRadius: "50%", margin: "0 auto 12px", animation: "spin 1s linear infinite" }} />
+                    Setting up your account...
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                  </div>
+                ) : (
+                  <>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>
+                      Let&apos;s start by reading your documents
+                    </h2>
+                    <p style={{ fontSize: 14, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 28, maxWidth: 600 }}>
+                      Upload your company documents and our AI will pre-fill the entire eligibility assessment. The more you upload, the less you type.
+                    </p>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 32 }}>
+                      {DOC_PRIORITY_CARDS.map(card => {
+                        const uploaded = uploadedDocTypes[card.category];
+                        const stars = Array(card.stars).fill(null).map((_, i) => (
+                          <span key={i} style={{ color: card.stars === 3 ? "var(--gold)" : card.stars === 2 ? "#E8B84B" : "var(--ink4)", fontSize: 12 }}>&#9733;</span>
+                        ));
+                        return (
+                          <div
+                            key={card.category}
+                            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--gold)"; e.currentTarget.style.background = "rgba(200,155,60,.06)"; }}
+                            onDragLeave={e => { e.currentTarget.style.borderColor = uploaded ? "rgba(39,174,96,.3)" : "var(--border)"; e.currentTarget.style.background = uploaded ? "rgba(39,174,96,.04)" : "#fff"; }}
+                            onDrop={e => {
+                              e.preventDefault();
+                              e.currentTarget.style.borderColor = "var(--border)";
+                              e.currentTarget.style.background = "#fff";
+                              const files = e.dataTransfer.files;
+                              if (files.length > 0) handleStep0Upload(files[0], card.category);
+                            }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 14, padding: "14px 18px",
+                              background: uploaded ? "rgba(39,174,96,.04)" : "#fff",
+                              border: `1.5px solid ${uploaded ? "rgba(39,174,96,.3)" : "var(--border)"}`,
+                              borderRadius: 10, cursor: "pointer", transition: "all .2s",
+                            }}
+                            onClick={() => {
+                              if (!uploaded) step0FileInputRefs.current[card.category]?.click();
+                            }}
+                          >
+                            <input
+                              type="file"
+                              ref={el => { step0FileInputRefs.current[card.category] = el; }}
+                              style={{ display: "none" }}
+                              onChange={e => {
+                                const file = e.target.files?.[0];
+                                if (file) handleStep0Upload(file, card.category);
+                                e.target.value = "";
+                              }}
+                            />
+                            <div style={{ width: 36, height: 36, borderRadius: 8, background: uploaded ? "rgba(39,174,96,.12)" : "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                              {uploaded ? "\u2713" : "\uD83D\uDCC4"}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                                <span style={{ display: "flex", gap: 1 }}>{stars}</span>
+                                <span style={{ fontSize: 13.5, fontWeight: 500, color: "var(--navy)" }}>{card.label}</span>
+                              </div>
+                              <div style={{ fontSize: 12, color: "var(--ink4)" }}>
+                                {uploaded ? (
+                                  <span style={{ color: "var(--green, #27ae60)", fontWeight: 500 }}>{"\u2713"} {uploaded}</span>
+                                ) : card.desc}
+                              </div>
+                            </div>
+                            {!uploaded && (
+                              <div style={{ fontSize: 12, color: "var(--gold)", fontWeight: 500, whiteSpace: "nowrap" }}>
+                                Upload
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Extraction result summary */}
+                    {extractionResult && (
+                      <div style={{
+                        background: "rgba(39,174,96,.06)", border: "1px solid rgba(39,174,96,.2)",
+                        borderRadius: 10, padding: "16px 20px", marginBottom: 24,
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 20 }}>{"\u2705"}</span>
+                          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--navy)" }}>
+                            Documents analyzed successfully
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6 }}>
+                          {extractionResult.fieldsFilled
+                            ? `Found ${extractionResult.fieldsFilled} of 30 fields from ${Object.keys(uploadedDocTypes).length} document(s).`
+                            : `Pre-filled fields from ${Object.keys(uploadedDocTypes).length} document(s). Review and adjust in the next steps.`}
+                          {extractionResult.confidence && (
+                            <span style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "rgba(39,174,96,.12)", color: "#27ae60", fontWeight: 600 }}>
+                              {extractionResult.confidence} confidence
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                      {Object.keys(uploadedDocTypes).length > 0 && (
+                        <button
+                          onClick={extractFromDocs}
+                          disabled={extracting}
+                          style={{
+                            width: "100%", padding: "15px 28px",
+                            background: extracting ? "var(--ink4)" : "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
+                            border: "none", borderRadius: 10, color: "#fff", fontSize: 15, fontWeight: 600,
+                            cursor: extracting ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif",
+                            boxShadow: extracting ? "none" : "0 4px 24px rgba(200,155,60,.4)",
+                            letterSpacing: ".02em", transition: "all .2s",
+                          }}
+                        >
+                          {extracting ? (
+                            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                              <span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 1s linear infinite" }} />
+                              Analyzing documents...
+                            </span>
+                          ) : (
+                            "Analyze Documents & Pre-fill Assessment"
+                          )}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setStep(1)}
+                        style={{
+                          background: "none", border: "none", color: "var(--ink4)",
+                          fontSize: 13, cursor: "pointer", textDecoration: "underline",
+                          fontFamily: "'DM Sans', sans-serif", padding: "8px 0",
+                        }}
+                      >
+                        Skip &mdash; I&apos;ll enter everything manually
+                      </button>
+                    </div>
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* STEP 1: Business Basics */}
             {step === 1 && (
@@ -1325,31 +1576,31 @@ function PortalEligibilityPageInner() {
             )}
           </div>
 
-          {/* Navigation */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              {step > 1 && (
+          {/* Navigation — hidden on step 0 which has its own buttons */}
+          {step > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <button onClick={() => setStep(s => s - 1)} style={{ padding: "10px 24px", background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--r)", fontSize: 14, color: "var(--ink)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                   Back
                 </button>
-              )}
-              <button onClick={saveAndExit} disabled={saving} style={{ background: "none", border: "none", color: "var(--gold)", fontSize: 13, cursor: "pointer", textDecoration: "underline" }}>
-                {saving ? "Saving..." : "Save & Exit"}
-              </button>
+                <button onClick={saveAndExit} disabled={saving} style={{ background: "none", border: "none", color: "var(--gold)", fontSize: 13, cursor: "pointer", textDecoration: "underline" }}>
+                  {saving ? "Saving..." : "Save & Exit"}
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                {step < 7 && (
+                  <>
+                    <button onClick={() => setStep(s => s + 1)} style={{ background: "none", border: "none", color: "var(--ink4)", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
+                      Skip this step
+                    </button>
+                    <button onClick={saveAndNext} disabled={saving} style={{ padding: "10px 28px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 4px 24px rgba(200,155,60,.3)" }}>
+                      {saving ? "Saving..." : "Next"}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              {step < 7 && (
-                <>
-                  <button onClick={() => setStep(s => s + 1)} style={{ background: "none", border: "none", color: "var(--ink4)", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
-                    Skip this step
-                  </button>
-                  <button onClick={saveAndNext} disabled={saving} style={{ padding: "10px 28px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 4px 24px rgba(200,155,60,.3)" }}>
-                    {saving ? "Saving..." : "Next"}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

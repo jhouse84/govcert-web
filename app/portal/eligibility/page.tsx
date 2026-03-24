@@ -416,14 +416,38 @@ function PortalEligibilityPageInner() {
     setTimeout(poll, 2000);
   }
 
+  const uploadQueue = useRef<File[]>([]);
+  const isUploading = useRef(false);
+  const [uploadingFile, setUploadingFile] = useState<string | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({});
+
+  async function processUploadQueue() {
+    if (isUploading.current || uploadQueue.current.length === 0) return;
+    isUploading.current = true;
+    while (uploadQueue.current.length > 0) {
+      const file = uploadQueue.current.shift()!;
+      await doSingleUpload(file);
+    }
+    isUploading.current = false;
+    setUploadingFile(null);
+  }
+
   async function handleStep0Upload(file: File, category: string) {
     if (!clientId) return;
+    // Queue the file and process sequentially
+    uploadQueue.current.push(file);
+    processUploadQueue();
+  }
+
+  async function doSingleUpload(file: File) {
+    if (!clientId) return;
+    setUploadingFile(file.name);
     const token = localStorage.getItem("token");
     const formData = new FormData();
     formData.append("file", file);
     formData.append("clientId", clientId);
-    formData.append("category", category);
-    formData.append("description", `Eligibility intake - ${category}`);
+    formData.append("category", "AUTO");
+    formData.append("description", `Eligibility intake - ${file.name}`);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/upload`, {
         method: "POST",
@@ -432,8 +456,9 @@ function PortalEligibilityPageInner() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Upload failed for ${file.name}`);
-      setUploadedDocTypes(prev => ({ ...prev, [category]: file.name }));
+      setUploadedDocTypes(prev => ({ ...prev, [file.name]: file.name }));
       setUploadedDocs(prev => [...prev, data]);
+      setUploadErrors(prev => { const next = { ...prev }; delete next[file.name]; return next; });
       if (data.document?.id) {
         setAnalyzingIds(prev => new Set(prev).add(data.document.id));
         pollForAIAnalysis(data.document.id);

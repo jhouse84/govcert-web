@@ -508,23 +508,78 @@ function PortalEligibilityPageInner() {
               </h2>
               <p style={{
                 fontSize: 14, color: "var(--ink3)", lineHeight: 1.7,
-                textAlign: "center" as const, maxWidth: 520, margin: "0 auto 24px",
+                textAlign: "center" as const, maxWidth: 560, margin: "0 auto 16px",
                 fontFamily: "'DM Sans', sans-serif",
               }}>
-                Watch this quick overview to understand how our eligibility assessment works, then get started below.
+                Watch the overview above, then download your sample data package below. These files contain a fictional company profile that you can upload to test every feature of the platform.
               </p>
 
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+              {/* Beta Sample Data Download */}
+              <div style={{ background: "#EEF2FF", border: "1px solid #C7D2FE", borderRadius: 10, padding: "16px 20px", marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                  <span style={{ fontSize: 24 }}>📦</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#4338CA" }}>Step 1: Download Sample Data</div>
+                    <div style={{ fontSize: 12, color: "var(--ink3)" }}>8 files — capability statement, financials (Excel), proposal, and invoices (CSV)</div>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      const data = await apiRequest("/api/clients/beta/dummy-package");
+                      for (const file of data.files) {
+                        let blob;
+                        if (file.contentBase64) {
+                          const binary = atob(file.contentBase64);
+                          const bytes = new Uint8Array(binary.length);
+                          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                          blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                        } else {
+                          const mimeTypes: Record<string, string> = { csv: "text/csv", txt: "text/plain" };
+                          blob = new Blob([file.content], { type: mimeTypes[file.type] || "text/plain" });
+                        }
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url; a.download = file.name;
+                        document.body.appendChild(a); a.click();
+                        document.body.removeChild(a); URL.revokeObjectURL(url);
+                      }
+                      // Show cert intent
+                      if (data.certificationIntent) {
+                        const ci = data.certificationIntent;
+                        alert(`📦 Downloaded ${data.totalFiles} files for "${data.companyName}"\n\n🎯 Targeting: ${ci.primaryLabel}\n📊 Openness to other certs: ${ci.explorationLevel.toUpperCase()}\n\n${ci.explorationNote}\n\nNow click "Start Eligibility Wizard" to begin uploading these files!`);
+                      }
+                    } catch (err: any) { alert("Download failed: " + err.message); }
+                  }}
+                  style={{
+                    width: "100%", padding: "11px", background: "#4338CA", border: "none",
+                    borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 600,
+                    cursor: "pointer", boxShadow: "0 2px 10px rgba(67,56,202,.3)",
+                  }}
+                >
+                  Download Sample Files
+                </button>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, padding: "12px 16px", background: "var(--cream)", borderRadius: 8 }}>
+                <span style={{ fontSize: 20 }}>📋</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>Step 2: Start the Eligibility Wizard</div>
+                  <div style={{ fontSize: 12, color: "var(--ink3)" }}>Use the sample data to fill in the wizard and test the AI analysis</div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 10 }}>
                 <button
                   onClick={dismissWelcome}
                   style={{
-                    padding: "13px 36px", background: "#C89B3C", border: "none",
+                    width: "100%", padding: "13px", background: "#C89B3C", border: "none",
                     borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600,
                     cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
                     boxShadow: "0 4px 16px rgba(200,155,60,0.3)",
                   }}
                 >
-                  Get Started &rarr;
+                  Start Eligibility Wizard &rarr;
                 </button>
                 <button
                   onClick={dismissWelcome}
@@ -534,7 +589,7 @@ function PortalEligibilityPageInner() {
                     fontFamily: "'DM Sans', sans-serif",
                   }}
                 >
-                  Skip video
+                  Skip for now
                 </button>
               </div>
             </div>

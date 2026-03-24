@@ -473,9 +473,10 @@ function PortalEligibilityPageInner() {
     setExtracting(true);
     try {
       const result = await apiRequest(`/api/eligibility/${clientId}/extract-from-docs`, { method: "POST" });
+      if (!result || typeof result !== "object") throw new Error("Invalid response from extraction");
       setExtractionResult(result);
-      // Map extracted data to form fields
-      if (result.companyProfile) {
+      // Map extracted data to form fields — defensive
+      try { if (result.companyProfile) {
         const cp = result.companyProfile;
         if (cp.businessName) setBusinessName(cp.businessName);
         if (cp.ein) setEin(cp.ein);
@@ -518,6 +519,7 @@ function PortalEligibilityPageInner() {
         if (perf.cparsAvailable !== undefined) setCparsAvailable(perf.cparsAvailable);
         if (perf.existingCerts) setExistingCerts(perf.existingCerts);
       }
+      } catch (mapErr) { console.warn("Field mapping error (non-fatal):", mapErr); }
       // Auto-advance to step 1 after a brief delay to show the success summary
       setTimeout(() => setStep(1), 2500);
     } catch (err: any) {
@@ -958,11 +960,13 @@ function PortalEligibilityPageInner() {
                           e.target.value = "";
                         }}
                       />
-                      <div style={{ fontSize: 40, marginBottom: 10 }}>{Object.keys(uploadedDocTypes).length > 0 ? "\uD83D\uDCC2" : "\uD83D\uDCC4"}</div>
+                      <div style={{ fontSize: 40, marginBottom: 10 }}>{uploadingFile ? "\u23F3" : Object.keys(uploadedDocTypes).length > 0 ? "\uD83D\uDCC2" : "\uD83D\uDCC4"}</div>
                       <div style={{ fontSize: 16, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>
-                        {Object.keys(uploadedDocTypes).length > 0
-                          ? `${Object.keys(uploadedDocTypes).length} file${Object.keys(uploadedDocTypes).length !== 1 ? "s" : ""} uploaded`
-                          : "Drag & drop your files here"}
+                        {uploadingFile
+                          ? `Uploading: ${uploadingFile}...`
+                          : Object.keys(uploadedDocTypes).length > 0
+                            ? `${Object.keys(uploadedDocTypes).length} file${Object.keys(uploadedDocTypes).length !== 1 ? "s" : ""} uploaded`
+                            : "Drag & drop your files here"}
                       </div>
                       <div style={{ fontSize: 13, color: "var(--ink4)", marginBottom: 8 }}>
                         or <span style={{ color: "var(--gold)", fontWeight: 600 }}>click to browse</span> &mdash; PDF, Word, Excel, CSV, images accepted

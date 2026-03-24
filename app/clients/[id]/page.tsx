@@ -368,7 +368,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               <span>{item.icon}</span>{item.label}
             </a>
             );
-          ))}
+          })}
         </nav>
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ padding: "10px 12px", marginBottom: 8 }}>

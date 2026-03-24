@@ -16,7 +16,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   useEffect(() => {
     async function fetchInvite() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/invites/${token}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/invites/${token}`);
         const data = await res.json();
         if (res.ok) setInvite(data);
         else setError(data.error || "Invalid invitation.");
@@ -37,7 +37,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/invites/${token}/accept`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app"}/api/invites/${token}/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ firstName: form.firstName, lastName: form.lastName, password: form.password }),

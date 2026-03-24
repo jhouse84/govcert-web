@@ -456,6 +456,13 @@ function PortalEligibilityPageInner() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Upload failed for ${file.name}`);
+
+      // Handle duplicate detection
+      if (data.duplicate) {
+        setUploadErrors(prev => ({ ...prev, [file.name]: "Already uploaded" }));
+        return;
+      }
+
       setUploadedDocTypes(prev => ({ ...prev, [file.name]: file.name }));
       setUploadedDocs(prev => [...prev, data]);
       setUploadErrors(prev => { const next = { ...prev }; delete next[file.name]; return next; });
@@ -534,6 +541,71 @@ function PortalEligibilityPageInner() {
       alert("Document extraction failed: " + (err.message || "Unknown error. You can still enter data manually."));
     } finally {
       setExtracting(false);
+    }
+  }
+
+  // Auto-populate form from ExtractedProfile after all AI analysis completes
+  const prevAnalyzingCount = useRef(0);
+  useEffect(() => {
+    // Trigger when analyzingIds goes from non-empty to empty (all docs finished)
+    if (prevAnalyzingCount.current > 0 && analyzingIds.size === 0 && clientId && uploadedDocs.length > 0) {
+      fetchExtractedProfile();
+    }
+    prevAnalyzingCount.current = analyzingIds.size;
+  }, [analyzingIds.size]);
+
+  async function fetchExtractedProfile() {
+    if (!clientId) return;
+    try {
+      const result = await apiRequest(`/api/eligibility/${clientId}/extracted-profile`);
+      if (!result?.profileData) return;
+      const p = result.profileData;
+      const str = (v: any): string => {
+        if (v === null || v === undefined) return "";
+        if (Array.isArray(v)) return v.join(", ");
+        if (typeof v === "object") return JSON.stringify(v);
+        return String(v);
+      };
+      // Only set fields that are currently empty (don't overwrite user edits)
+      if (p.businessName && !businessName) setBusinessName(str(p.businessName));
+      if (p.ein && !ein) setEin(str(p.ein));
+      if (p.entityType && !entityType) setEntityType(str(p.entityType));
+      if (p.address && !principalAddress) setPrincipalAddress(str(p.address));
+      if (p.city && !city) setCity(str(p.city));
+      if (p.state && !addrState) setAddrState(str(p.state));
+      if (p.zip && !zip) setZip(str(p.zip));
+      if (p.ownerName && !businessName) setBusinessName(str(p.ownerName)); // fallback
+      if (p.yearEstablished && !yearEstablished) setYearEstablished(str(p.yearEstablished));
+      if (p.naicsCodes && !naicsCodes) setNaicsCodes(str(p.naicsCodes));
+      if (p.owners && Array.isArray(p.owners) && p.owners.length > 0 && owners.length <= 1 && !owners[0]?.name) {
+        setOwners(p.owners.map((o: any) => ({
+          name: str(o.name),
+          ownershipPercentage: str(o.ownershipPercentage),
+          gender: str(o.gender),
+          ethnicity: str(o.ethnicity),
+          veteranStatus: str(o.veteranStatus) || "Not a Veteran",
+          disabilityStatus: !!o.disabilityStatus,
+          usCitizen: o.usCitizen !== undefined ? !!o.usCitizen : true,
+          managesDailyOps: !!o.managesDailyOps,
+        })));
+      }
+      if (p.revenue3Years && Array.isArray(p.revenue3Years)) {
+        if (p.revenue3Years[0] && !revenueYear1) setRevenueYear1(str(p.revenue3Years[0]));
+        if (p.revenue3Years[1] && !revenueYear2) setRevenueYear2(str(p.revenue3Years[1]));
+        if (p.revenue3Years[2] && !revenueYear3) setRevenueYear3(str(p.revenue3Years[2]));
+      }
+      if (p.employeeCount && !employeeCount) setEmployeeCount(str(p.employeeCount));
+      if (p.ownerNetWorth && !netWorthRange) setNetWorthRange(str(p.ownerNetWorth));
+      if (p.ownerAGI && !agiRange) setAgiRange(str(p.ownerAGI));
+      if (p.ownerTotalAssets && !totalAssetsRange) setTotalAssetsRange(str(p.ownerTotalAssets));
+      if (p.samRegistered && !samRegistered) setSamRegistered(str(p.samRegistered));
+      if (p.completedContracts && !completedContracts) setCompletedContracts(str(p.completedContracts));
+      if (p.existingCerts && Array.isArray(p.existingCerts) && existingCerts.length === 0) {
+        setExistingCerts(p.existingCerts.map(str));
+      }
+      console.log(`[ExtractedProfile] Auto-populated ${result.fieldsExtracted} fields from uploaded documents`);
+    } catch (err) {
+      console.warn("[ExtractedProfile] Could not fetch (non-fatal):", err);
     }
   }
 
@@ -993,6 +1065,21 @@ function PortalEligibilityPageInner() {
                             borderRadius: 6, fontSize: 12, color: "var(--navy)",
                           }}>
                             <span style={{ color: "#27ae60" }}>{"\u2713"}</span> {String(name)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Duplicate/error messages */}
+                    {Object.keys(uploadErrors).length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 12 }}>
+                        {Object.entries(uploadErrors).map(([name, msg]) => (
+                          <div key={name} style={{
+                            display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
+                            background: "rgba(231,76,60,.06)", border: "1px solid rgba(231,76,60,.2)",
+                            borderRadius: 6, fontSize: 12, color: "#c0392b",
+                          }}>
+                            <span>{"\u26A0"}</span> {String(name)}: {String(msg)}
                           </div>
                         ))}
                       </div>

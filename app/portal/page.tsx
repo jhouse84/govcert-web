@@ -219,9 +219,20 @@ export default function PortalPage() {
             <button onClick={async () => {
               try {
                 const data = await apiRequest("/api/clients/beta/dummy-package");
-                // Download each file
+                // Download each file with correct type
                 for (const file of data.files) {
-                  const blob = new Blob([file.content], { type: "text/plain" });
+                  let blob;
+                  if (file.contentBase64) {
+                    // Binary file (xlsx)
+                    const binary = atob(file.contentBase64);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    const mimeTypes: Record<string, string> = { xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", csv: "text/csv", txt: "text/plain" };
+                    blob = new Blob([bytes], { type: mimeTypes[file.type] || "application/octet-stream" });
+                  } else {
+                    const mimeTypes: Record<string, string> = { csv: "text/csv", txt: "text/plain" };
+                    blob = new Blob([file.content], { type: mimeTypes[file.type] || "text/plain" });
+                  }
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
                   a.href = url;
@@ -230,6 +241,12 @@ export default function PortalPage() {
                   a.click();
                   document.body.removeChild(a);
                   URL.revokeObjectURL(url);
+                }
+                // Show certification intent popup
+                if (data.certificationIntent) {
+                  const ci = data.certificationIntent;
+                  const levelEmoji = { high: "🟢", medium: "🟡", low: "🔴" }[ci.explorationLevel] || "🟡";
+                  alert(`📦 Sample Data Package Downloaded!\n\nCompany: ${data.companyName}\nFiles: ${data.totalFiles} (${data.fileTypes.txt} text, ${data.fileTypes.xlsx} Excel, ${data.fileTypes.csv} CSV)\n\n🎯 This company is targeting: ${ci.primaryLabel}\n${levelEmoji} Openness to other certs: ${ci.explorationLevel.toUpperCase()}\n\n${ci.explorationNote}\n\nUpload these files to the Eligibility Wizard and application sections to test the full workflow!`);
                 }
               } catch (err: any) { alert("Download failed: " + err.message); }
             }}

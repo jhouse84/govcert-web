@@ -62,6 +62,29 @@ function PortalEligibilityPageInner() {
     return new URLSearchParams(window.location.search).get("welcome") === "true";
   });
 
+  // Also check on mount in case router.push hasn't updated URL yet
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Check URL param
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("welcome") === "true") {
+      setShowWelcome(true);
+      return;
+    }
+    // Also check if user is brand new (no onboarded flag = show welcome)
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        const parsed = JSON.parse(userData);
+        const onboardKey = `govcert_onboarded_${parsed.id || parsed.email}`;
+        const onboarded = localStorage.getItem(onboardKey) || localStorage.getItem("govcert_onboarded");
+        if (!onboarded) {
+          setShowWelcome(true);
+        }
+      } catch {}
+    }
+  }, []);
+
   function dismissWelcome() {
     // Set user-specific onboarding flag
     const userData = localStorage.getItem("user");

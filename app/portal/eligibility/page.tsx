@@ -1031,14 +1031,7 @@ function PortalEligibilityPageInner() {
                           </span>
                         </div>
                         <div style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6 }}>
-                          {extractionResult.fieldsFilled
-                            ? `Found ${extractionResult.fieldsFilled} of 30 fields from ${Object.keys(uploadedDocTypes).length} document(s).`
-                            : `Pre-filled fields from ${Object.keys(uploadedDocTypes).length} document(s). Review and adjust in the next steps.`}
-                          {extractionResult.confidence && (
-                            <span style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "rgba(39,174,96,.12)", color: "#27ae60", fontWeight: 600 }}>
-                              {extractionResult.confidence} confidence
-                            </span>
-                          )}
+                          {"Pre-filled your assessment from " + String(Object.keys(uploadedDocTypes).length) + " document(s). Review and adjust in the next steps."}
                         </div>
                       </div>
                     )}

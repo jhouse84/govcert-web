@@ -493,7 +493,7 @@ function PortalEligibilityPageInner() {
     router.push("/login");
   }
 
-  if (loading) return (
+  if (loading && !showWelcome) return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>
       Loading eligibility wizard...
     </div>
@@ -502,7 +502,7 @@ function PortalEligibilityPageInner() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
 
-      {/* Welcome Video Modal */}
+      {/* Welcome Video Modal — shows even during loading for new users */}
       {showWelcome && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,

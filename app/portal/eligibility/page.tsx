@@ -163,10 +163,6 @@ function PortalEligibilityPageInner() {
     if (!token) { router.push("/login"); return; }
     if (userData) {
       const parsed = JSON.parse(userData);
-      if (parsed.role === "ADMIN" || parsed.role === "ADVISOR") {
-        router.push("/dashboard");
-        return;
-      }
       setUser(parsed);
     }
     fetchClientAndData();

@@ -245,7 +245,8 @@ export default function PortalPage() {
                 // Show certification intent popup
                 if (data.certificationIntent) {
                   const ci = data.certificationIntent;
-                  const levelEmoji = { high: "🟢", medium: "🟡", low: "🔴" }[ci.explorationLevel] || "🟡";
+                  const emojiMap: Record<string, string> = { high: "🟢", medium: "🟡", low: "🔴" };
+                  const levelEmoji = emojiMap[ci.explorationLevel] || "🟡";
                   alert(`📦 Sample Data Package Downloaded!\n\nCompany: ${data.companyName}\nFiles: ${data.totalFiles} (${data.fileTypes.txt} text, ${data.fileTypes.xlsx} Excel, ${data.fileTypes.csv} CSV)\n\n🎯 This company is targeting: ${ci.primaryLabel}\n${levelEmoji} Openness to other certs: ${ci.explorationLevel.toUpperCase()}\n\n${ci.explorationNote}\n\nUpload these files to the Eligibility Wizard and application sections to test the full workflow!`);
                 }
               } catch (err: any) { alert("Download failed: " + err.message); }

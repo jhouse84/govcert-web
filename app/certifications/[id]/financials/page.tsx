@@ -611,6 +611,36 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
                 />
               </div>
 
+              {/* Upload documents inline */}
+              <div style={{ background: "#fff", border: "1px dashed rgba(200,155,60,.3)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                  <span style={{ fontSize: 20 }}>📄</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Have your financial documents?</div>
+                    <div style={{ fontSize: 12, color: "var(--ink3)" }}>Upload your P&L, Balance Sheet, or tax returns and AI will extract the figures automatically.</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.xlsx,.xls,.csv,.doc,.docx"
+                    onChange={e => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 0) handleFileUpload(files);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    style={{ display: "none" }}
+                  />
+                  <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                    style={{ padding: "8px 20px", borderRadius: "var(--r)", border: "1px solid rgba(200,155,60,.3)", background: "rgba(200,155,60,.05)", color: "#8B7A3E", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+                    {uploading ? "Extracting..." : "Upload & Extract →"}
+                  </button>
+                  <span style={{ fontSize: 11, color: "var(--ink4)" }}>PDF, Excel, CSV accepted</span>
+                </div>
+              </div>
+
               {/* Bottom nav */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8 }}>
                 <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>← Back to Dashboard</a>

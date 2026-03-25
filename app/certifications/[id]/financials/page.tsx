@@ -102,6 +102,28 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
           setFinancials(parsed);
           setMode("review");
         } catch {}
+      } else if (data.client?.id) {
+        // Auto-populate from eligibility/extracted profile data
+        try {
+          const defaults = await apiRequest(`/api/applications/preview-defaults/${data.client.id}/${data.type || "GSA_MAS"}`);
+          if (defaults?.defaults?.annualRevenue) {
+            const rev = defaults.defaults.annualRevenue;
+            // Try to get 3-year revenue from eligibility intake
+            const eligibility = await apiRequest(`/api/eligibility/${data.client.id}`).catch(() => null);
+            const rev3 = eligibility?.revenue3Years ? JSON.parse(eligibility.revenue3Years) : null;
+            const yr = new Date().getFullYear();
+            const prefilled: FinancialData = {
+              year1: { revenue: rev3?.[0] ? String(rev3[0]) : String(rev) },
+              year2: { revenue: rev3?.[1] ? String(rev3[1]) : "" },
+              year1Label: String(yr - 1),
+              year2Label: String(yr - 2),
+              source: null,
+              notes: "Pre-filled from your uploaded documents. Review and complete the remaining fields.",
+            };
+            setFinancials(prefilled);
+            setMode("review");
+          }
+        } catch {}
       }
     } catch (err) {
       console.error(err);

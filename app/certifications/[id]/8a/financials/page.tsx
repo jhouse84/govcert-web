@@ -119,6 +119,43 @@ export default function Financials8aPage({ params }: { params: Promise<{ id: str
           setFinancials(parsed);
           setMode("review");
         } catch {}
+      } else if (data.client?.id) {
+        // Auto-populate from eligibility/extracted profile data
+        try {
+          const defaults = await apiRequest(`/api/applications/preview-defaults/${data.client.id}/EIGHT_A`);
+          if (defaults?.defaults?.annualRevenue) {
+            const rev = defaults.defaults.annualRevenue;
+            const eligibility = await apiRequest(`/api/eligibility/${data.client.id}`).catch(() => null);
+            const rev3 = eligibility?.revenue3Years ? JSON.parse(eligibility.revenue3Years) : null;
+            const yr = new Date().getFullYear();
+            setFinancials({
+              year1: { revenue: rev3?.[0] ? String(rev3[0]) : String(rev) },
+              year2: { revenue: rev3?.[1] ? String(rev3[1]) : "" },
+              year1Label: String(yr - 1),
+              year2Label: String(yr - 2),
+              source: null,
+              notes: "Pre-filled from your uploaded documents. Review and complete the remaining fields.",
+            });
+            // Also pre-fill personal financials from economic disadvantage data if available
+            if (defaults?.defaults?.economicDisadvantageData) {
+              try {
+                const econ = JSON.parse(defaults.defaults.economicDisadvantageData);
+                const ownerName = defaults.defaults.ownerName || "";
+                if (econ.adjustedGrossIncome || econ.personalNetWorth) {
+                  setPersonalFinancials([{
+                    ownerName,
+                    ownershipPct: "100",
+                    netWorth: econ.personalNetWorth?.replace(/[^0-9]/g, "") || "",
+                    annualIncome: econ.adjustedGrossIncome?.replace(/[^0-9]/g, "") || "",
+                    totalAssets: econ.totalAssets?.replace(/[^0-9]/g, "") || "",
+                    totalLiabilities: "",
+                  }]);
+                }
+              } catch {}
+            }
+            setMode("review");
+          }
+        } catch {}
       }
       const completed: Record<string, boolean> = {};
       const app = data.application;

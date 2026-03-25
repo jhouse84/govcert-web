@@ -29,6 +29,13 @@ export function SecurityTrustModal({ onClose }: Props) {
       body: "Your account is protected by multiple layers of security that work together to keep your data safe.",
       detail: null, // Will render the features grid instead
     },
+    {
+      icon: "\uD83C\uDFAC",
+      title: "See Our Security in Action",
+      body: "Watch a quick overview of how GovCert protects your most sensitive business information.",
+      detail: null, // Will render the video instead
+      isVideo: true,
+    },
   ];
 
   const current = steps[step];
@@ -134,6 +141,24 @@ export function SecurityTrustModal({ onClose }: Props) {
               </div>
             );
           })()}
+
+          {/* Step 4: Security Video */}
+          {step === 3 && (
+            <div style={{
+              position: "relative", width: "100%", paddingBottom: "56.25%",
+              borderRadius: 10, overflow: "hidden", marginTop: 8,
+              border: "1px solid rgba(200, 155, 60, 0.15)",
+            }}>
+              <iframe
+                src="https://www.youtube.com/embed/GzqIYqzsXfk"
+                title="GovCert Security Overview"
+                style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                frameBorder="0"
+              />
+            </div>
+          )}
         </div>
 
         {/* Footer */}

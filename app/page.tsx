@@ -120,20 +120,52 @@ export default function LandingPage() {
           <p style={{ fontSize: 15, color: "var(--ink3)", maxWidth: 600, margin: "0 auto 28px", fontWeight: 300, lineHeight: 1.6 }}>
             Built by the founders of House Strategies Group — a government contracting firm that spent months assembling certification applications by hand. We knew there had to be an easier way.
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-            <div>
-              <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)", border: "1px solid rgba(200,155,60,.12)", background: "var(--navy)" }}>
+          {/* Top row: two product videos side by side */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+            <div style={{ background: "#fff", borderRadius: 16, padding: 16, border: "1px solid rgba(200,155,60,.1)", boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #C89B3C, #E8B84B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#fff" }}>▶</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>GovCert Overview</div>
+                  <div style={{ fontSize: 11, color: "var(--ink3)" }}>What the platform does and how it saves you time</div>
+                </div>
+              </div>
+              <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 10, overflow: "hidden", background: "var(--navy)" }}>
                 <iframe src="https://www.youtube.com/embed/PhevgTFZiOg" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
               </div>
-              <div style={{ marginTop: 12, fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>GovCert Overview</div>
-              <div style={{ fontSize: 12, color: "var(--ink3)" }}>What the platform does and how it saves you time</div>
             </div>
-            <div>
-              <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)", border: "1px solid rgba(200,155,60,.12)", background: "var(--navy)" }}>
+            <div style={{ background: "#fff", borderRadius: 16, padding: 16, border: "1px solid rgba(200,155,60,.1)", boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #4338CA, #6366F1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#fff" }}>▶</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>Full Platform Demo</div>
+                  <div style={{ fontSize: 11, color: "var(--ink3)" }}>Walk through every feature from upload to submission</div>
+                </div>
+              </div>
+              <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 10, overflow: "hidden", background: "var(--navy)" }}>
                 <iframe src="https://www.youtube.com/embed/SVfWc-31Xbw" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
               </div>
-              <div style={{ marginTop: 12, fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Full Platform Demo</div>
-              <div style={{ fontSize: 12, color: "var(--ink3)" }}>Walk through every feature from upload to submission</div>
+            </div>
+          </div>
+          {/* Bottom row: security video — distinct dark treatment */}
+          <div style={{ background: "linear-gradient(135deg, #0B1929, #1A2F45)", borderRadius: 16, padding: 20, display: "flex", gap: 24, alignItems: "center", border: "1px solid rgba(200,155,60,.15)" }}>
+            <div style={{ flex: "0 0 55%", position: "relative", paddingBottom: "30.9%", borderRadius: 10, overflow: "hidden" }}>
+              <iframe src="https://www.youtube.com/embed/GzqIYqzsXfk" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #10B981, #34D399)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff" }}>🛡️</span>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#10B981" }}>Security</div>
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 500, color: "#fff", fontFamily: "'Cormorant Garamond', serif", lineHeight: 1.3, marginBottom: 8 }}>Your Data Is Protected</div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,.55)", lineHeight: 1.6, margin: 0 }}>
+                AES-256 encryption, PII auto-masking, document-level access controls, and D&B verified. See how we keep your most sensitive business information safe.
+              </p>
+              <div style={{ display: "flex", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
+                {["🔒 Encrypted", "🏢 D&B Verified", "🛡️ CSA STAR"].map((badge, i) => (
+                  <span key={i} style={{ fontSize: 10, padding: "4px 10px", borderRadius: 20, background: "rgba(255,255,255,.08)", color: "rgba(255,255,255,.6)", border: "1px solid rgba(255,255,255,.08)" }}>{badge}</span>
+                ))}
+              </div>
             </div>
           </div>
           <div style={{ marginTop: 28, display: "flex", justifyContent: "center", gap: 14 }}>

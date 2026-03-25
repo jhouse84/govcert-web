@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import CertSidebar from "@/components/CertSidebar";
+import { SecurityBanner } from "@/components/SecurityBadge";
 
 const EIGHT_A_SECTIONS = [
   { id: "social-disadvantage", label: "Social Disadvantage" },
@@ -415,6 +416,11 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
               <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>&times;</button>
             </div>
           )}
+
+          <SecurityBanner
+            message="This section contains highly sensitive personal information. Your data is encrypted, access-controlled, and never shared without your explicit consent."
+            badges={["encrypted-at-rest", "pii-protected", "audit-logged"]}
+          />
 
           {/* SBA Requirements box */}
           <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "22px 28px", marginBottom: 28 }}>

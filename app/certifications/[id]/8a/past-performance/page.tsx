@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import CertSidebar from "@/components/CertSidebar";
+import { SecurityBanner } from "@/components/SecurityBadge";
 
 const EIGHT_A_SECTIONS = [
   { id: "social-disadvantage", label: "Social Disadvantage" },
@@ -417,6 +418,11 @@ export default function PastPerformance8aPage({ params }: { params: Promise<{ id
               Add your past contracts to demonstrate capability. At least 2-3 relevant contracts recommended for 8(a).
             </p>
           </div>
+
+          <SecurityBanner
+            message="Contract details and reference contact information are encrypted and access-controlled."
+            badges={["encryption", "audit-logged"]}
+          />
 
           {error && (
             <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "var(--red)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

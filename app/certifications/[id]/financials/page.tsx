@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { parseCurrencyRaw } from "@/lib/formatters";
+import { SecurityBanner } from "@/components/SecurityBadge";
 
 function fmtNum(v: string | number | null | undefined): string {
   if (!v) return "";
@@ -331,6 +332,11 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Financial Statements</h1>
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>2 years of P&L and Balance Sheet data required for GSA MAS submission.</p>
           </div>
+
+          <SecurityBanner
+            message="Financial data is protected with bank-grade encryption and never shared without your consent."
+            badges={["bank-grade", "encrypted-at-rest"]}
+          />
 
           {error && (
             <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "var(--red)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

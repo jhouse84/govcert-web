@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { SecurityBanner } from "@/components/SecurityBadge";
 
 // ── STRUCTURED QUESTIONS ──
 const GUIDED_QUESTIONS = [
@@ -565,6 +566,11 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
               <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>✕</button>
             </div>
           )}
+
+          <SecurityBanner
+            message="Your corporate data and AI-drafted narratives are encrypted and protected."
+            badges={["encryption", "secure-server"]}
+          />
 
           {/* ── GSA INSTRUCTIONS (collapsible) ── */}
           <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", marginBottom: 24, overflow: "hidden" }}>

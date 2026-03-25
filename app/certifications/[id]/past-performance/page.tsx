@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { fmtCurrencyInput, parseCurrencyRaw, fmtPhone, parsePhoneRaw } from "@/lib/formatters";
+import { SecurityBanner } from "@/components/SecurityBadge";
 
 const CONTRACT_TYPES = ["Federal Government", "State/Local Government", "Commercial", "Non-Profit"];
 
@@ -526,6 +527,11 @@ Scope of Work: ${contract.sowDescription}`,
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Past Performance</h1>
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Add your past contracts and collect the 3 references GSA requires.</p>
           </div>
+
+          <SecurityBanner
+            message="Contract details and reference contact information are encrypted and only shared via secure PPQ questionnaires."
+            badges={["encryption", "audit-logged"]}
+          />
 
           {error && (
             <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "var(--red)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

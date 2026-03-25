@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { parseCurrencyRaw } from "@/lib/formatters";
 import CertSidebar from "@/components/CertSidebar";
+import { SecurityBanner } from "@/components/SecurityBadge";
 
 function fmtNum(v: string | number | null | undefined): string {
   if (!v) return "";
@@ -343,6 +344,11 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
               <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>&times;</button>
             </div>
           )}
+
+          <SecurityBanner
+            message="Your financial data is protected with bank-grade encryption. Net worth and income details are never shared without your explicit consent."
+            badges={["bank-grade", "pii-protected", "audit-logged"]}
+          />
 
           {/* Smart Auto-Populate Tools */}
           <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24 }}>

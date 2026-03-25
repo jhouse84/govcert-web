@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { fmtCurrencyInput, parseCurrencyRaw } from "@/lib/formatters";
 import CertSidebar from "@/components/CertSidebar";
+import { SecurityBanner } from "@/components/SecurityBadge";
 
 const EIGHT_A_SECTIONS = [
   { id: "social-disadvantage", label: "Social Disadvantage" },
@@ -298,6 +299,11 @@ export default function Financials8aPage({ params }: { params: Promise<{ id: str
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Financial Statements</h1>
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>2 years of business financials plus personal financial statements for each owner.</p>
           </div>
+
+          <SecurityBanner
+            message="Business and personal financial data is protected with bank-grade encryption and strict access controls."
+            badges={["bank-grade", "encrypted-at-rest", "audit-logged"]}
+          />
 
           {error && (
             <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "var(--red)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

@@ -114,14 +114,27 @@ export default function LandingPage() {
 
       {/* DEMO VIDEO */}
       <div id="demo" style={{ background: "var(--cream)", padding: "88px 0" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 48px", textAlign: "center" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 48px", textAlign: "center" }}>
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 12 }}>See It In Action</div>
-          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(28px,3.5vw,42px)", color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 10, letterSpacing: "-.03em" }}>Watch the full platform demo</h2>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(28px,3.5vw,42px)", color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 10, letterSpacing: "-.03em" }}>Watch how GovCert works</h2>
           <p style={{ fontSize: 15, color: "var(--ink3)", maxWidth: 600, margin: "0 auto 28px", fontWeight: 300, lineHeight: 1.6 }}>
             Built by the founders of House Strategies Group — a government contracting firm that spent months assembling certification applications by hand. We knew there had to be an easier way.
           </p>
-          <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)", border: "1px solid rgba(200,155,60,.12)", background: "var(--navy)" }}>
-            <iframe src="https://www.youtube.com/embed/SVfWc-31Xbw" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            <div>
+              <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)", border: "1px solid rgba(200,155,60,.12)", background: "var(--navy)" }}>
+                <iframe src="https://www.youtube.com/embed/PhevgTFZiOg" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              </div>
+              <div style={{ marginTop: 12, fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>GovCert Overview</div>
+              <div style={{ fontSize: 12, color: "var(--ink3)" }}>What the platform does and how it saves you time</div>
+            </div>
+            <div>
+              <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)", border: "1px solid rgba(200,155,60,.12)", background: "var(--navy)" }}>
+                <iframe src="https://www.youtube.com/embed/SVfWc-31Xbw" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              </div>
+              <div style={{ marginTop: 12, fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Full Platform Demo</div>
+              <div style={{ fontSize: 12, color: "var(--ink3)" }}>Walk through every feature from upload to submission</div>
+            </div>
           </div>
           <div style={{ marginTop: 28, display: "flex", justifyContent: "center", gap: 14 }}>
             <a href="/register" style={{

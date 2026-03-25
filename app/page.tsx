@@ -325,6 +325,63 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* SECURITY & TRUST */}
+      <div style={{ background: "var(--navy)", padding: "64px 0" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 48px", textAlign: "center" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold2)", marginBottom: 12 }}>Security &amp; Trust</div>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(24px,3vw,36px)", color: "#fff", fontWeight: 400, lineHeight: 1.1, marginBottom: 8, letterSpacing: "-.02em" }}>Enterprise-grade security for your most sensitive data</h2>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,.45)", maxWidth: 560, margin: "0 auto 36px", fontWeight: 300, lineHeight: 1.6 }}>
+            Government contractors trust us with their financial statements, tax returns, and certification data. We take that responsibility seriously.
+          </p>
+
+          {/* Trust Badges */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 32, marginBottom: 40, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 56, height: 56, borderRadius: 12, background: "rgba(200,155,60,.1)", border: "1px solid rgba(200,155,60,.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{"\uD83C\uDFE2"}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>Dun &amp; Bradstreet</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>D-U-N-S: 105595626</div>
+              <div style={{ fontSize: 9, color: "var(--gold2)", fontWeight: 500 }}>VERIFIED BUSINESS</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 56, height: 56, borderRadius: 12, background: "rgba(200,155,60,.1)", border: "1px solid rgba(200,155,60,.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{"\uD83D\uDEE1\uFE0F"}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>CSA STAR</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>Cloud Security Alliance</div>
+              <div style={{ fontSize: 9, color: "var(--gold2)", fontWeight: 500 }}>SELF-ASSESSMENT</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 56, height: 56, borderRadius: 12, background: "rgba(200,155,60,.1)", border: "1px solid rgba(200,155,60,.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{"\uD83D\uDD12"}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>TLS 1.3</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>256-bit encryption</div>
+              <div style={{ fontSize: 9, color: "var(--gold2)", fontWeight: 500 }}>IN TRANSIT</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 56, height: 56, borderRadius: 12, background: "rgba(200,155,60,.1)", border: "1px solid rgba(200,155,60,.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{"\uD83D\uDCCB"}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>Audit Logging</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>Every document access</div>
+              <div style={{ fontSize: 9, color: "var(--gold2)", fontWeight: 500 }}>TRACKED</div>
+            </div>
+          </div>
+
+          {/* Security features grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, textAlign: "left" }}>
+            {[
+              { icon: "\uD83D\uDD10", title: "AES-256 Encryption", body: "All documents encrypted at rest and in transit. Your tax returns, financial statements, and PII are protected with bank-grade security." },
+              { icon: "\uD83D\uDC64", title: "PII Auto-Detection", body: "AI automatically identifies and classifies sensitive data in uploaded documents. EINs, SSNs, and financial data are masked for non-owner access." },
+              { icon: "\u2705", title: "Role-Based Access", body: "Document-level consent controls. Advisors must request access to each document individually. You approve or deny every request." },
+              { icon: "\uD83D\uDEAB", title: "XSS & Injection Protection", body: "All inputs sanitized server-side. Content Security Policy headers block unauthorized scripts. CORS locked to authorized domains only." },
+              { icon: "\u23F0", title: "Account Security", body: "Account lockout after 5 failed attempts. Email verification required. Session timeout for inactivity. Strong password enforcement." },
+              { icon: "\uD83D\uDCC8", title: "Rate Limiting", body: "API-level rate limiting prevents abuse. Auth: 10 req/15min. AI operations: 10 req/min. General: 100 req/min." },
+            ].map((f, i) => (
+              <div key={i} style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 12, padding: "20px 22px" }}>
+                <div style={{ fontSize: 20, marginBottom: 10 }}>{f.icon}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", marginBottom: 6 }}>{f.title}</div>
+                <div style={{ fontSize: 11.5, color: "rgba(255,255,255,.4)", lineHeight: 1.6 }}>{f.body}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* FOOTER */}
       <div style={{ background: "var(--navy2)", borderTop: "1px solid rgba(255,255,255,.07)", padding: "40px 48px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "#fff", fontWeight: 500 }}>

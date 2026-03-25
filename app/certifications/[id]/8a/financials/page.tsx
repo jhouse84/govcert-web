@@ -201,8 +201,24 @@ export default function Financials8aPage({ params }: { params: Promise<{ id: str
         body: JSON.stringify({
           section: "Financial Data Extraction",
           certType: "8a",
-          prompt: `Extract financial figures from this document. Return ONLY valid JSON: { "year1Label": "YYYY", "year2Label": "YYYY", "year1": { "revenue": "", "cogs": "", "grossProfit": "", "operatingExpenses": "", "operatingIncome": "", "netIncome": "", "totalAssets": "", "totalLiabilities": "", "ownersEquity": "", "cashAndEquivalents": "", "accountsReceivable": "", "currentLiabilities": "" }, "year2": { same } }. Numbers without commas or $.`,
-          context: { businessName: cert?.client?.businessName, otherSections: text.substring(0, 6000) },
+          prompt: `You are extracting financial data from uploaded business documents for an SBA 8(a) application. This may include P&L statements, Balance Sheets, tax returns, or financial summaries.
+
+CRITICAL: Search the ENTIRE document. Balance Sheet data is often on a separate page from the P&L. Do NOT stop after finding revenue.
+
+Return ONLY valid JSON:
+{
+  "year1Label": "YYYY", "year2Label": "YYYY",
+  "year1": { "revenue": "", "cogs": "", "grossProfit": "", "operatingExpenses": "", "operatingIncome": "", "netIncome": "", "totalAssets": "", "totalLiabilities": "", "ownersEquity": "", "cashAndEquivalents": "", "accountsReceivable": "", "currentLiabilities": "" },
+  "year2": { same 12 fields }
+}
+
+RULES:
+- year1 = most recent fiscal year, year2 = prior year
+- Numbers without $ or commas (e.g. "450000")
+- Empty string "" if not found
+- ALTERNATE LABELS: revenue=Total Revenue/Sales/Gross Receipts; cogs=Cost of Goods Sold/Cost of Sales; grossProfit=Gross Profit/Margin; operatingExpenses=Total Operating Expenses/SG&A; operatingIncome=Operating Income/EBIT; netIncome=Net Income/Net Profit/Bottom Line; totalAssets=Total Assets; totalLiabilities=Total Liabilities; ownersEquity=Owner's Equity/Stockholders' Equity/Net Worth; cashAndEquivalents=Cash/Bank Accounts; accountsReceivable=A/R/Trade Receivables; currentLiabilities=Current Liabilities
+- Extract ALL fields from both P&L AND Balance Sheet sections`,
+          context: { businessName: cert?.client?.businessName, otherSections: text.substring(0, 15000) },
         }),
       });
       try {

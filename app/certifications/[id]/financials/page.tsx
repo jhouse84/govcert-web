@@ -169,30 +169,53 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
         method: "POST",
         body: JSON.stringify({
           section: "Financial Data Extraction",
-          prompt: `Extract the financial figures from this document and return ONLY a valid JSON object with this exact structure:
+          prompt: `You are extracting financial data from uploaded business documents. This may include P&L statements, Balance Sheets, tax returns, or financial summaries in various formats (PDF, Excel export, CSV).
+
+CRITICAL: Search the ENTIRE document thoroughly. The Balance Sheet data is often on a separate page or section from the P&L. Do NOT stop after finding revenue.
+
+Return ONLY a valid JSON object with this exact structure:
 {
   "year1Label": "YYYY",
   "year2Label": "YYYY",
   "year1": {
-    "revenue": "number as string",
-    "cogs": "number as string",
-    "grossProfit": "number as string",
-    "operatingExpenses": "number as string",
-    "operatingIncome": "number as string",
-    "netIncome": "number as string",
-    "totalAssets": "number as string",
-    "totalLiabilities": "number as string",
-    "ownersEquity": "number as string",
-    "cashAndEquivalents": "number as string",
-    "accountsReceivable": "number as string",
-    "currentLiabilities": "number as string"
+    "revenue": "number",
+    "cogs": "number",
+    "grossProfit": "number",
+    "operatingExpenses": "number",
+    "operatingIncome": "number",
+    "netIncome": "number",
+    "totalAssets": "number",
+    "totalLiabilities": "number",
+    "ownersEquity": "number",
+    "cashAndEquivalents": "number",
+    "accountsReceivable": "number",
+    "currentLiabilities": "number"
   },
-  "year2": { same fields }
+  "year2": { same 12 fields }
 }
-Use the most recent fiscal year as year1. Format numbers without commas or dollar signs (e.g. "450000"). If a value is not found use empty string "".`,
+
+RULES:
+- year1 = most recent fiscal year, year2 = prior year
+- All values as plain numbers without $ or commas (e.g. "450000" not "$450,000")
+- If a value is not found, use empty string ""
+- LOOK FOR THESE ALTERNATE LABELS:
+  * "revenue" = Total Revenue, Sales, Gross Sales, Total Income, Gross Receipts
+  * "cogs" = Cost of Goods Sold, Cost of Sales, Cost of Revenue, Direct Costs
+  * "grossProfit" = Gross Profit, Gross Margin
+  * "operatingExpenses" = Total Operating Expenses, SG&A, Total Expenses (minus COGS)
+  * "operatingIncome" = Operating Income, Operating Profit, Income from Operations, EBIT
+  * "netIncome" = Net Income, Net Profit, Net Earnings, Bottom Line, Net Income (Loss)
+  * "totalAssets" = Total Assets
+  * "totalLiabilities" = Total Liabilities, Total Liabilities and Equity minus Equity
+  * "ownersEquity" = Owner's Equity, Stockholders' Equity, Net Worth, Total Equity, Retained Earnings + Paid-in Capital
+  * "cashAndEquivalents" = Cash, Cash and Cash Equivalents, Bank Accounts
+  * "accountsReceivable" = Accounts Receivable, A/R, Trade Receivables
+  * "currentLiabilities" = Current Liabilities, Short-term Liabilities, Current Portion
+- If a Balance Sheet is present, extract ALL balance sheet fields — do not skip them
+- If only one year of data exists, populate year1 and leave year2 fields as ""`,
           context: {
             businessName: cert?.client?.businessName,
-            otherSections: text.substring(0, 6000),
+            otherSections: text.substring(0, 15000),
           },
         }),
       });

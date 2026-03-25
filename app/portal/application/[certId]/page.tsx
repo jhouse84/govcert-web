@@ -2,13 +2,17 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { ApplicationCoachingModal } from "@/components/ApplicationCoachingModal";
 
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
   EIGHT_A: "8(a) Business Development",
+  OASIS_PLUS: "GSA OASIS+",
   WOSB: "Women-Owned Small Business",
   HUBZONE: "HUBZone",
   MBE: "Minority Business Enterprise",
+  SDVOSB: "Service-Disabled Veteran-Owned",
+  VOSB: "Veteran-Owned Small Business",
 };
 
 function extractNarrative(json: string | undefined, key: string): string {
@@ -28,6 +32,9 @@ export default function PortalApplicationPage({ params }: { params: Promise<{ ce
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("corporate");
+  const [showCoaching, setShowCoaching] = useState(false);
+  const [coachingCertType, setCoachingCertType] = useState<string>("GSA_MAS");
+  const [clientId, setClientId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -35,7 +42,30 @@ export default function PortalApplicationPage({ params }: { params: Promise<{ ce
     if (!token) { router.push("/login"); return; }
     if (userData) setUser(JSON.parse(userData));
     fetchCert();
+    fetchClientId();
   }, []);
+
+  async function fetchClientId() {
+    try {
+      const clients = await apiRequest("/api/clients");
+      if (Array.isArray(clients) && clients.length > 0) {
+        setClientId(clients[0].id);
+        checkCoaching(clients[0].id);
+      }
+    } catch {}
+  }
+
+  async function checkCoaching(cId: string) {
+    try {
+      const certData = await apiRequest(`/api/certifications/${certId}`);
+      const certType = certData?.certType || certData?.type || "GSA_MAS";
+      setCoachingCertType(certType);
+      const coachingKey = `govcert_coaching_done_${certId}`;
+      if (!localStorage.getItem(coachingKey)) {
+        setShowCoaching(true);
+      }
+    } catch (err) { console.error("Coaching check failed:", err); }
+  }
 
   async function fetchCert() {
     try {
@@ -130,6 +160,23 @@ export default function PortalApplicationPage({ params }: { params: Promise<{ ce
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
+
+      {/* Document Coaching Modal — shows on first visit to any application */}
+      {showCoaching && clientId && (
+        <ApplicationCoachingModal
+          clientId={clientId}
+          certType={coachingCertType}
+          onClose={() => {
+            setShowCoaching(false);
+            localStorage.setItem(`govcert_coaching_done_${certId}`, new Date().toISOString());
+          }}
+          onUploadClick={() => {
+            setShowCoaching(false);
+            localStorage.setItem(`govcert_coaching_done_${certId}`, new Date().toISOString());
+            router.push("/portal/documents");
+          }}
+        />
+      )}
 
       {/* Sidebar */}
       <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>

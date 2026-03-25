@@ -1396,39 +1396,94 @@ function PortalEligibilityPageInner() {
                   <input style={{ ...inputStyle, maxWidth: 200 }} type="number" value={employeeCount} onChange={e => setEmployeeCount(e.target.value)} placeholder="25" />
                 </div>
 
-                <div style={{ marginBottom: 20 }}>
-                  <label style={labelStyle}>Owner Net Worth Range</label>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {["<$250K", "$250K-$500K", "$500K-$850K", ">$850K"].map(opt => (
-                      <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--ink)", cursor: "pointer" }}>
-                        <input type="radio" name="netWorth" checked={netWorthRange === opt} onChange={() => setNetWorthRange(opt)} style={{ accentColor: "var(--gold)" }} />
-                        {opt}
-                      </label>
-                    ))}
+                {/* ── Owner Financial Data with AI Coaching ── */}
+                <div style={{ background: "linear-gradient(135deg, rgba(26, 35, 50, 0.03), rgba(180, 155, 80, 0.05))", border: "1px solid rgba(180, 155, 80, 0.15)", borderRadius: 12, padding: 20, marginBottom: 20 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                    <span style={{ fontSize: 16 }}>{"\uD83D\uDD10"}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#1A2332" }}>Owner Financial Information</span>
+                    <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(180, 155, 80, 0.08)", border: "1px solid rgba(180, 155, 80, 0.2)", color: "#8B7A3E" }}>{"\uD83D\uDD12"} Encrypted</span>
                   </div>
-                </div>
-
-                <div style={{ marginBottom: 20 }}>
-                  <label style={labelStyle}>Owner Average AGI (Last 3 Years)</label>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {["<$200K", "$200K-$400K", ">$400K"].map(opt => (
-                      <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--ink)", cursor: "pointer" }}>
-                        <input type="radio" name="agi" checked={agiRange === opt} onChange={() => setAgiRange(opt)} style={{ accentColor: "var(--gold)" }} />
-                        {opt}
-                      </label>
-                    ))}
+                  <div style={{ background: "rgba(180, 155, 80, 0.06)", borderRadius: 8, padding: "12px 16px", marginBottom: 20, fontSize: 12, lineHeight: 1.7, color: "#3A4A5A" }}>
+                    <strong style={{ color: "#1A2332" }}>Why we ask:</strong> These ranges determine your eligibility for the SBA 8(a) Business Development Program. The SBA has strict thresholds &mdash; personal net worth must be under $850K, and AGI must generally be under $400K (averaged over 3 years). This data is <strong>never shared</strong> with anyone without your explicit consent.
                   </div>
-                </div>
 
-                <div>
-                  <label style={labelStyle}>Owner Total Assets</label>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {["<$2M", "$2M-$6.5M", ">$6.5M"].map(opt => (
-                      <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--ink)", cursor: "pointer" }}>
-                        <input type="radio" name="assets" checked={totalAssetsRange === opt} onChange={() => setTotalAssetsRange(opt)} style={{ accentColor: "var(--gold)" }} />
-                        {opt}
-                      </label>
-                    ))}
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={labelStyle}>Owner Personal Net Worth Range</label>
+                    <div style={{ background: "rgba(26, 35, 50, 0.02)", borderRadius: 8, padding: "12px 16px", marginBottom: 10, fontSize: 11, lineHeight: 1.7, color: "#5A6B7B", border: "1px solid rgba(0,0,0,0.04)" }}>
+                      <strong style={{ color: "#1A2332" }}>{"\uD83D\uDCA1"} How to calculate your net worth:</strong><br />
+                      Your personal net worth = <strong>Total Assets minus Total Liabilities</strong>. Here&apos;s where to find each piece:<br /><br />
+                      <strong>Assets (what you own):</strong><br />
+                      &bull; <strong>Bank accounts</strong> &mdash; Check your online banking dashboard for all checking/savings balances<br />
+                      &bull; <strong>Investment accounts</strong> &mdash; Log into Fidelity, Schwab, Vanguard, or your brokerage for current balances<br />
+                      &bull; <strong>Retirement accounts</strong> &mdash; 401(k), IRA, Roth IRA balances (check your plan administrator or statements)<br />
+                      &bull; <strong>Real estate</strong> &mdash; Use Zillow Zestimate or your most recent property tax assessment for fair market value<br />
+                      &bull; <strong>Vehicles</strong> &mdash; Check Kelley Blue Book (kbb.com) for current market value<br />
+                      &bull; <strong>Life insurance</strong> &mdash; Cash surrender value only (call your insurance provider)<br />
+                      &bull; <strong>Other assets</strong> &mdash; Business ownership interests, personal property of value<br /><br />
+                      <strong>Liabilities (what you owe):</strong><br />
+                      &bull; <strong>Mortgage balance</strong> &mdash; Check your most recent mortgage statement or lender portal<br />
+                      &bull; <strong>Auto loans</strong> &mdash; Check your lender portal or most recent statement<br />
+                      &bull; <strong>Student loans</strong> &mdash; Log into studentaid.gov or your loan servicer<br />
+                      &bull; <strong>Credit card debt</strong> &mdash; Total outstanding balances from all cards<br />
+                      &bull; <strong>Other debts</strong> &mdash; Personal loans, lines of credit, tax liens<br /><br />
+                      <strong>{"\uD83D\uDCCB"} Pro tip:</strong> The SBA uses <strong>Form 413 (Personal Financial Statement)</strong> for the official calculation. You can <a href="https://www.sba.gov/document/sba-form-413-personal-financial-statement" target="_blank" rel="noopener" style={{ color: "#B49B50" }}>download it here</a> to work through the numbers. Your primary residence is <strong>excluded</strong> from the net worth calculation for 8(a) eligibility (up to the equity amount).
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {["<$250K", "$250K-$500K", "$500K-$850K", ">$850K"].map(opt => (
+                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--ink)", cursor: "pointer" }}>
+                          <input type="radio" name="netWorth" checked={netWorthRange === opt} onChange={() => setNetWorthRange(opt)} style={{ accentColor: "var(--gold)" }} />
+                          {opt}
+                          {opt === ">$850K" && <span style={{ fontSize: 10, color: "#C46030", fontWeight: 500 }}>(exceeds 8(a) threshold)</span>}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={labelStyle}>Owner Average Adjusted Gross Income (Last 3 Years)</label>
+                    <div style={{ background: "rgba(26, 35, 50, 0.02)", borderRadius: 8, padding: "12px 16px", marginBottom: 10, fontSize: 11, lineHeight: 1.7, color: "#5A6B7B", border: "1px solid rgba(0,0,0,0.04)" }}>
+                      <strong style={{ color: "#1A2332" }}>{"\uD83D\uDCA1"} How to find your AGI:</strong><br />
+                      Your Adjusted Gross Income is on your <strong>IRS Form 1040</strong> &mdash; specifically <strong>Line 11</strong> (as of recent tax years).<br /><br />
+                      <strong>Where to find it:</strong><br />
+                      &bull; <strong>Your tax return copy</strong> &mdash; Look at Page 1 of Form 1040, Line 11 labeled &quot;Adjusted gross income&quot;<br />
+                      &bull; <strong>IRS Online</strong> &mdash; Log into <a href="https://www.irs.gov/individuals/get-transcript" target="_blank" rel="noopener" style={{ color: "#B49B50" }}>irs.gov/individuals/get-transcript</a> and request a &quot;Tax Return Transcript&quot;<br />
+                      &bull; <strong>Your accountant/CPA</strong> &mdash; They have copies of your filed returns<br />
+                      &bull; <strong>Tax software</strong> &mdash; TurboTax, H&amp;R Block, or your filing software stores prior returns<br /><br />
+                      <strong>{"\uD83D\uDCCB"} How to calculate the 3-year average:</strong> Add your AGI from the last 3 tax years and divide by 3. For example: ($350K + $280K + $310K) &divide; 3 = $313K average.
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {["<$200K", "$200K-$400K", ">$400K"].map(opt => (
+                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--ink)", cursor: "pointer" }}>
+                          <input type="radio" name="agi" checked={agiRange === opt} onChange={() => setAgiRange(opt)} style={{ accentColor: "var(--gold)" }} />
+                          {opt}
+                          {opt === ">$400K" && <span style={{ fontSize: 10, color: "#C46030", fontWeight: 500 }}>(exceeds 8(a) threshold)</span>}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>Owner Total Assets</label>
+                    <div style={{ background: "rgba(26, 35, 50, 0.02)", borderRadius: 8, padding: "12px 16px", marginBottom: 10, fontSize: 11, lineHeight: 1.7, color: "#5A6B7B", border: "1px solid rgba(0,0,0,0.04)" }}>
+                      <strong style={{ color: "#1A2332" }}>{"\uD83D\uDCA1"} How to calculate your total assets:</strong><br />
+                      Total assets is the <strong>sum of everything you own</strong> (before subtracting debts). This is the &quot;Assets&quot; side of the net worth equation above.<br /><br />
+                      <strong>Include:</strong><br />
+                      &bull; All bank and investment account balances<br />
+                      &bull; Fair market value of all real estate (including primary residence for this calculation)<br />
+                      &bull; Retirement account balances (401k, IRA, pension)<br />
+                      &bull; Business ownership interests at fair market value<br />
+                      &bull; Vehicles, personal property, and other valuable assets<br /><br />
+                      <strong>{"\uD83D\uDCCB"} Where to look:</strong> The quickest approach is to use your most recent <strong>Personal Financial Statement (SBA Form 413)</strong> if you have one, or your most recent <strong>mortgage application</strong> which requires a complete asset disclosure. Your <strong>bank and brokerage year-end statements</strong> cover most of it.
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {["<$2M", "$2M-$6.5M", ">$6.5M"].map(opt => (
+                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--ink)", cursor: "pointer" }}>
+                          <input type="radio" name="assets" checked={totalAssetsRange === opt} onChange={() => setTotalAssetsRange(opt)} style={{ accentColor: "var(--gold)" }} />
+                          {opt}
+                          {opt === ">$6.5M" && <span style={{ fontSize: 10, color: "#C46030", fontWeight: 500 }}>(exceeds 8(a) threshold)</span>}
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

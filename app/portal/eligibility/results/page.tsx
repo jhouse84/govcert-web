@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { ApplicationCoachingModal } from "@/components/ApplicationCoachingModal";
 
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
@@ -259,6 +260,11 @@ export default function EligibilityResultsPage() {
     router.push("/login");
   }
 
+  // ── Coaching modal state ──
+  const [coachingCertType, setCoachingCertType] = useState<string | null>(null);
+  const [pendingCertId, setPendingCertId] = useState<string | null>(null);
+  const [pendingCertType, setPendingCertType] = useState<string | null>(null);
+
   async function startApplication(certType: string) {
     if (!clientId || creatingCert) return;
     setCreatingCert(certType);
@@ -267,10 +273,11 @@ export default function EligibilityResultsPage() {
         method: "POST",
         body: JSON.stringify({ clientId, type: certType, status: "IN_PROGRESS" }),
       });
-      const wizardBase = certType === "EIGHT_A"
-        ? `/certifications/${newCert.id}/8a/social-disadvantage`
-        : `/certifications/${newCert.id}/corporate`;
-      router.push(wizardBase);
+      // Show coaching modal before navigating to wizard
+      setPendingCertId(newCert.id);
+      setPendingCertType(certType);
+      setCoachingCertType(certType);
+      setCreatingCert(null);
     } catch (err: any) {
       if (err.message?.includes("already has")) {
         alert(err.message);
@@ -279,6 +286,19 @@ export default function EligibilityResultsPage() {
       }
       setCreatingCert(null);
     }
+  }
+
+  function navigateToWizard() {
+    if (!pendingCertId || !pendingCertType) return;
+    let wizardBase: string;
+    if (pendingCertType === "EIGHT_A") {
+      wizardBase = `/certifications/${pendingCertId}/8a/social-disadvantage`;
+    } else if (pendingCertType === "OASIS_PLUS") {
+      wizardBase = `/certifications/${pendingCertId}/oasis-plus/domains`;
+    } else {
+      wizardBase = `/certifications/${pendingCertId}/corporate`;
+    }
+    router.push(wizardBase);
   }
 
   const federalAssessments = assessmentResults?.assessments || [];
@@ -753,6 +773,22 @@ export default function EligibilityResultsPage() {
 
         </div>
       </div>
+
+      {/* Coaching Modal — shown when user starts a new application */}
+      {coachingCertType && clientId && (
+        <ApplicationCoachingModal
+          clientId={clientId}
+          certType={coachingCertType}
+          onClose={() => {
+            setCoachingCertType(null);
+            navigateToWizard();
+          }}
+          onUploadClick={() => {
+            setCoachingCertType(null);
+            router.push("/portal/documents");
+          }}
+        />
+      )}
     </div>
   );
 }

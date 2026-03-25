@@ -83,6 +83,7 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
   const [processingInvoices, setProcessingInvoices] = useState(false);
   const [invoiceGroups, setInvoiceGroups] = useState<any[]>([]);
   const [invoicesProcessed, setInvoicesProcessed] = useState(false);
+  const [existingDocs, setExistingDocs] = useState<Record<string, any[]>>({});
 
   // Library state
   const [librarySearch, setLibrarySearch] = useState("");
@@ -116,6 +117,26 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
           setLcats(parsed.lcats || []);
           setNotes(parsed.notes || "");
           if ((parsed.lcats || []).length > 0) setActiveTab("csp1");
+        } catch {}
+      }
+      // Fetch existing documents by category for the checklist
+      if (data.client?.id) {
+        try {
+          const cats = "INVOICE,RATE_CARD,PAST_PROPOSAL,CONTRACT";
+          const docs = await apiRequest(`/api/upload/documents/by-category/${data.client.id}/${cats}`);
+          const grouped: Record<string, any[]> = {};
+          for (const doc of docs) {
+            if (!grouped[doc.category]) grouped[doc.category] = [];
+            grouped[doc.category].push(doc);
+          }
+          setExistingDocs(grouped);
+          // Auto-check items that have documents
+          const autoChecked: string[] = [];
+          if (grouped.INVOICE?.length) autoChecked.push("invoices");
+          if (grouped.RATE_CARD?.length) autoChecked.push("ratelist", "commercial");
+          if (grouped.PAST_PROPOSAL?.length) autoChecked.push("proposals");
+          if (grouped.CONTRACT?.length) autoChecked.push("proposals");
+          if (autoChecked.length > 0) setCheckedItems(prev => [...new Set([...prev, ...autoChecked])]);
         } catch {}
       }
     } catch (err) {
@@ -548,16 +569,40 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {DOCS_CHECKLIST.map(item => {
                     const checked = checkedItems.includes(item.id);
+                    // Map checklist items to document categories
+                    const catMap: Record<string, string[]> = {
+                      invoices: ["INVOICE"], ratelist: ["RATE_CARD"], proposals: ["PAST_PROPOSAL", "CONTRACT"],
+                      commercial: ["RATE_CARD"], prevgsa: ["RATE_CARD"],
+                    };
+                    const relevantCats = catMap[item.id] || [];
+                    const matchedDocs = relevantCats.flatMap(c => existingDocs[c] || []);
                     return (
                       <div key={item.id} onClick={() => setCheckedItems(prev => checked ? prev.filter(i => i !== item.id) : [...prev, item.id])}
-                        style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 16px", border: `1px solid ${checked ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--r)", cursor: "pointer", background: checked ? "var(--green-bg)" : "#fff", transition: "all .12s" }}>
-                        <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${checked ? "var(--green)" : "var(--border2)"}`, background: checked ? "var(--green)" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                          {checked && <span style={{ fontSize: 11, color: "#fff", fontWeight: 800 }}>✓</span>}
+                        style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 16px", border: `1px solid ${checked ? "var(--green-b)" : matchedDocs.length > 0 ? "rgba(200,155,60,.25)" : "var(--border)"}`, borderRadius: "var(--r)", cursor: "pointer", background: checked ? "var(--green-bg)" : matchedDocs.length > 0 ? "rgba(200,155,60,.04)" : "#fff", transition: "all .12s" }}>
+                        <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${checked ? "var(--green)" : matchedDocs.length > 0 ? "var(--gold)" : "var(--border2)"}`, background: checked ? "var(--green)" : matchedDocs.length > 0 ? "var(--gold)" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                          {(checked || matchedDocs.length > 0) && <span style={{ fontSize: 11, color: "#fff", fontWeight: 800 }}>✓</span>}
                         </div>
                         <span style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--navy)", marginBottom: 3 }}>{item.label}</div>
+                          <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--navy)", marginBottom: 3 }}>
+                            {item.label}
+                            {matchedDocs.length > 0 && (
+                              <span style={{ fontSize: 11, color: "var(--gold)", fontWeight: 600, marginLeft: 8 }}>
+                                {matchedDocs.length} already uploaded
+                              </span>
+                            )}
+                          </div>
                           <div style={{ fontSize: 12.5, color: "var(--ink3)", lineHeight: 1.5 }}>{item.desc}</div>
+                          {matchedDocs.length > 0 && (
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                              {matchedDocs.slice(0, 3).map((d: any, i: number) => (
+                                <span key={i} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "rgba(200,155,60,.08)", color: "var(--gold)", border: "1px solid rgba(200,155,60,.15)" }}>
+                                  {d.originalName?.substring(0, 30)}{d.originalName?.length > 30 ? "..." : ""}
+                                </span>
+                              ))}
+                              {matchedDocs.length > 3 && <span style={{ fontSize: 11, color: "var(--ink4)" }}>+{matchedDocs.length - 3} more</span>}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

@@ -4,6 +4,82 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { ApplicationCoachingModal } from "@/components/ApplicationCoachingModal";
 
+/* ── Resource links for common items users need to obtain ── */
+const RESOURCE_LINKS: Record<string, { url: string; label: string; desc: string }> = {
+  NAICS: {
+    url: "https://www.naics.com/search/",
+    label: "Look up your NAICS codes",
+    desc: "NAICS codes describe the work your company does. You can self-designate under any NAICS code that accurately represents your services. Search by keyword to find codes that match your business.",
+  },
+  UEI: {
+    url: "https://sam.gov/content/entity-registration",
+    label: "Get your UEI on SAM.gov",
+    desc: "Your Unique Entity Identifier (UEI) is assigned when you register on SAM.gov. Registration is free and required for all federal contractors. Allow 7-10 business days for processing.",
+  },
+  CAGE: {
+    url: "https://cage.dla.mil/Home/UsageAgree",
+    label: "Look up your CAGE code",
+    desc: "Your Commercial and Government Entity (CAGE) code is automatically assigned when your SAM.gov registration is processed. You can verify it through the DLA CAGE portal.",
+  },
+  SAM: {
+    url: "https://sam.gov/content/entity-registration",
+    label: "Register on SAM.gov",
+    desc: "System for Award Management registration is free and required before any federal agency can award you a contract. Renew annually.",
+  },
+  HUBZONE_MAP: {
+    url: "https://maps.certify.sba.gov/hubzone/map",
+    label: "Check if your address is in a HUBZone",
+    desc: "Use the SBA's HUBZone map to verify if your principal office and employee addresses qualify.",
+  },
+  SBA_413: {
+    url: "https://www.sba.gov/document/sba-form-413-personal-financial-statement",
+    label: "Download SBA Form 413",
+    desc: "Personal Financial Statement required for 8(a) and EDWOSB applications. Complete one for each owner with 20%+ ownership.",
+  },
+  NET_WORTH: {
+    url: "/portal/resources/net-worth",
+    label: "How to calculate your net worth",
+    desc: "Step-by-step guide to calculating personal net worth for SBA certification applications.",
+  },
+  WOSB_CERTIFY: {
+    url: "https://www.sba.gov/federal-contracting/contracting-assistance-programs/women-owned-small-business-federal-contracting-program",
+    label: "WOSB self-certification on SBA.gov",
+    desc: "WOSB is a self-certification program. You certify your status through the SBA's beta.certify.sba.gov portal. No third-party certifier required.",
+  },
+  VA_LETTER: {
+    url: "https://www.va.gov/records/download-va-letters/",
+    label: "Download your VA disability letter",
+    desc: "Service-disabled veterans can download their disability rating letter directly from VA.gov.",
+  },
+  DD214: {
+    url: "https://www.archives.gov/veterans/military-service-records",
+    label: "Request your DD-214",
+    desc: "If you don't have your DD-214, request it from the National Archives (eVetRecs).",
+  },
+  CPARS: {
+    url: "https://www.cpars.gov/",
+    label: "Access CPARS reports",
+    desc: "Contractor Performance Assessment Reporting System — view or print your past performance evaluations.",
+  },
+};
+
+/* ── Helper: detect keywords in action text and return matching resource ── */
+function getResourceForAction(action: string): { url: string; label: string; desc: string } | null {
+  const lower = action.toLowerCase();
+  if (lower.includes("naics")) return RESOURCE_LINKS.NAICS;
+  if (lower.includes("uei") || lower.includes("unique entity")) return RESOURCE_LINKS.UEI;
+  if (lower.includes("cage")) return RESOURCE_LINKS.CAGE;
+  if (lower.includes("sam.gov") || lower.includes("sam registration")) return RESOURCE_LINKS.SAM;
+  if (lower.includes("hubzone") && (lower.includes("address") || lower.includes("zip") || lower.includes("location"))) return RESOURCE_LINKS.HUBZONE_MAP;
+  if (lower.includes("net worth")) return RESOURCE_LINKS.NET_WORTH;
+  if (lower.includes("form 413") || lower.includes("personal financial statement")) return RESOURCE_LINKS.SBA_413;
+  if (lower.includes("wosb") || lower.includes("woman-owned") || lower.includes("women-owned")) return RESOURCE_LINKS.WOSB_CERTIFY;
+  if (lower.includes("disability") && lower.includes("rating")) return RESOURCE_LINKS.VA_LETTER;
+  if (lower.includes("dd-214") || lower.includes("dd214")) return RESOURCE_LINKS.DD214;
+  if (lower.includes("cpars")) return RESOURCE_LINKS.CPARS;
+  return null;
+}
+
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
   EIGHT_A: "8(a) Business Development",
@@ -928,13 +1004,27 @@ function AssessmentCard({
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--ink4)", marginBottom: 12 }}>
             To Improve Your Eligibility
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {actionsRequired.map((action: string, i: number) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <span style={{ color: "#e67e22", fontSize: 10, marginTop: 4, flexShrink: 0 }}>{"\u25CF"}</span>
-                <span style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.5 }}>{action}</span>
-              </div>
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {actionsRequired.map((action: string, i: number) => {
+              const resource = getResourceForAction(action);
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <span style={{ color: "#e67e22", fontSize: 10, marginTop: 4, flexShrink: 0 }}>{"\u25CF"}</span>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.5 }}>{action}</span>
+                    {resource && (
+                      <div style={{ marginTop: 4 }}>
+                        <a href={resource.url} target={resource.url.startsWith("/") ? undefined : "_blank"} rel="noopener noreferrer"
+                          style={{ fontSize: 12, color: "#B49B50", fontWeight: 500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {resource.label} <span style={{ fontSize: 10 }}>{resource.url.startsWith("/") ? "\u2192" : "\u2197"}</span>
+                        </a>
+                        <div style={{ fontSize: 11, color: "var(--ink4)", lineHeight: 1.5, marginTop: 2 }}>{resource.desc}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

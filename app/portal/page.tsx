@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { trackPageView } from "@/lib/activity";
 import EligibilityScorecard from "@/components/EligibilityScorecard";
+import { downloadSampleZip } from "@/lib/downloadSampleZip";
 
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
@@ -219,31 +220,7 @@ export default function PortalPage() {
             <button onClick={async () => {
               try {
                 const data = await apiRequest("/api/clients/beta/dummy-package");
-                // Download each file with delay to prevent browser blocking
-                for (let i = 0; i < data.files.length; i++) {
-                  const file = data.files[i];
-                  await new Promise(resolve => setTimeout(resolve, i * 300)); // 300ms delay between downloads
-                  let blob;
-                  if (file.contentBase64) {
-                    const binary = atob(file.contentBase64);
-                    const bytes = new Uint8Array(binary.length);
-                    for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
-                    const mimeTypes: Record<string, string> = { xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", csv: "text/csv", txt: "text/plain" };
-                    blob = new Blob([bytes], { type: mimeTypes[file.type] || "application/octet-stream" });
-                  } else {
-                    const mimeTypes: Record<string, string> = { csv: "text/csv", txt: "text/plain" };
-                    blob = new Blob([file.content], { type: mimeTypes[file.type] || "text/plain" });
-                  }
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = file.name;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                }
-                // Show certification intent popup
+                await downloadSampleZip(data);
                 if (data.certificationIntent) {
                   const ci = data.certificationIntent;
                   const emojiMap: Record<string, string> = { high: "🟢", medium: "🟡", low: "🔴" };

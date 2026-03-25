@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { fmtEIN, parseEINRaw, fmtPhone, parsePhoneRaw, fmtZip, parseZipRaw } from "@/lib/formatters";
 
 const FIELDS = [
   { key: "businessName", label: "Legal Business Name", placeholder: "e.g., House Strategies Group LLC", group: "company" },
@@ -508,9 +509,16 @@ export default function CompanyProfilePage() {
                   </label>
                   <input
                     type="text"
-                    value={formData[field.key] || ""}
-                    onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+                    value={field.key === "ein" ? fmtEIN(formData[field.key]) : field.key === "phone" ? fmtPhone(formData[field.key]) : field.key === "zip" ? fmtZip(formData[field.key]) : formData[field.key] || ""}
+                    onChange={e => {
+                      const raw = field.key === "ein" ? parseEINRaw(e.target.value)
+                        : field.key === "phone" ? parsePhoneRaw(e.target.value)
+                        : field.key === "zip" ? parseZipRaw(e.target.value)
+                        : e.target.value;
+                      setFormData(prev => ({ ...prev, [field.key]: raw }));
+                    }}
                     placeholder={field.placeholder}
+                    maxLength={field.key === "ein" ? 10 : field.key === "phone" ? 14 : field.key === "zip" ? 10 : field.key === "uei" ? 12 : field.key === "cageCode" ? 5 : undefined}
                     style={{
                       width: "100%", padding: "9px 12px",
                       border: `1.5px solid ${formData[field.key]?.trim() ? "var(--green-b)" : "var(--border2)"}`,

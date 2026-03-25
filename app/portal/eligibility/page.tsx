@@ -2,6 +2,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { fmtCurrencyInput, parseCurrencyRaw, fmtEIN, parseEINRaw, fmtCurrency, fmtDate } from "@/lib/formatters";
+import { downloadSampleZip } from "@/lib/downloadSampleZip";
 
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
@@ -774,24 +776,7 @@ function PortalEligibilityPageInner() {
                   onClick={async () => {
                     try {
                       const data = await apiRequest("/api/clients/beta/dummy-package");
-                      for (const file of data.files) {
-                        let blob;
-                        if (file.contentBase64) {
-                          const binary = atob(file.contentBase64);
-                          const bytes = new Uint8Array(binary.length);
-                          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                          blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                        } else {
-                          const mimeTypes: Record<string, string> = { csv: "text/csv", txt: "text/plain" };
-                          blob = new Blob([file.content], { type: mimeTypes[file.type] || "text/plain" });
-                        }
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url; a.download = file.name;
-                        document.body.appendChild(a); a.click();
-                        document.body.removeChild(a); URL.revokeObjectURL(url);
-                      }
-                      // Show cert intent
+                      await downloadSampleZip(data);
                       if (data.certificationIntent) {
                         const ci = data.certificationIntent;
                         alert(`📦 Downloaded ${data.totalFiles} files for "${data.companyName}"\n\n🎯 Targeting: ${ci.primaryLabel}\n📊 Openness to other certs: ${ci.explorationLevel.toUpperCase()}\n\n${ci.explorationNote}\n\nNow click "Start Eligibility Wizard" to begin uploading these files!`);
@@ -1239,7 +1224,7 @@ function PortalEligibilityPageInner() {
                   </div>
                   <div>
                     <label style={labelStyle}>EIN</label>
-                    <input style={inputStyle} value={ein} onChange={e => setEin(e.target.value)} placeholder="XX-XXXXXXX" />
+                    <input style={inputStyle} value={fmtEIN(ein)} onChange={e => setEin(parseEINRaw(e.target.value))} placeholder="XX-XXXXXXX" maxLength={10} />
                   </div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
@@ -1394,15 +1379,15 @@ function PortalEligibilityPageInner() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
                   <div>
                     <label style={labelStyle}>Revenue Year 1</label>
-                    <input style={inputStyle} value={revenueYear1} onChange={e => setRevenueYear1(e.target.value)} placeholder="$500,000" />
+                    <input style={inputStyle} value={revenueYear1 ? fmtCurrencyInput(revenueYear1) : ""} onChange={e => setRevenueYear1(parseCurrencyRaw(e.target.value))} placeholder="$500,000" />
                   </div>
                   <div>
                     <label style={labelStyle}>Revenue Year 2</label>
-                    <input style={inputStyle} value={revenueYear2} onChange={e => setRevenueYear2(e.target.value)} placeholder="$750,000" />
+                    <input style={inputStyle} value={revenueYear2 ? fmtCurrencyInput(revenueYear2) : ""} onChange={e => setRevenueYear2(parseCurrencyRaw(e.target.value))} placeholder="$750,000" />
                   </div>
                   <div>
                     <label style={labelStyle}>Revenue Year 3</label>
-                    <input style={inputStyle} value={revenueYear3} onChange={e => setRevenueYear3(e.target.value)} placeholder="$1,000,000" />
+                    <input style={inputStyle} value={revenueYear3 ? fmtCurrencyInput(revenueYear3) : ""} onChange={e => setRevenueYear3(parseCurrencyRaw(e.target.value))} placeholder="$1,000,000" />
                   </div>
                 </div>
 
@@ -1711,9 +1696,9 @@ function PortalEligibilityPageInner() {
                     <button onClick={() => setStep(3)} style={{ background: "none", border: "none", color: "var(--gold)", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>Edit</button>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 13, color: "var(--ink3)" }}>
-                    <div><strong>Revenue Y1:</strong> {revenueYear1 || "\u2014"}</div>
-                    <div><strong>Revenue Y2:</strong> {revenueYear2 || "\u2014"}</div>
-                    <div><strong>Revenue Y3:</strong> {revenueYear3 || "\u2014"}</div>
+                    <div><strong>Revenue Y1:</strong> {revenueYear1 ? fmtCurrency(revenueYear1) : "\u2014"}</div>
+                    <div><strong>Revenue Y2:</strong> {revenueYear2 ? fmtCurrency(revenueYear2) : "\u2014"}</div>
+                    <div><strong>Revenue Y3:</strong> {revenueYear3 ? fmtCurrency(revenueYear3) : "\u2014"}</div>
                     <div><strong>Employees:</strong> {employeeCount || "\u2014"}</div>
                     <div><strong>Net Worth:</strong> {netWorthRange || "\u2014"}</div>
                     <div><strong>AGI:</strong> {agiRange || "\u2014"}</div>

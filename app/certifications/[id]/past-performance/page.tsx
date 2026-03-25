@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { fmtCurrencyInput, parseCurrencyRaw, fmtPhone, parsePhoneRaw } from "@/lib/formatters";
 
 const CONTRACT_TYPES = ["Federal Government", "State/Local Government", "Commercial", "Non-Profit"];
 
@@ -644,8 +645,12 @@ Scope of Work: ${contract.sowDescription}`,
                         {CONTRACT_TYPES.map(t => <option key={t}>{t}</option>)}
                       </select>
                     ) : (
-                      <input type={f.type || "text"} value={(newContract as any)[f.field]}
-                        onChange={e => setNewContract(prev => ({ ...prev, [f.field]: e.target.value }))}
+                      <input type={f.type || "text"}
+                        value={f.field === "contractValue" ? fmtCurrencyInput((newContract as any)[f.field]) : (newContract as any)[f.field]}
+                        onChange={e => {
+                          const val = f.field === "contractValue" ? parseCurrencyRaw(e.target.value) : e.target.value;
+                          setNewContract(prev => ({ ...prev, [f.field]: val }));
+                        }}
                         placeholder={(f as any).placeholder || ""}
                         style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
                     )}
@@ -686,9 +691,14 @@ Scope of Work: ${contract.sowDescription}`,
                   ].map(f => (
                     <div key={f.field}>
                       <label style={{ display: "block", fontSize: 11.5, color: "var(--ink3)", marginBottom: 4, fontWeight: 500 }}>{f.label}</label>
-                      <input type="text" value={(newContract as any)[f.field]}
-                        onChange={e => setNewContract(prev => ({ ...prev, [f.field]: e.target.value }))}
+                      <input type="text"
+                        value={f.field === "referencePhone" ? fmtPhone((newContract as any)[f.field]) : (newContract as any)[f.field]}
+                        onChange={e => {
+                          const val = f.field === "referencePhone" ? parsePhoneRaw(e.target.value) : e.target.value;
+                          setNewContract(prev => ({ ...prev, [f.field]: val }));
+                        }}
                         placeholder={f.placeholder}
+                        maxLength={f.field === "referencePhone" ? 14 : undefined}
                         style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
                     </div>
                   ))}

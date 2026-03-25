@@ -2,7 +2,14 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { parseCurrencyRaw } from "@/lib/formatters";
 import CertSidebar from "@/components/CertSidebar";
+
+function fmtNum(v: string | number | null | undefined): string {
+  if (!v) return "";
+  const n = parseFloat(String(v).replace(/[^0-9.-]/g, ""));
+  return isNaN(n) ? String(v) : n.toLocaleString("en-US");
+}
 
 const EIGHT_A_SECTIONS = [
   { id: "social-disadvantage", label: "Social Disadvantage" },
@@ -498,8 +505,8 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
                     <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--ink4)" }}>$</span>
                     <input
                       type="text"
-                      value={assets[cat.key] || ""}
-                      onChange={e => setAssets(prev => ({ ...prev, [cat.key]: e.target.value }))}
+                      value={fmtNum(assets[cat.key])}
+                      onChange={e => setAssets(prev => ({ ...prev, [cat.key]: parseCurrencyRaw(e.target.value) }))}
                       placeholder="0"
                       style={{
                         width: "100%",
@@ -536,8 +543,8 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
                     <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--ink4)" }}>$</span>
                     <input
                       type="text"
-                      value={liabilities[cat.key] || ""}
-                      onChange={e => setLiabilities(prev => ({ ...prev, [cat.key]: e.target.value }))}
+                      value={fmtNum(liabilities[cat.key])}
+                      onChange={e => setLiabilities(prev => ({ ...prev, [cat.key]: parseCurrencyRaw(e.target.value) }))}
                       placeholder="0"
                       style={{
                         width: "100%",
@@ -578,10 +585,10 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
                           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--ink4)" }}>$</span>
                           <input
                             type="text"
-                            value={iy.adjustedGross}
+                            value={fmtNum(iy.adjustedGross)}
                             onChange={e => {
                               const updated = [...incomeYears];
-                              updated[i] = { ...updated[i], adjustedGross: e.target.value };
+                              updated[i] = { ...updated[i], adjustedGross: parseCurrencyRaw(e.target.value) };
                               setIncomeYears(updated);
                             }}
                             placeholder="0"

@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { fmtCurrencyInput, parseCurrencyRaw } from "@/lib/formatters";
 import CertSidebar from "@/components/CertSidebar";
 
 const EIGHT_A_SECTIONS = [
@@ -361,7 +362,7 @@ export default function Financials8aPage({ params }: { params: Promise<{ id: str
                         </div>
                         <div style={{ position: "relative" }}>
                           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink4)" }}>$</span>
-                          <input value={financials[y.key as "year1" | "year2"][f.key] || ""} onChange={e => updateField(y.key as "year1" | "year2", f.key, e.target.value)} placeholder="0" style={inputStyle} />
+                          <input value={(() => { const v = financials[y.key as "year1" | "year2"][f.key]; if (!v) return ""; const n = parseFloat(String(v).replace(/[^0-9.-]/g, "")); return isNaN(n) ? v : n.toLocaleString("en-US"); })()} onChange={e => updateField(y.key as "year1" | "year2", f.key, parseCurrencyRaw(e.target.value))} placeholder="0" style={inputStyle} />
                         </div>
                       </div>
                     ))}
@@ -377,7 +378,7 @@ export default function Financials8aPage({ params }: { params: Promise<{ id: str
                         </div>
                         <div style={{ position: "relative" }}>
                           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink4)" }}>$</span>
-                          <input value={financials[y.key as "year1" | "year2"][f.key] || ""} onChange={e => updateField(y.key as "year1" | "year2", f.key, e.target.value)} placeholder="0" style={inputStyle} />
+                          <input value={(() => { const v = financials[y.key as "year1" | "year2"][f.key]; if (!v) return ""; const n = parseFloat(String(v).replace(/[^0-9.-]/g, "")); return isNaN(n) ? v : n.toLocaleString("en-US"); })()} onChange={e => updateField(y.key as "year1" | "year2", f.key, parseCurrencyRaw(e.target.value))} placeholder="0" style={inputStyle} />
                         </div>
                       </div>
                     ))}
@@ -421,14 +422,14 @@ export default function Financials8aPage({ params }: { params: Promise<{ id: str
                         <label style={{ fontSize: 12, color: "var(--ink3)", fontWeight: 500, marginBottom: 3, display: "block" }}>Total Personal Assets</label>
                         <div style={{ position: "relative" }}>
                           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink4)" }}>$</span>
-                          <input value={pf.totalAssets} onChange={e => updatePersonal(i, "totalAssets", e.target.value)} style={inputStyle} placeholder="0" />
+                          <input value={pf.totalAssets ? parseFloat(String(pf.totalAssets).replace(/[^0-9.-]/g, "")).toLocaleString("en-US") : ""} onChange={e => updatePersonal(i, "totalAssets", parseCurrencyRaw(e.target.value))} style={inputStyle} placeholder="0" />
                         </div>
                       </div>
                       <div>
                         <label style={{ fontSize: 12, color: "var(--ink3)", fontWeight: 500, marginBottom: 3, display: "block" }}>Total Personal Liabilities</label>
                         <div style={{ position: "relative" }}>
                           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink4)" }}>$</span>
-                          <input value={pf.totalLiabilities} onChange={e => updatePersonal(i, "totalLiabilities", e.target.value)} style={inputStyle} placeholder="0" />
+                          <input value={pf.totalLiabilities ? parseFloat(String(pf.totalLiabilities).replace(/[^0-9.-]/g, "")).toLocaleString("en-US") : ""} onChange={e => updatePersonal(i, "totalLiabilities", parseCurrencyRaw(e.target.value))} style={inputStyle} placeholder="0" />
                         </div>
                       </div>
                       <div>
@@ -441,7 +442,7 @@ export default function Financials8aPage({ params }: { params: Promise<{ id: str
                         <label style={{ fontSize: 12, color: "var(--ink3)", fontWeight: 500, marginBottom: 3, display: "block" }}>Annual Income</label>
                         <div style={{ position: "relative" }}>
                           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink4)" }}>$</span>
-                          <input value={pf.annualIncome} onChange={e => updatePersonal(i, "annualIncome", e.target.value)} style={inputStyle} placeholder="0" />
+                          <input value={pf.annualIncome ? parseFloat(String(pf.annualIncome).replace(/[^0-9.-]/g, "")).toLocaleString("en-US") : ""} onChange={e => updatePersonal(i, "annualIncome", parseCurrencyRaw(e.target.value))} style={inputStyle} placeholder="0" />
                         </div>
                       </div>
                     </div>

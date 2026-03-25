@@ -2,6 +2,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { parseCurrencyRaw } from "@/lib/formatters";
+
+function fmtNum(v: string | number | null | undefined): string {
+  if (!v) return "";
+  const n = parseFloat(String(v).replace(/[^0-9.-]/g, ""));
+  return isNaN(n) ? String(v) : n.toLocaleString("en-US");
+}
 
 const YEARS = [
   { key: "year1", label: "Year 1 (Most Recent)" },
@@ -509,8 +516,8 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
                           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink3)" }}>$</span>
                           <input
                             type="text"
-                            value={(y.key === "year1" ? financials.year1 : financials.year2)[field.key] || ""}
-                            onChange={e => updateField(y.key as "year1" | "year2", field.key, e.target.value)}
+                            value={fmtNum((y.key === "year1" ? financials.year1 : financials.year2)[field.key])}
+                            onChange={e => updateField(y.key as "year1" | "year2", field.key, parseCurrencyRaw(e.target.value))}
                             placeholder="0"
                             style={{ width: "100%", padding: "8px 10px 8px 22px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Mono', monospace", textAlign: "right" as const }}
                           />
@@ -550,8 +557,8 @@ Use the most recent fiscal year as year1. Format numbers without commas or dolla
                           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink3)" }}>$</span>
                           <input
                             type="text"
-                            value={(y.key === "year1" ? financials.year1 : financials.year2)[field.key] || ""}
-                            onChange={e => updateField(y.key as "year1" | "year2", field.key, e.target.value)}
+                            value={fmtNum((y.key === "year1" ? financials.year1 : financials.year2)[field.key])}
+                            onChange={e => updateField(y.key as "year1" | "year2", field.key, parseCurrencyRaw(e.target.value))}
                             placeholder="0"
                             style={{ width: "100%", padding: "8px 10px 8px 22px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Mono', monospace", textAlign: "right" as const }}
                           />

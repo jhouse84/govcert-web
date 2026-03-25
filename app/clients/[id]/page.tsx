@@ -869,9 +869,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                               {assessment.score != null && (
                                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                   <div style={{ flex: 1, height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
-                                    <div style={{ width: `${Math.round(assessment.score * 100)}%`, height: "100%", background: assessment.score >= 0.7 ? "var(--green)" : assessment.score >= 0.4 ? "var(--amber)" : "var(--red)", borderRadius: 3, transition: "width .3s" }} />
+                                    <div style={{ width: `${Math.min(100, Math.round(assessment.score))}%`, height: "100%", background: assessment.score >= 70 ? "var(--green)" : assessment.score >= 40 ? "var(--amber)" : "var(--red)", borderRadius: 3, transition: "width .3s" }} />
                                   </div>
-                                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink2)", minWidth: 36 }}>{Math.round(assessment.score * 100)}%</span>
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink2)", minWidth: 36 }}>{Math.round(assessment.score)}%</span>
                                 </div>
                               )}
                             </div>

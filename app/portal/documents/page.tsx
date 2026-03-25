@@ -171,6 +171,9 @@ export default function PortalDocumentsPage() {
   const [uploadSuccess, setUploadSuccess] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Access requests state
   const [accessRequests, setAccessRequests] = useState<any[]>([]);
@@ -309,6 +312,34 @@ export default function PortalDocumentsPage() {
       setDeleteConfirm(null);
       fetchData();
     } catch (err) { console.error(err); }
+  }
+
+  /* ── Bulk delete handler ── */
+  async function handleBulkDelete() {
+    setBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedDocs);
+      await Promise.all(ids.map(id => apiRequest(`/api/upload/documents/${id}`, { method: "DELETE" })));
+      setSelectedDocs(new Set());
+      setBulkDeleteConfirm(false);
+      fetchData();
+    } catch (err) { console.error(err); } finally { setBulkDeleting(false); }
+  }
+
+  function toggleDocSelection(docId: string) {
+    setSelectedDocs(prev => {
+      const next = new Set(prev);
+      next.has(docId) ? next.delete(docId) : next.add(docId);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedDocs.size === documents.length) {
+      setSelectedDocs(new Set());
+    } else {
+      setSelectedDocs(new Set(documents.map(d => d.id)));
+    }
   }
 
   /* ── Drag & drop handlers ── */
@@ -788,10 +819,65 @@ export default function PortalDocumentsPage() {
                 </div>
               </div>
 
+              {/* Bulk action bar */}
+              {selectedDocs.size > 0 && (
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "10px 16px", marginBottom: 8, borderRadius: 10,
+                  background: "linear-gradient(135deg, rgba(200,155,60,.08), rgba(200,155,60,.04))",
+                  border: "1px solid rgba(200,155,60,.15)",
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>
+                    {selectedDocs.size} document{selectedDocs.size !== 1 ? "s" : ""} selected
+                  </span>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => setSelectedDocs(new Set())} style={{
+                      padding: "6px 14px", borderRadius: 6, border: "1px solid rgba(0,0,0,.1)",
+                      background: "#fff", fontSize: 12, cursor: "pointer",
+                    }}>
+                      Clear Selection
+                    </button>
+                    {!bulkDeleteConfirm ? (
+                      <button onClick={() => setBulkDeleteConfirm(true)} style={{
+                        padding: "6px 14px", borderRadius: 6, border: "1px solid rgba(200,60,60,.2)",
+                        background: "rgba(200,60,60,.05)", color: "#C83C3C", fontSize: 12,
+                        fontWeight: 600, cursor: "pointer",
+                      }}>
+                        Delete Selected
+                      </button>
+                    ) : (
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <span style={{ fontSize: 12, color: "#C83C3C", fontWeight: 600 }}>Are you sure?</span>
+                        <button onClick={handleBulkDelete} disabled={bulkDeleting} style={{
+                          padding: "6px 14px", borderRadius: 6, border: "none",
+                          background: "#C83C3C", color: "#fff", fontSize: 12,
+                          fontWeight: 600, cursor: "pointer", opacity: bulkDeleting ? .6 : 1,
+                        }}>
+                          {bulkDeleting ? "Deleting..." : "Yes, Delete All"}
+                        </button>
+                        <button onClick={() => setBulkDeleteConfirm(false)} style={{
+                          padding: "6px 14px", borderRadius: 6, border: "1px solid rgba(0,0,0,.1)",
+                          background: "#fff", fontSize: 12, cursor: "pointer",
+                        }}>
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div style={{ overflowX: "auto" as const }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 13 }}>
                   <thead>
                     <tr style={{ borderBottom: "2px solid rgba(200,155,60,.12)" }}>
+                      <th style={{ padding: "10px 8px", width: 32 }}>
+                        <input type="checkbox"
+                          checked={documents.length > 0 && selectedDocs.size === documents.length}
+                          onChange={toggleSelectAll}
+                          style={{ cursor: "pointer", accentColor: "#C89B3C" }}
+                        />
+                      </th>
                       {["", "Filename", "Category", "Uploaded By", "Date", "Size", "AI Classification", "", ""].map((h, i) => (
                         <th key={i} style={{
                           textAlign: "left" as const, padding: "10px 12px",
@@ -813,7 +899,18 @@ export default function PortalDocumentsPage() {
                         if (doc.aiAnalysis) parsedAi = typeof doc.aiAnalysis === "string" ? JSON.parse(doc.aiAnalysis) : doc.aiAnalysis;
                       } catch {}
                       return (
-                        <tr key={doc.id} style={{ borderBottom: "1px solid rgba(11,25,41,.04)" }}>
+                        <tr key={doc.id} style={{
+                          borderBottom: "1px solid rgba(11,25,41,.04)",
+                          background: selectedDocs.has(doc.id) ? "rgba(200,155,60,.04)" : undefined,
+                        }}>
+                          {/* Checkbox */}
+                          <td style={{ padding: "12px 8px", width: 32 }}>
+                            <input type="checkbox"
+                              checked={selectedDocs.has(doc.id)}
+                              onChange={() => toggleDocSelection(doc.id)}
+                              style={{ cursor: "pointer", accentColor: "#C89B3C" }}
+                            />
+                          </td>
                           {/* Icon */}
                           <td style={{ padding: "12px 8px 12px 12px", fontSize: 18, width: 36 }}>
                             {getFileIcon(doc.originalName || doc.fileName || "")}

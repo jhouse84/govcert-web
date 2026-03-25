@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/api";
 import { trackPageView } from "@/lib/activity";
 import EligibilityScorecard from "@/components/EligibilityScorecard";
 import { downloadSampleZip } from "@/lib/downloadSampleZip";
+import { SecurityTrustModal } from "@/components/SecurityTrustModal";
 
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
@@ -24,6 +25,7 @@ export default function PortalPage() {
   const [clientId, setClientId] = useState<string | null>(null);
   const [eligibility, setEligibility] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -40,6 +42,12 @@ export default function PortalPage() {
       if (!onboarded) {
         router.push("/portal/eligibility?welcome=true");
         return;
+      }
+
+      // Show security trust modal once per user — existing users see it on next login, then never again
+      const securityKey = `govcert_security_seen_${parsed.id || parsed.email}`;
+      if (!localStorage.getItem(securityKey)) {
+        setShowSecurityModal(true);
       }
     }
     trackPageView("portal-home");
@@ -126,6 +134,15 @@ export default function PortalPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "radial-gradient(ellipse at top right, rgba(200,155,60,.03) 0%, transparent 50%), var(--cream)", display: "flex" }}>
+
+      {/* Security Trust Modal — shown once per user on first login */}
+      {showSecurityModal && (
+        <SecurityTrustModal onClose={() => {
+          setShowSecurityModal(false);
+          const securityKey = `govcert_security_seen_${user?.id || user?.email}`;
+          localStorage.setItem(securityKey, new Date().toISOString());
+        }} />
+      )}
 
       {/* Sidebar */}
       <div style={{ width: 240, background: "linear-gradient(180deg, #0B1929 0%, #0D1F35 100%)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>

@@ -28,6 +28,7 @@ interface Props {
   certType: string;
   onClose: () => void;
   onUploadClick?: () => void;
+  inline?: boolean;
 }
 
 const CERT_LABELS: Record<string, string> = {
@@ -41,7 +42,7 @@ const CERT_LABELS: Record<string, string> = {
   EDWOSB: "Economically Disadvantaged WOSB",
 };
 
-export function ApplicationCoachingModal({ clientId, certType, onClose, onUploadClick }: Props) {
+export function ApplicationCoachingModal({ clientId, certType, onClose, onUploadClick, inline }: Props) {
   const [data, setData] = useState<CoachingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -66,14 +67,13 @@ export function ApplicationCoachingModal({ clientId, certType, onClose, onUpload
   }
 
   if (loading) {
-    return (
-      <div style={overlayStyle}>
-        <div style={{ ...modalStyle, textAlign: "center", padding: 60 }}>
-          <div style={{ fontSize: 32, marginBottom: 16 }}>{"\uD83D\uDCCB"}</div>
-          <div style={{ color: "#8B7A3E", fontSize: 16 }}>Analyzing your document readiness...</div>
-        </div>
+    const loadingContent = (
+      <div style={{ ...(inline ? {} : modalStyle), textAlign: "center", padding: 60 }}>
+        <div style={{ fontSize: 32, marginBottom: 16 }}>{"\uD83D\uDCCB"}</div>
+        <div style={{ color: "#8B7A3E", fontSize: 16 }}>Analyzing your document readiness...</div>
       </div>
     );
+    return inline ? loadingContent : <div style={overlayStyle}>{loadingContent}</div>;
   }
 
   if (!data) {
@@ -84,9 +84,8 @@ export function ApplicationCoachingModal({ clientId, certType, onClose, onUpload
   const criticalReady = data.ready.filter(d => d.importance === "CRITICAL").length;
   const criticalTotal = data.ready.filter(d => d.importance === "CRITICAL").length + data.missing.filter(d => d.importance === "CRITICAL").length;
 
-  return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
+  const content = (
+      <div style={inline ? {} : modalStyle}>
         {/* Header */}
         <div style={{ padding: "28px 32px 0", borderBottom: "1px solid #E8DFC5" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -211,8 +210,9 @@ export function ApplicationCoachingModal({ clientId, certType, onClose, onUpload
           </button>
         </div>
       </div>
-    </div>
   );
+
+  return inline ? content : <div style={overlayStyle}>{content}</div>;
 }
 
 const overlayStyle: React.CSSProperties = {

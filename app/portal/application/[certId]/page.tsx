@@ -31,8 +31,7 @@ export default function PortalApplicationPage({ params }: { params: Promise<{ ce
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState("corporate");
-  const [showCoaching, setShowCoaching] = useState(false);
+  const [activeSection, setActiveSection] = useState("coaching");
   const [coachingCertType, setCoachingCertType] = useState<string>("GSA_MAS");
   const [clientId, setClientId] = useState<string | null>(null);
 
@@ -60,10 +59,6 @@ export default function PortalApplicationPage({ params }: { params: Promise<{ ce
       const certData = await apiRequest(`/api/certifications/${certId}`);
       const certType = certData?.certType || certData?.type || "GSA_MAS";
       setCoachingCertType(certType);
-      const coachingKey = `govcert_coaching_done_${certId}`;
-      if (!localStorage.getItem(coachingKey)) {
-        setShowCoaching(true);
-      }
     } catch (err) { console.error("Coaching check failed:", err); }
   }
 
@@ -84,6 +79,14 @@ export default function PortalApplicationPage({ params }: { params: Promise<{ ce
   const app = cert?.application;
 
   const SECTIONS = [
+    {
+      id: "coaching",
+      label: "Document Analysis",
+      icon: "📋",
+      hasData: false,
+      isCoaching: true,
+      content: [],
+    },
     {
       id: "corporate",
       label: "Corporate Experience",
@@ -161,23 +164,6 @@ export default function PortalApplicationPage({ params }: { params: Promise<{ ce
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
 
-      {/* Document Coaching Modal — shows on first visit to any application */}
-      {showCoaching && clientId && (
-        <ApplicationCoachingModal
-          clientId={clientId}
-          certType={coachingCertType}
-          onClose={() => {
-            setShowCoaching(false);
-            localStorage.setItem(`govcert_coaching_done_${certId}`, new Date().toISOString());
-          }}
-          onUploadClick={() => {
-            setShowCoaching(false);
-            localStorage.setItem(`govcert_coaching_done_${certId}`, new Date().toISOString());
-            router.push("/portal/documents");
-          }}
-        />
-      )}
-
       {/* Sidebar */}
       <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ padding: "24px 20px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
@@ -241,6 +227,39 @@ export default function PortalApplicationPage({ params }: { params: Promise<{ ce
           </div>
 
           {/* Active section content */}
+          {activeSection === "coaching" ? (
+            /* ── Document Analysis / Coaching Step ── */
+            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
+              <div style={{ padding: "18px 24px", background: "linear-gradient(135deg, #0B1929, #1A2F45)", display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 20 }}>📋</span>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 500, color: "#fff" }}>Document Analysis & Coaching</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>Review your document readiness before building your application</div>
+                </div>
+                <button onClick={() => setActiveSection("corporate")} style={{
+                  marginLeft: "auto", padding: "6px 16px", borderRadius: 6, border: "1px solid rgba(255,255,255,.2)",
+                  background: "transparent", color: "rgba(255,255,255,.6)", fontSize: 12, cursor: "pointer",
+                }}>
+                  Skip to Application →
+                </button>
+              </div>
+              <div style={{ padding: "24px 28px" }}>
+                {clientId ? (
+                  <ApplicationCoachingModal
+                    clientId={clientId}
+                    certType={coachingCertType}
+                    onClose={() => setActiveSection("corporate")}
+                    onUploadClick={() => router.push("/portal/documents")}
+                    inline={true}
+                  />
+                ) : (
+                  <div style={{ textAlign: "center", padding: "40px 0", color: "var(--ink4)" }}>
+                    <div style={{ fontSize: 14 }}>Loading document analysis...</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
           <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
             <div style={{ padding: "18px 24px", background: "var(--navy)", display: "flex", alignItems: "center", gap: 12 }}>
               <span style={{ fontSize: 20 }}>{activeS.icon}</span>
@@ -298,6 +317,7 @@ export default function PortalApplicationPage({ params }: { params: Promise<{ ce
               )}
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

@@ -459,7 +459,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           {showRequestModal && (
             <div style={{
               position: "fixed", inset: 0, zIndex: 9999,
-              background: "rgba(11,25,41,.5)", backdropFilter: "blur(4px)",
+              background: "rgba(11,25,41,.5)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <div style={{

@@ -45,6 +45,7 @@ export function SecurityTrustModal({ onClose }: Props) {
       position: "fixed", inset: 0, zIndex: 10000,
       backgroundColor: "rgba(11, 25, 41, 0.85)",
       backdropFilter: "blur(8px)",
+      WebkitBackdropFilter: "blur(8px)",
       display: "flex", alignItems: "center", justifyContent: "center",
       padding: 24,
     }}>

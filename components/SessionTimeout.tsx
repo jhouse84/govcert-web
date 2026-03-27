@@ -78,7 +78,7 @@ export default function SessionTimeout() {
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 99999,
-      background: "rgba(11,25,41,.65)", backdropFilter: "blur(4px)",
+      background: "rgba(11,25,41,.65)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
       <div style={{

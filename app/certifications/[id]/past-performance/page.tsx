@@ -956,7 +956,7 @@ Scope of Work: ${contract.sowDescription}`,
       {ppqModal.open && (
         <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div onClick={() => !ppqModal.drafting && !ppqModal.sending && setPpqModal(prev => ({ ...prev, open: false }))}
-            style={{ position: "absolute", inset: 0, background: "rgba(11,25,41,.7)", backdropFilter: "blur(4px)" }} />
+            style={{ position: "absolute", inset: 0, background: "rgba(11,25,41,.7)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }} />
           <div style={{ position: "relative", width: ppqModal.step === 2 ? 680 : 520, maxHeight: "90vh", overflowY: "auto", background: "#fff", borderRadius: 16, boxShadow: "0 24px 80px rgba(0,0,0,.25)", padding: ppqModal.step === 3 ? "48px 40px" : "32px 36px" }}>
 
             {/* Step indicator */}

@@ -27,6 +27,7 @@ export default function LandingPage() {
         padding: "0 48px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between",
         background: scrolled ? "rgba(11,25,41,.92)" : "transparent",
         backdropFilter: scrolled ? "blur(16px)" : "none",
+        WebkitBackdropFilter: scrolled ? "blur(16px)" : "none",
         borderBottom: scrolled ? "1px solid rgba(255,255,255,.07)" : "none",
         boxShadow: scrolled ? "0 1px 8px rgba(0,0,0,.15)" : "none",
         transition: "all .3s cubic-bezier(.4,0,.2,1)"
@@ -47,7 +48,7 @@ export default function LandingPage() {
           ))}
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <a href="/login" style={{ padding: "8px 20px", borderRadius: "var(--r)", fontSize: 13, fontWeight: 500, background: "rgba(255,255,255,.06)", color: "rgba(255,255,255,.85)", border: "1px solid rgba(255,255,255,.12)", textDecoration: "none", backdropFilter: "blur(8px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
+          <a href="/login" style={{ padding: "8px 20px", borderRadius: "var(--r)", fontSize: 13, fontWeight: 500, background: "rgba(255,255,255,.06)", color: "rgba(255,255,255,.85)", border: "1px solid rgba(255,255,255,.12)", textDecoration: "none", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,.12)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.2)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,.06)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.12)"; }}>Sign In</a>
           <a href="/register" style={{ padding: "8px 20px", borderRadius: "var(--r)", fontSize: 13, fontWeight: 500, background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)", color: "#fff", textDecoration: "none", transition: "all .25s cubic-bezier(.4,0,.2,1)", boxShadow: "0 2px 12px rgba(200,155,60,.3)" }}
@@ -60,7 +61,7 @@ export default function LandingPage() {
       <div style={{ position: "relative", height: "100vh", minHeight: 700, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(11,25,41,.75) 0%,rgba(11,25,41,.50) 40%,rgba(11,25,41,.80) 100%), url(https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=1800&q=80&auto=format&fit=crop) center/cover no-repeat" }} />
         <div style={{ position: "relative", zIndex: 2, textAlign: "center", maxWidth: 860, padding: "0 24px" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(200,155,60,.18)", border: "1px solid rgba(200,155,60,.3)", borderRadius: 100, padding: "5px 14px", marginBottom: 28, backdropFilter: "blur(8px)" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(200,155,60,.18)", border: "1px solid rgba(200,155,60,.3)", borderRadius: 100, padding: "5px 14px", marginBottom: 28, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
             <div style={{ width: 6, height: 6, background: "var(--gold2)", borderRadius: "50%" }} />
             <span style={{ fontSize: 11.5, fontWeight: 500, color: "var(--gold-lt)", letterSpacing: ".08em", textTransform: "uppercase" }}>Government Certification Automation</span>
           </div>
@@ -85,7 +86,7 @@ export default function LandingPage() {
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 24px rgba(200,155,60,.4), 0 1px 3px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "none"; }}>
                 Start Free Trial →
               </a>
-              <a href="/register" style={{ padding: "14px 32px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.18)", borderRadius: "var(--r)", color: "#fff", fontSize: 15, textDecoration: "none", backdropFilter: "blur(8px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
+              <a href="/register" style={{ padding: "14px 32px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.18)", borderRadius: "var(--r)", color: "#fff", fontSize: 15, textDecoration: "none", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,.12)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.28)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,.06)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.18)"; }}>
                 Start an Application →
@@ -102,7 +103,7 @@ export default function LandingPage() {
           </div>
         </div>
         {/* Stats glass panel */}
-        <div style={{ position: "absolute", bottom: 60, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 48, zIndex: 2, background: "rgba(255,255,255,.06)", backdropFilter: "blur(16px)", borderRadius: 16, padding: "24px 48px", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 4px 24px rgba(0,0,0,.15)" }}>
+        <div style={{ position: "absolute", bottom: 60, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 48, zIndex: 2, background: "rgba(255,255,255,.06)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRadius: 16, padding: "24px 48px", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 4px 24px rgba(0,0,0,.15)" }}>
           {[["$700B+", "Federal Contracts Annually"], ["170K+", "Certified Small Businesses"], ["80%", "Faster with GovCert"]].map(([v, l]) => (
             <div key={l} style={{ textAlign: "center" }}>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: "#fff", fontWeight: 400, lineHeight: 1, letterSpacing: "-.03em" }}>{v}</div>
@@ -206,7 +207,7 @@ export default function LandingPage() {
               { icon: "📈", title: "Status Tracking", body: "Real-time status updates across all your certifications. Know exactly where every application stands." },
               { icon: "⚡", title: "Instant SAM.gov Sync", body: "Direct integration with SAM.gov for registration verification and automatic data population." },
             ].map(f => (
-              <div key={f.title} style={{ padding: "40px 36px", background: "rgba(255,255,255,.02)", backdropFilter: "blur(16px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
+              <div key={f.title} style={{ padding: "40px 36px", background: "rgba(255,255,255,.02)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,.06)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,.02)"; e.currentTarget.style.transform = "none"; }}>
                 <div style={{ width: 44, height: 44, background: "var(--gold-bg)", border: "1px solid rgba(200,155,60,.25)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 20 }}>{f.icon}</div>
@@ -236,7 +237,7 @@ export default function LandingPage() {
               { badge: "State", badgeColor: "#5A1A6A", badgeBg: "#F0E8F8", title: "MBE / DBE", body: "Minority and Disadvantaged Business Enterprise certifications for state and local government contracts." },
               { badge: "SAM", badgeColor: "#1A6644", badgeBg: "#E6F4EE", title: "SAM.gov Registration", body: "Required for all federal contracting. We handle initial registration and annual renewals automatically." },
             ].map(c => (
-              <div key={c.title} style={{ background: "rgba(255,255,255,.85)", backdropFilter: "blur(16px)", border: "1px solid rgba(200,155,60,.12)", borderRadius: "var(--rl)", padding: 28, position: "relative", overflow: "hidden", transition: "all .25s cubic-bezier(.4,0,.2,1)", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)" }}
+              <div key={c.title} style={{ background: "rgba(255,255,255,.85)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid rgba(200,155,60,.12)", borderRadius: "var(--rl)", padding: 28, position: "relative", overflow: "hidden", transition: "all .25s cubic-bezier(.4,0,.2,1)", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.08), 0 20px 48px rgba(0,0,0,.06)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)"; }}>
                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg, var(--gold), var(--gold2))" }} />

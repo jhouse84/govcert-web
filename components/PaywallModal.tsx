@@ -48,7 +48,7 @@ export default function PaywallModal({ certType, certLabel, price, betaMode, onU
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(11,25,41,.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, backdropFilter: "blur(4px)" }}
+    <div style={{ position: "fixed", inset: 0, background: "rgba(11,25,41,.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }}
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: "40px 44px", maxWidth: 520, width: "100%", boxShadow: "0 24px 80px rgba(0,0,0,.3)", position: "relative" }}>
         <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 20, color: "var(--ink4)", cursor: "pointer" }}>&times;</button>

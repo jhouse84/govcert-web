@@ -164,7 +164,7 @@ export default function RegisterPage() {
               {PLANS.map(plan => (
                 <div key={plan.id}
                   onClick={() => selectPlan(plan.id)}
-                  style={{ background: "rgba(255,255,255,.04)", backdropFilter: "blur(16px)", border: `2px solid ${selectedPlan === plan.id ? "var(--gold)" : "rgba(255,255,255,.08)"}`, borderRadius: 16, padding: "32px 28px", cursor: "pointer", transition: "all .25s cubic-bezier(.4,0,.2,1)", position: "relative", overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)" }}
+                  style={{ background: "rgba(255,255,255,.04)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: `2px solid ${selectedPlan === plan.id ? "var(--gold)" : "rgba(255,255,255,.08)"}`, borderRadius: 16, padding: "32px 28px", cursor: "pointer", transition: "all .25s cubic-bezier(.4,0,.2,1)", position: "relative", overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)" }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--gold)"; e.currentTarget.style.background = "rgba(255,255,255,.06)"; e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.08), 0 20px 48px rgba(0,0,0,.06)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = selectedPlan === plan.id ? "var(--gold)" : "rgba(255,255,255,.08)"; e.currentTarget.style.background = "rgba(255,255,255,.04)"; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)"; }}>
 
@@ -230,7 +230,7 @@ export default function RegisterPage() {
           <div style={{ maxWidth: 500, margin: "0 auto" }}>
 
             {/* Selected plan indicator */}
-            <div style={{ background: "rgba(200,155,60,.08)", border: "1px solid rgba(200,155,60,.2)", borderRadius: 10, padding: "12px 16px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between", backdropFilter: "blur(16px)" }}>
+            <div style={{ background: "rgba(200,155,60,.08)", border: "1px solid rgba(200,155,60,.2)", borderRadius: 10, padding: "12px 16px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
               <div>
                 <div style={{ fontSize: 10, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "rgba(200,155,60,.6)", marginBottom: 2 }}>Selected Plan</div>
                 <div style={{ fontSize: 14, fontWeight: 500, color: "var(--gold2)" }}>
@@ -251,7 +251,7 @@ export default function RegisterPage() {
               <p style={{ fontSize: 14, color: "rgba(255,255,255,.4)" }}>You'll verify your email after signing up</p>
             </div>
 
-            <div style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 14, padding: "36px 32px", backdropFilter: "blur(16px)", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)" }}>
+            <div style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 14, padding: "36px 32px", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)" }}>
               {error && (
                 <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "10px 14px", marginBottom: 20, color: "var(--red)", fontSize: 13 }}>
                   {error}
@@ -369,7 +369,7 @@ export default function RegisterPage() {
         {/* STEP 3 — Check Email */}
         {step === 3 && (
           <div style={{ maxWidth: 480, margin: "0 auto" }}>
-            <div style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 16, padding: "48px 40px", textAlign: "center", backdropFilter: "blur(16px)", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)" }}>
+            <div style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 16, padding: "48px 40px", textAlign: "center", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04)" }}>
               <div style={{ fontSize: 52, marginBottom: 20 }}>📬</div>
               <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, color: "#fff", fontWeight: 400, marginBottom: 10, letterSpacing: "-.03em" }}>
                 Check your email
@@ -382,7 +382,7 @@ export default function RegisterPage() {
               </p>
 
               {/* What to expect */}
-              <div style={{ background: "rgba(200,155,60,.08)", border: "1px solid rgba(200,155,60,.15)", borderRadius: 10, padding: "18px 20px", marginBottom: 28, textAlign: "left" as const, backdropFilter: "blur(8px)" }}>
+              <div style={{ background: "rgba(200,155,60,.08)", border: "1px solid rgba(200,155,60,.15)", borderRadius: 10, padding: "18px 20px", marginBottom: 28, textAlign: "left" as const, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--gold2)", marginBottom: 12 }}>What happens next</div>
                 {selectedPlan === "CONSULTING" ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

@@ -219,6 +219,7 @@ const overlayStyle: React.CSSProperties = {
   position: "fixed", inset: 0, zIndex: 9999,
   backgroundColor: "rgba(26, 35, 50, 0.7)",
   backdropFilter: "blur(4px)",
+  WebkitBackdropFilter: "blur(4px)",
   display: "flex", alignItems: "center", justifyContent: "center",
 };
 

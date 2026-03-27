@@ -182,7 +182,7 @@ export default function ClientsPage() {
       {showInviteModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {/* Backdrop */}
-          <div onClick={() => setShowInviteModal(false)} style={{ position: "absolute", inset: 0, background: "rgba(11,25,41,.6)", backdropFilter: "blur(4px)" }} />
+          <div onClick={() => setShowInviteModal(false)} style={{ position: "absolute", inset: 0, background: "rgba(11,25,41,.6)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }} />
           {/* Modal */}
           <div style={{ position: "relative", width: 480, background: "#F5F1E8", borderRadius: 16, overflow: "hidden", boxShadow: "0 24px 80px rgba(11,25,41,.35), 0 8px 24px rgba(11,25,41,.15)" }}>
             {/* Navy header */}
@@ -197,7 +197,7 @@ export default function ClientsPage() {
             </div>
             {/* Body */}
             <div style={{ padding: "28px" }}>
-              <div style={{ background: "rgba(255,255,255,.7)", border: "1px solid rgba(200,155,60,.15)", borderRadius: 12, padding: "24px", backdropFilter: "blur(8px)", boxShadow: "0 2px 12px rgba(11,25,41,.06)" }}>
+              <div style={{ background: "rgba(255,255,255,.7)", border: "1px solid rgba(200,155,60,.15)", borderRadius: 12, padding: "24px", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", boxShadow: "0 2px 12px rgba(11,25,41,.06)" }}>
                 {inviteSuccess && (
                   <div style={{ padding: "12px 16px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: 8, fontSize: 13, color: "var(--green)", fontWeight: 500, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
                     <span>&#10003;</span> {inviteSuccess}

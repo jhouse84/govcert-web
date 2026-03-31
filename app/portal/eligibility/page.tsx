@@ -1171,9 +1171,40 @@ function PortalEligibilityPageInner() {
                       </div>
                     )}
 
+                    {/* Existing documents banner */}
+                    {uploadedDocs.length > 0 && Object.keys(uploadedDocTypes).length === 0 && !extractionResult && (
+                      <div style={{
+                        background: "linear-gradient(135deg, rgba(200,155,60,.08), rgba(200,155,60,.03))",
+                        border: "1px solid rgba(200,155,60,.2)", borderRadius: 10,
+                        padding: "16px 20px", marginBottom: 20,
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                      }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)", marginBottom: 4 }}>
+                            {"\uD83D\uDCC2"} {uploadedDocs.length} document{uploadedDocs.length !== 1 ? "s" : ""} already on file
+                          </div>
+                          <div style={{ fontSize: 12, color: "var(--ink3)" }}>
+                            You have documents from a previous session. Analyze them to pre-fill your eligibility assessment, or upload additional files below.
+                          </div>
+                        </div>
+                        <button
+                          onClick={extractFromDocs}
+                          disabled={extracting}
+                          style={{
+                            padding: "10px 20px", borderRadius: 8, border: "none",
+                            background: extracting ? "var(--ink4)" : "linear-gradient(135deg, #C89B3C, #E8B84B)",
+                            color: "#fff", fontSize: 13, fontWeight: 600, cursor: extracting ? "wait" : "pointer",
+                            whiteSpace: "nowrap" as const, flexShrink: 0, marginLeft: 16,
+                          }}
+                        >
+                          {extracting ? "Analyzing..." : "\uD83E\uDDE0 Analyze All"}
+                        </button>
+                      </div>
+                    )}
+
                     {/* Action buttons */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                      {Object.keys(uploadedDocTypes).length > 0 && (
+                      {(Object.keys(uploadedDocTypes).length > 0 || uploadedDocs.length > 0) && (
                         <button
                           onClick={extractFromDocs}
                           disabled={extracting}

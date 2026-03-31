@@ -175,6 +175,11 @@ export default function PortalDocumentsPage() {
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
+  // Analyze documents state
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeProgress, setAnalyzeProgress] = useState({ current: 0, total: 0, status: "" });
+  const [analyzeResult, setAnalyzeResult] = useState<any>(null);
+
   // Access requests state
   const [accessRequests, setAccessRequests] = useState<any[]>([]);
   const [activeGrants, setActiveGrants] = useState<any[]>([]);
@@ -339,6 +344,39 @@ export default function PortalDocumentsPage() {
       setSelectedDocs(new Set());
     } else {
       setSelectedDocs(new Set(documents.map(d => d.id)));
+    }
+  }
+
+  /* ── Analyze all documents ── */
+  async function handleAnalyzeDocuments() {
+    if (!clientId || analyzing) return;
+    setAnalyzing(true);
+    setAnalyzeResult(null);
+    try {
+      // Step 1: Trigger AI extraction from all docs → eligibility profile
+      setAnalyzeProgress({ current: 1, total: 3, status: "Extracting data from documents..." });
+      const extractResult = await apiRequest(`/api/eligibility/${clientId}/extract-from-docs`, { method: "POST" });
+
+      // Step 2: Re-run eligibility assessment if intake exists
+      setAnalyzeProgress({ current: 2, total: 3, status: "Updating eligibility assessment..." });
+      try {
+        await apiRequest(`/api/eligibility/${clientId}/assess`, { method: "POST" });
+      } catch {} // Okay if no intake yet
+
+      // Step 3: Refresh document list
+      setAnalyzeProgress({ current: 3, total: 3, status: "Refreshing documents..." });
+      await fetchData();
+
+      setAnalyzeResult({
+        success: true,
+        fieldsExtracted: extractResult?.fieldsExtracted || 0,
+        message: `Analyzed ${documents.length} documents. ${extractResult?.fieldsExtracted || 0} fields extracted and mapped to your profile. This data will auto-populate eligibility and any applications you start.`,
+      });
+    } catch (err: any) {
+      setAnalyzeResult({ success: false, message: "Analysis failed: " + (err.message || "Unknown error") });
+    } finally {
+      setAnalyzing(false);
+      setAnalyzeProgress({ current: 0, total: 0, status: "" });
     }
   }
 
@@ -811,13 +849,50 @@ export default function PortalDocumentsPage() {
                     Uploaded Documents
                   </h2>
                 </div>
-                <div style={{
-                  padding: "5px 14px", background: "#0B1929", borderRadius: 100,
-                  fontSize: 12, color: "#E8B84B", fontWeight: 500,
-                }}>
-                  {totalDocs} document{totalDocs !== 1 ? "s" : ""}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button
+                    onClick={handleAnalyzeDocuments}
+                    disabled={analyzing}
+                    style={{
+                      padding: "8px 18px", borderRadius: 8, border: "none",
+                      background: analyzing ? "rgba(200,155,60,.3)" : "linear-gradient(135deg, #C89B3C, #E8B84B)",
+                      color: "#fff", fontSize: 13, fontWeight: 500, cursor: analyzing ? "wait" : "pointer",
+                      display: "flex", alignItems: "center", gap: 8,
+                      boxShadow: "0 2px 8px rgba(200,155,60,.25)",
+                    }}
+                  >
+                    {analyzing ? (
+                      <>{"\u{1F504}"} {analyzeProgress.status || "Analyzing..."}</>
+                    ) : (
+                      <>{"\u{1F9E0}"} Analyze All Documents</>
+                    )}
+                  </button>
+                  <div style={{
+                    padding: "5px 14px", background: "#0B1929", borderRadius: 100,
+                    fontSize: 12, color: "#E8B84B", fontWeight: 500,
+                  }}>
+                    {totalDocs} document{totalDocs !== 1 ? "s" : ""}
+                  </div>
                 </div>
               </div>
+
+              {/* Analyze result banner */}
+              {analyzeResult && (
+                <div style={{
+                  padding: "12px 16px", marginBottom: 16, borderRadius: 10,
+                  background: analyzeResult.success ? "rgba(34,197,94,.06)" : "rgba(200,60,60,.06)",
+                  border: `1px solid ${analyzeResult.success ? "rgba(34,197,94,.2)" : "rgba(200,60,60,.2)"}`,
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                }}>
+                  <span style={{ fontSize: 13, color: analyzeResult.success ? "#16a34a" : "#C83C3C" }}>
+                    {analyzeResult.success ? "\u2705" : "\u274C"} {analyzeResult.message}
+                  </span>
+                  <button onClick={() => setAnalyzeResult(null)} style={{
+                    padding: "4px 10px", borderRadius: 4, border: "1px solid rgba(0,0,0,.1)",
+                    background: "transparent", fontSize: 11, cursor: "pointer",
+                  }}>Dismiss</button>
+                </div>
+              )}
 
               {/* Bulk action bar */}
               {selectedDocs.size > 0 && (

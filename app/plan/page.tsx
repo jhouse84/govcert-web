@@ -38,7 +38,7 @@ const PHASES = [
     status:"done", color:"#1A6644",
     tasks:[
       {title:"Next.js app created with TypeScript",status:"done"},
-      {title:"Deployed to Vercel — govcert-web.vercel.app",status:"done"},
+      {title:"Deployed to Vercel — govcert.ai",status:"done"},
       {title:"lib/api.ts — API client with JWT auth headers",status:"done"},
       {title:"GovCert design system — navy/gold/Cormorant Garamond",status:"done"},
       {title:"Landing page — hero, features, certs, pricing",status:"done"},
@@ -206,7 +206,7 @@ export default function PlanPage() {
           })}
         </nav>
         <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,.07)", fontSize: 10.5, color: "rgba(255,255,255,.28)", lineHeight: 1.6 }}>
-          govcert.ai · govcert-web.vercel.app<br/>
+          govcert.ai · govcert.ai<br/>
           Click tasks to update status
         </div>
       </div>
@@ -217,7 +217,7 @@ export default function PlanPage() {
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "#C89B3C", marginBottom: 8 }}>Development Tracker</div>
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 400, marginBottom: 6 }}>GovCert Project Plan</h1>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,.45)", marginBottom: 20 }}>
-            Backend: govcert.ai (Railway) · Frontend: govcert-web.vercel.app (Vercel) · Click any task to cycle its status
+            Backend: govcert.ai (Railway) · Frontend: govcert.ai (Vercel) · Click any task to cycle its status
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
             {[

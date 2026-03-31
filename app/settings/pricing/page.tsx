@@ -30,6 +30,8 @@ export default function PricingManagementPage() {
   const [editForm, setEditForm] = useState<any>({});
   const [showNewPlan, setShowNewPlan] = useState(false);
   const [newPlan, setNewPlan] = useState({ name: "", slug: "", description: "", price: 0, interval: "", features: "", maxCerts: "" });
+  const [betaMode, setBetaMode] = useState(true);
+  const [togglingBeta, setTogglingBeta] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -41,6 +43,7 @@ export default function PricingManagementPage() {
       setUser(parsed);
     }
     fetchData();
+    fetchBetaStatus();
   }, []);
 
   async function fetchData() {
@@ -56,6 +59,25 @@ export default function PricingManagementPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function fetchBetaStatus() {
+    try {
+      const data = await apiRequest("/api/pricing");
+      setBetaMode(data.betaMode ?? true);
+    } catch { setBetaMode(true); }
+  }
+
+  async function toggleBeta() {
+    setTogglingBeta(true);
+    try {
+      await apiRequest("/api/pricing", {
+        method: "PUT",
+        body: JSON.stringify({ betaMode: !betaMode }),
+      });
+      setBetaMode(!betaMode);
+    } catch (err) { console.error(err); }
+    finally { setTogglingBeta(false); }
   }
 
   async function savePlan(planId: string) {
@@ -191,6 +213,58 @@ export default function PricingManagementPage() {
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300, lineHeight: 1.6 }}>
               Manage pricing plans, view orders, and configure payment settings
             </p>
+          </div>
+
+          {/* Beta Mode Toggle */}
+          <div style={{
+            background: betaMode
+              ? "linear-gradient(135deg, rgba(200,155,60,.12) 0%, rgba(200,155,60,.04) 100%)"
+              : "linear-gradient(135deg, rgba(34,197,94,.08) 0%, rgba(34,197,94,.02) 100%)",
+            border: betaMode ? "2px solid rgba(200,155,60,.35)" : "2px solid rgba(34,197,94,.3)",
+            borderRadius: 16, padding: "28px 32px", marginBottom: 32,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                  <span style={{ fontSize: 28 }}>{betaMode ? "\u26A0\uFE0F" : "\u2705"}</span>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, margin: 0 }}>
+                    Beta Mode
+                  </h2>
+                </div>
+                <p style={{ fontSize: 15, color: betaMode ? "#92700C" : "var(--ink3)", lineHeight: 1.6, margin: 0, maxWidth: 500 }}>
+                  {betaMode
+                    ? "Everything is FREE. All paywalls are bypassed. Users can access all features without payment."
+                    : "Paywalls are ACTIVE. Users must purchase a plan before starting applications or using AI features."
+                  }
+                </p>
+                {betaMode && (
+                  <div style={{
+                    marginTop: 12, padding: "8px 14px", background: "rgba(200,155,60,.12)",
+                    border: "1px solid rgba(200,155,60,.25)", borderRadius: 8,
+                    fontSize: 13, color: "#92700C", fontWeight: 500, display: "inline-block",
+                  }}>
+                    Turn OFF to start charging users
+                  </div>
+                )}
+              </div>
+              <div
+                onClick={togglingBeta ? undefined : toggleBeta}
+                style={{
+                  width: 72, height: 40, borderRadius: 20, cursor: togglingBeta ? "wait" : "pointer",
+                  background: betaMode ? "linear-gradient(135deg, #C89B3C, #E8B84B)" : "rgba(34,197,94,.8)",
+                  position: "relative" as const, transition: "background .3s",
+                  boxShadow: betaMode ? "0 2px 12px rgba(200,155,60,.35)" : "0 2px 12px rgba(34,197,94,.3)",
+                  opacity: togglingBeta ? .6 : 1,
+                }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 16, background: "#fff",
+                  position: "absolute" as const, top: 4,
+                  left: betaMode ? 4 : 36,
+                  transition: "left .3s",
+                  boxShadow: "0 2px 6px rgba(0,0,0,.15)",
+                }} />
+              </div>
+            </div>
           </div>
 
           {/* Revenue Summary */}

@@ -4,35 +4,32 @@ import { useRouter, usePathname } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { ADMIN_NAV } from "@/lib/admin-nav";
 
-const CERT_TYPE_LABELS: Record<string, string> = {
-  GSA_MAS: "GSA Multiple Award Schedule",
-  EIGHT_A: "8(a) Business Development",
-  WOSB: "Women-Owned Small Business",
-  SDVOSB: "Service-Disabled Veteran-Owned",
-  HUBZONE: "HUBZone",
-  MBE: "Minority Business Enterprise",
-  BUNDLE_8A_GSA: "8(a) + GSA Bundle",
-};
-
-const TIER_LABELS: Record<string, string> = {
-  ESSENTIAL: "Essential",
-  PROFESSIONAL: "Professional",
-  ENTERPRISE: "Enterprise",
-};
+interface Plan {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  price: number; // cents
+  currency: string;
+  interval: string | null;
+  features: string | null;
+  active: boolean;
+  sortOrder: number;
+  maxCerts: number | null;
+}
 
 export default function PricingManagementPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
-  const [pricing, setPricing] = useState<any>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  // Editable state
-  const [betaMode, setBetaMode] = useState(true);
-  const [generationFees, setGenerationFees] = useState<Record<string, number>>({});
-  const [maintenanceTiers, setMaintenanceTiers] = useState<Record<string, { name: string; monthlyPrice: number; annualPrice: number }>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+  const [editingPlan, setEditingPlan] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<any>({});
+  const [showNewPlan, setShowNewPlan] = useState(false);
+  const [newPlan, setNewPlan] = useState({ name: "", slug: "", description: "", price: 0, interval: "", features: "", maxCerts: "" });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -40,44 +37,83 @@ export default function PricingManagementPage() {
     if (!token) { router.push("/login"); return; }
     if (userData) {
       const parsed = JSON.parse(userData);
-      if (parsed.role === "CUSTOMER") { router.push("/portal"); return; }
-      if (parsed.role === "ADVISOR") { router.push("/dashboard"); return; }
+      if (parsed.role !== "ADMIN") { router.push("/dashboard"); return; }
       setUser(parsed);
     }
-    fetchPricing();
+    fetchData();
   }, []);
 
-  async function fetchPricing() {
+  async function fetchData() {
     try {
-      const data = await apiRequest("/api/pricing");
-      setPricing(data);
-      setBetaMode(data.betaMode ?? true);
-      setGenerationFees(data.generationFees || {});
-      setMaintenanceTiers(data.maintenanceTiers || {});
+      const [plansData, ordersData] = await Promise.all([
+        apiRequest("/api/payments/plans/all"),
+        apiRequest("/api/payments/orders"),
+      ]);
+      setPlans(plansData);
+      setOrders(ordersData);
     } catch (err) {
-      console.error("Failed to fetch pricing:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleSave() {
-    setSaving(true);
-    setSaveSuccess(false);
+  async function savePlan(planId: string) {
+    setSaving(planId);
     try {
-      await apiRequest("/api/pricing", {
+      await apiRequest(`/api/payments/plans/${planId}`, {
         method: "PUT",
-        body: JSON.stringify({ betaMode, generationFees, maintenanceTiers }),
+        body: JSON.stringify({
+          ...editForm,
+          price: parseFloat(editForm.price),
+          maxCerts: editForm.maxCerts ? parseInt(editForm.maxCerts) : null,
+          features: editForm.features ? (typeof editForm.features === "string" ? editForm.features.split("\n").filter((f: string) => f.trim()) : editForm.features) : [],
+        }),
       });
-      await fetchPricing();
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      console.error("Failed to save pricing:", err);
-      alert("Failed to save pricing. Please try again.");
-    } finally {
-      setSaving(false);
-    }
+      setEditingPlan(null);
+      await fetchData();
+    } catch (err) { console.error(err); }
+    finally { setSaving(null); }
+  }
+
+  async function createPlan() {
+    setSaving("new");
+    try {
+      await apiRequest("/api/payments/plans", {
+        method: "POST",
+        body: JSON.stringify({
+          ...newPlan,
+          price: parseFloat(newPlan.price as any),
+          interval: newPlan.interval || null,
+          maxCerts: newPlan.maxCerts ? parseInt(newPlan.maxCerts) : null,
+          features: newPlan.features ? newPlan.features.split("\n").filter(f => f.trim()) : [],
+        }),
+      });
+      setShowNewPlan(false);
+      setNewPlan({ name: "", slug: "", description: "", price: 0, interval: "", features: "", maxCerts: "" });
+      await fetchData();
+    } catch (err) { console.error(err); }
+    finally { setSaving(null); }
+  }
+
+  async function togglePlanActive(plan: Plan) {
+    await apiRequest(`/api/payments/plans/${plan.id}`, {
+      method: "PUT",
+      body: JSON.stringify({ active: !plan.active }),
+    });
+    await fetchData();
+  }
+
+  function startEditing(plan: Plan) {
+    setEditingPlan(plan.id);
+    setEditForm({
+      name: plan.name,
+      description: plan.description || "",
+      price: (plan.price / 100).toFixed(2),
+      interval: plan.interval || "",
+      maxCerts: plan.maxCerts || "",
+      features: plan.features ? JSON.parse(plan.features).join("\n") : "",
+    });
   }
 
   function logout() {
@@ -92,6 +128,8 @@ export default function PricingManagementPage() {
     </div>
   );
 
+  const totalRevenue = orders.filter(o => o.status === "COMPLETED").reduce((sum: number, o: any) => sum + o.amount, 0);
+  const activeSubscriptions = orders.filter(o => o.subscriptionStatus === "active").length;
 
   return (
     <div style={{ minHeight: "100vh", background: "radial-gradient(ellipse at top right, rgba(200,155,60,.03) 0%, transparent 50%), var(--cream)", display: "flex" }}>
@@ -147,312 +185,218 @@ export default function PricingManagementPage() {
           <div style={{ marginBottom: 36 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Settings</div>
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 4 }}>
-              Pricing Management
+              Pricing & Payments
             </h1>
             <div style={{ width: 48, height: 2, background: "linear-gradient(90deg, #C89B3C, #E8B84B)", borderRadius: 2, marginBottom: 8 }} />
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300, lineHeight: 1.6 }}>
-              Configure generation fees and maintenance tiers for your platform
+              Manage pricing plans, view orders, and configure payment settings
             </p>
           </div>
 
-          {/* Beta Mode Toggle — PROMINENT */}
-          <div style={{
-            background: betaMode ? "linear-gradient(135deg, rgba(200,155,60,.12) 0%, rgba(200,155,60,.04) 100%)" : "linear-gradient(135deg, rgba(34,197,94,.08) 0%, rgba(34,197,94,.02) 100%)",
-            border: betaMode ? "2px solid rgba(200,155,60,.35)" : "2px solid rgba(34,197,94,.3)",
-            borderRadius: 16, padding: "28px 32px", marginBottom: 32,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                  <span style={{ fontSize: 28 }}>{betaMode ? "\u26A0\uFE0F" : "\u2705"}</span>
-                  <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, margin: 0 }}>
-                    Beta Mode
-                  </h2>
-                </div>
-                <p style={{ fontSize: 15, color: betaMode ? "#92700C" : "var(--ink3)", lineHeight: 1.6, margin: 0, maxWidth: 500 }}>
-                  {betaMode
-                    ? "Everything is FREE. All generation fees and maintenance tiers are bypassed. Users can access all features without payment."
-                    : "Paywalls are ACTIVE. Users must pay generation fees and subscribe to maintenance tiers to access features."
-                  }
-                </p>
-                {betaMode && (
-                  <div style={{
-                    marginTop: 12, padding: "8px 14px", background: "rgba(200,155,60,.12)",
-                    border: "1px solid rgba(200,155,60,.25)", borderRadius: 8,
-                    fontSize: 13, color: "#92700C", fontWeight: 500,
-                    display: "inline-block",
-                  }}>
-                    Turn OFF to start charging users
-                  </div>
-                )}
+          {/* Revenue Summary */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 32 }}>
+            {[
+              { label: "Total Revenue", value: `$${(totalRevenue / 100).toLocaleString()}`, icon: "\uD83D\uDCB0" },
+              { label: "Total Orders", value: orders.filter(o => o.status === "COMPLETED").length.toString(), icon: "\uD83D\uDCC4" },
+              { label: "Active Subscriptions", value: activeSubscriptions.toString(), icon: "\uD83D\uDD04" },
+            ].map((stat, i) => (
+              <div key={i} style={{ padding: "20px 24px", background: "#fff", borderRadius: 12, border: "1px solid var(--border)", boxShadow: "var(--shadow)" }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>{stat.icon}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--ink4)", marginBottom: 4 }}>{stat.label}</div>
+                <div style={{ fontSize: 28, fontWeight: 300, color: "var(--navy)", fontFamily: "'Cormorant Garamond', serif" }}>{stat.value}</div>
               </div>
-              <div
-                onClick={() => setBetaMode(!betaMode)}
-                style={{
-                  width: 72, height: 40, borderRadius: 20, cursor: "pointer",
-                  background: betaMode ? "linear-gradient(135deg, #C89B3C, #E8B84B)" : "rgba(34,197,94,.8)",
-                  position: "relative", transition: "background .3s",
-                  boxShadow: betaMode ? "0 2px 12px rgba(200,155,60,.35)" : "0 2px 12px rgba(34,197,94,.3)",
-                  flexShrink: 0, marginLeft: 24,
-                }}
-              >
-                <div style={{
-                  width: 34, height: 34, borderRadius: "50%", background: "#fff",
-                  position: "absolute", top: 3,
-                  left: betaMode ? 35 : 3,
-                  transition: "left .3s",
-                  boxShadow: "0 2px 6px rgba(0,0,0,.2)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 16,
+            ))}
+          </div>
+
+          {/* Pricing Plans */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400 }}>Pricing Plans</h2>
+              <button onClick={() => setShowNewPlan(true)} style={{
+                padding: "8px 16px", borderRadius: 8, border: "none",
+                background: "var(--gold)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer",
+              }}>
+                + Add Plan
+              </button>
+            </div>
+
+            {/* New Plan Form */}
+            {showNewPlan && (
+              <div style={{ padding: 24, background: "#fff", borderRadius: 12, border: "2px solid var(--gold)", marginBottom: 16, boxShadow: "var(--shadow)" }}>
+                <h3 style={{ fontSize: 16, color: "var(--navy)", marginBottom: 16 }}>New Plan</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--ink4)" }}>Name</label>
+                    <input value={newPlan.name} onChange={e => setNewPlan({ ...newPlan, name: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 14, marginTop: 4 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--ink4)" }}>Slug</label>
+                    <input value={newPlan.slug} onChange={e => setNewPlan({ ...newPlan, slug: e.target.value })} placeholder="e.g. single, bundle" style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 14, marginTop: 4 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--ink4)" }}>Price ($)</label>
+                    <input type="number" value={newPlan.price} onChange={e => setNewPlan({ ...newPlan, price: parseFloat(e.target.value) || 0 })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 14, marginTop: 4 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--ink4)" }}>Billing</label>
+                    <select value={newPlan.interval} onChange={e => setNewPlan({ ...newPlan, interval: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 14, marginTop: 4 }}>
+                      <option value="">One-time</option>
+                      <option value="month">Monthly</option>
+                      <option value="year">Annual</option>
+                    </select>
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--ink4)" }}>Description</label>
+                    <input value={newPlan.description} onChange={e => setNewPlan({ ...newPlan, description: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 14, marginTop: 4 }} />
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--ink4)" }}>Features (one per line)</label>
+                    <textarea value={newPlan.features} onChange={e => setNewPlan({ ...newPlan, features: e.target.value })} rows={4} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 13, marginTop: 4, resize: "vertical" as const }} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                  <button onClick={createPlan} disabled={saving === "new"} style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "var(--gold)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", opacity: saving === "new" ? .6 : 1 }}>
+                    {saving === "new" ? "Creating..." : "Create Plan"}
+                  </button>
+                  <button onClick={() => setShowNewPlan(false)} style={{ padding: "8px 20px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {/* Plan Cards */}
+            {plans.map(plan => {
+              const isEditing = editingPlan === plan.id;
+              const features = plan.features ? JSON.parse(plan.features) : [];
+              return (
+                <div key={plan.id} style={{
+                  padding: 24, background: "#fff", borderRadius: 12, marginBottom: 12,
+                  border: `1px solid ${plan.active ? "var(--border)" : "rgba(200,60,60,.2)"}`,
+                  opacity: plan.active ? 1 : .6, boxShadow: "var(--shadow)",
                 }}>
-                  {betaMode ? "ON" : "OFF"}
+                  {isEditing ? (
+                    /* Edit mode */
+                    <div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--ink4)" }}>Name</label>
+                          <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 14, marginTop: 4 }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--ink4)" }}>Price ($)</label>
+                          <input type="number" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 14, marginTop: 4 }} />
+                        </div>
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--ink4)" }}>Description</label>
+                          <input value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 14, marginTop: 4 }} />
+                        </div>
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--ink4)" }}>Features (one per line)</label>
+                          <textarea value={editForm.features} onChange={e => setEditForm({ ...editForm, features: e.target.value })} rows={4} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 13, marginTop: 4, resize: "vertical" as const }} />
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                        <button onClick={() => savePlan(plan.id)} disabled={saving === plan.id} style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "var(--gold)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+                          {saving === plan.id ? "Saving..." : "Save Changes"}
+                        </button>
+                        <button onClick={() => setEditingPlan(null)} style={{ padding: "8px 20px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Display mode */
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                          <h3 style={{ fontSize: 18, color: "var(--navy)", fontWeight: 500, margin: 0 }}>{plan.name}</h3>
+                          <span style={{
+                            padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600,
+                            background: plan.active ? "rgba(34,197,94,.1)" : "rgba(200,60,60,.1)",
+                            color: plan.active ? "#16a34a" : "#C83C3C",
+                          }}>
+                            {plan.active ? "ACTIVE" : "INACTIVE"}
+                          </span>
+                          {plan.interval && (
+                            <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: "rgba(59,130,246,.1)", color: "#3b82f6" }}>
+                              RECURRING
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 28, fontWeight: 300, color: "var(--navy)", fontFamily: "'Cormorant Garamond', serif", marginBottom: 4 }}>
+                          ${(plan.price / 100).toLocaleString()}{plan.interval ? `/${plan.interval}` : ""}
+                        </div>
+                        {plan.description && <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 8 }}>{plan.description}</p>}
+                        {features.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                            {features.slice(0, 4).map((f: string, i: number) => (
+                              <span key={i} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 4, background: "rgba(200,155,60,.06)", color: "var(--ink3)", border: "1px solid rgba(200,155,60,.1)" }}>
+                                {f}
+                              </span>
+                            ))}
+                            {features.length > 4 && <span style={{ fontSize: 11, color: "var(--ink4)" }}>+{features.length - 4} more</span>}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                        <button onClick={() => startEditing(plan)} style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid var(--border)", background: "#fff", fontSize: 12, cursor: "pointer" }}>Edit</button>
+                        <button onClick={() => togglePlanActive(plan)} style={{
+                          padding: "6px 14px", borderRadius: 6, border: "none", fontSize: 12, cursor: "pointer",
+                          background: plan.active ? "rgba(200,60,60,.08)" : "rgba(34,197,94,.08)",
+                          color: plan.active ? "#C83C3C" : "#16a34a",
+                        }}>
+                          {plan.active ? "Deactivate" : "Activate"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
 
-          {/* Generation Fees Table */}
-          <div style={{
-            background: "#fff", border: "1px solid rgba(200,155,60,.08)",
-            borderRadius: 14, overflow: "hidden", marginBottom: 28,
-            boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)",
-          }}>
-            <div style={{ padding: "20px 28px", borderBottom: "1px solid rgba(200,155,60,.08)" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>One-Time Fees</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400 }}>Generation Fees</h2>
-              <p style={{ fontSize: 13, color: "var(--ink4)", marginTop: 4 }}>Charged once per certification when a user generates their application package</p>
-            </div>
-
-            {/* Table header */}
-            <div style={{
-              display: "grid", gridTemplateColumns: "2fr 1fr 1fr",
-              padding: "12px 28px", background: "#FAFAF7",
-              borderBottom: "1px solid rgba(200,155,60,.08)",
-              fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const,
-              letterSpacing: ".08em", color: "var(--ink4)",
-            }}>
-              <div>Certification Type</div>
-              <div>Price (cents)</div>
-              <div>Display Price</div>
-            </div>
-
-            {/* Rows */}
-            {Object.entries(generationFees).map(([key, value]) => (
-              <div key={key} style={{
-                display: "grid", gridTemplateColumns: "2fr 1fr 1fr",
-                padding: "16px 28px", alignItems: "center",
-                borderBottom: "1px solid rgba(200,155,60,.06)",
-              }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{CERT_TYPE_LABELS[key] || key}</div>
-                  <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>{key}</div>
-                </div>
-                <div>
-                  <div style={{ position: "relative" }}>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={value}
-                      onChange={e => setGenerationFees(prev => ({ ...prev, [key]: Number(e.target.value) }))}
-                      style={{
-                        width: 120, padding: "8px 12px",
-                        background: betaMode ? "#F8F6F1" : "#fff",
-                        border: "1px solid rgba(200,155,60,.2)",
-                        borderRadius: 8, fontSize: 14, color: "var(--navy)",
-                        outline: "none", fontFamily: "'DM Sans', sans-serif",
-                        opacity: betaMode ? 0.6 : 1,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div style={{ fontSize: 14, color: betaMode ? "var(--gold)" : "var(--navy)", fontWeight: betaMode ? 500 : 400 }}>
-                  {betaMode ? "$0 / Free" : `$${(value / 100).toFixed(2)}`}
-                </div>
+          {/* Recent Orders */}
+          <div>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400, marginBottom: 16 }}>Recent Orders</h2>
+            {orders.length === 0 ? (
+              <div style={{ padding: 32, background: "#fff", borderRadius: 12, border: "1px solid var(--border)", textAlign: "center" as const, color: "var(--ink4)" }}>
+                No orders yet
               </div>
-            ))}
-          </div>
-
-          {/* Maintenance Tiers Table */}
-          <div style={{
-            background: "#fff", border: "1px solid rgba(200,155,60,.08)",
-            borderRadius: 14, overflow: "hidden", marginBottom: 28,
-            boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)",
-          }}>
-            <div style={{ padding: "20px 28px", borderBottom: "1px solid rgba(200,155,60,.08)" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Recurring</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400 }}>Maintenance Tiers</h2>
-              <p style={{ fontSize: 13, color: "var(--ink4)", marginTop: 4 }}>Ongoing subscription pricing for certification maintenance and compliance monitoring</p>
-            </div>
-
-            {/* Table header */}
-            <div style={{
-              display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr",
-              padding: "12px 28px", background: "#FAFAF7",
-              borderBottom: "1px solid rgba(200,155,60,.08)",
-              fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const,
-              letterSpacing: ".08em", color: "var(--ink4)",
-            }}>
-              <div>Tier</div>
-              <div>Monthly Price</div>
-              <div>Display (Monthly)</div>
-              <div>Annual Price</div>
-              <div>Display (Annual)</div>
-            </div>
-
-            {/* Rows */}
-            {Object.entries(maintenanceTiers).map(([key, tier]) => (
-              <div key={key} style={{
-                display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr",
-                padding: "16px 28px", alignItems: "center",
-                borderBottom: "1px solid rgba(200,155,60,.06)",
-              }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{tier.name || TIER_LABELS[key] || key}</div>
-                  <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>{key}</div>
-                </div>
-                <div>
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink4)" }}>$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={tier.monthlyPrice}
-                      onChange={e => setMaintenanceTiers(prev => ({
-                        ...prev,
-                        [key]: { ...prev[key], monthlyPrice: Number(e.target.value) },
-                      }))}
-                      style={{
-                        width: 100, padding: "8px 10px 8px 24px",
-                        background: betaMode ? "#F8F6F1" : "#fff",
-                        border: "1px solid rgba(200,155,60,.2)",
-                        borderRadius: 8, fontSize: 14, color: "var(--navy)",
-                        outline: "none", fontFamily: "'DM Sans', sans-serif",
-                        opacity: betaMode ? 0.6 : 1,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div style={{ fontSize: 14, color: betaMode ? "var(--gold)" : "var(--navy)", fontWeight: betaMode ? 500 : 400 }}>
-                  {betaMode ? "$0 / Free" : `$${tier.monthlyPrice}/mo`}
-                </div>
-                <div>
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink4)" }}>$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={tier.annualPrice}
-                      onChange={e => setMaintenanceTiers(prev => ({
-                        ...prev,
-                        [key]: { ...prev[key], annualPrice: Number(e.target.value) },
-                      }))}
-                      style={{
-                        width: 100, padding: "8px 10px 8px 24px",
-                        background: betaMode ? "#F8F6F1" : "#fff",
-                        border: "1px solid rgba(200,155,60,.2)",
-                        borderRadius: 8, fontSize: 14, color: "var(--navy)",
-                        outline: "none", fontFamily: "'DM Sans', sans-serif",
-                        opacity: betaMode ? 0.6 : 1,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div style={{ fontSize: 14, color: betaMode ? "var(--gold)" : "var(--navy)", fontWeight: betaMode ? 500 : 400 }}>
-                  {betaMode ? "$0 / Free" : `$${tier.annualPrice}/yr`}
-                </div>
+            ) : (
+              <div style={{ background: "#fff", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid rgba(200,155,60,.12)" }}>
+                      {["Customer", "Plan", "Amount", "Provider", "Status", "Date"].map(h => (
+                        <th key={h} style={{ textAlign: "left" as const, padding: "10px 14px", fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--ink4)" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.slice(0, 20).map((order: any) => (
+                      <tr key={order.id} style={{ borderBottom: "1px solid rgba(0,0,0,.04)" }}>
+                        <td style={{ padding: "10px 14px" }}>{order.user?.firstName} {order.user?.lastName}</td>
+                        <td style={{ padding: "10px 14px" }}>{order.plan?.name}</td>
+                        <td style={{ padding: "10px 14px", fontWeight: 500 }}>${(order.amount / 100).toFixed(2)}</td>
+                        <td style={{ padding: "10px 14px" }}>
+                          <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: order.paymentProvider === "stripe" ? "rgba(99,91,255,.1)" : "rgba(0,112,243,.1)", color: order.paymentProvider === "stripe" ? "#635BFF" : "#0070F3" }}>
+                            {(order.paymentProvider || "—").toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 14px" }}>
+                          <span style={{
+                            padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600,
+                            background: order.status === "COMPLETED" ? "rgba(34,197,94,.1)" : order.status === "PENDING" ? "rgba(234,179,8,.1)" : "rgba(200,60,60,.1)",
+                            color: order.status === "COMPLETED" ? "#16a34a" : order.status === "PENDING" ? "#ca8a04" : "#C83C3C",
+                          }}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 14px", color: "var(--ink4)" }}>{new Date(order.createdAt).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ))}
-          </div>
-
-          {/* Save Button */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={{
-                padding: "14px 40px",
-                background: saving ? "var(--ink4)" : "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
-                border: "none", borderRadius: 10,
-                color: "#fff", fontSize: 16, fontWeight: 600,
-                cursor: saving ? "wait" : "pointer",
-                boxShadow: "0 4px 20px rgba(200,155,60,.3)",
-                transition: "all .2s",
-                fontFamily: "'DM Sans', sans-serif",
-              }}
-              onMouseEnter={e => { if (!saving) e.currentTarget.style.boxShadow = "0 6px 28px rgba(200,155,60,.45)"; }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(200,155,60,.3)"; }}
-            >
-              {saving ? "Saving..." : "Save All Changes"}
-            </button>
-            {saveSuccess && (
-              <span style={{ fontSize: 14, color: "var(--green, #22C55E)", fontWeight: 500 }}>
-                {"\u2713"} Saved successfully
-              </span>
             )}
           </div>
-
-          {/* Payment Provider Section */}
-          <div style={{
-            background: "#fff", border: "1px solid rgba(200,155,60,.08)",
-            borderRadius: 14, overflow: "hidden",
-            boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06)",
-          }}>
-            <div style={{ padding: "20px 28px", borderBottom: "1px solid rgba(200,155,60,.08)" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Integrations</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400 }}>Payment Providers</h2>
-            </div>
-            <div style={{ padding: "0 28px" }}>
-              {/* Stripe */}
-              <div style={{ padding: "20px 0", borderBottom: "1px solid rgba(200,155,60,.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 8,
-                    background: "#635BFF", display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "#fff", fontSize: 14, fontWeight: 700,
-                  }}>S</div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Stripe</div>
-                    <div style={{ fontSize: 12, color: "var(--ink4)" }}>Credit cards, Apple Pay, Google Pay</div>
-                  </div>
-                </div>
-                <div style={{
-                  padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500,
-                  background: "rgba(239,68,68,.08)", color: "#DC2626", border: "1px solid rgba(239,68,68,.15)",
-                }}>
-                  Not configured
-                </div>
-              </div>
-              {/* PayPal */}
-              <div style={{ padding: "20px 0", borderBottom: "1px solid rgba(200,155,60,.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 8,
-                    background: "#003087", display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "#fff", fontSize: 14, fontWeight: 700,
-                  }}>P</div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>PayPal</div>
-                    <div style={{ fontSize: 12, color: "var(--ink4)" }}>PayPal balance and linked accounts</div>
-                  </div>
-                </div>
-                <div style={{
-                  padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500,
-                  background: "rgba(239,68,68,.08)", color: "#DC2626", border: "1px solid rgba(239,68,68,.15)",
-                }}>
-                  Not configured
-                </div>
-              </div>
-            </div>
-            <div style={{ padding: "16px 28px 20px", background: "#FAFAF7" }}>
-              <p style={{ fontSize: 13, color: "var(--ink4)", lineHeight: 1.6 }}>
-                Payment processing will be enabled when you connect Stripe. During beta, upgrades are instant and free.
-              </p>
-            </div>
-          </div>
-
         </div>
       </div>
     </div>

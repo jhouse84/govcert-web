@@ -252,10 +252,10 @@ export default function LandingPage() {
           <div style={{ marginBottom: 48, textAlign: "center" }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 12 }}>Pricing</div>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(34px,4vw,52px)", color: "#fff", fontWeight: 400, lineHeight: 1.1, marginBottom: 16, letterSpacing: "-.03em" }}>A fraction of what consultants charge</h2>
-            <p style={{ fontSize: 16, color: "rgba(255,255,255,.45)", maxWidth: 600, margin: "0 auto", fontWeight: 300 }}>One-time fee to generate your application. Optional monthly subscription to maintain your certifications.</p>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(34,197,94,.15)", border: "1px solid rgba(34,197,94,.3)", borderRadius: 100, padding: "6px 16px", marginTop: 16 }}>
-              <div style={{ width: 8, height: 8, background: "#22C55E", borderRadius: "50%" }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#22C55E" }}>FREE DURING BETA — All features unlocked</span>
+            <p style={{ fontSize: 16, color: "rgba(255,255,255,.45)", maxWidth: 600, margin: "0 auto", fontWeight: 300 }}>One-time fee per certification. No overpriced consultants — just some human help where needed, included in your cost.</p>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(200,155,60,.15)", border: "1px solid rgba(200,155,60,.3)", borderRadius: 100, padding: "6px 16px", marginTop: 16 }}>
+              <div style={{ width: 8, height: 8, background: "#C89B3C", borderRadius: "50%" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#E8B84B" }}>Human help included where needed — no hidden fees</span>
             </div>
           </div>
 
@@ -272,10 +272,10 @@ export default function LandingPage() {
               </div>
               {/* Rows */}
               {[
-                { cert: "GSA Multiple Award Schedule", consultant: "$6,000 – $50,000", price: "$1,999", save: "Up to 96%", popular: true },
-                { cert: "8(a) Business Development", consultant: "$3,000 – $5,000", price: "$2,499", save: "Up to 50%", popular: true },
-                { cert: "GSA OASIS+", consultant: "$10,000 – $35,000", price: "$2,999", save: "Up to 91%", popular: true },
-                { cert: "Bundle: 8(a) + GSA MAS", consultant: "$10,000 – $30,000", price: "$3,499", save: "Up to 88%", popular: false },
+                { cert: "8(a) Business Development", consultant: "$3,000 – $5,000", price: "$1,000", save: "Up to 80%", popular: true },
+                { cert: "GSA Multiple Award Schedule", consultant: "$6,000 – $50,000", price: "$1,000", save: "Up to 98%", popular: true },
+                { cert: "GSA OASIS+", consultant: "$10,000 – $35,000", price: "$1,000", save: "Up to 97%", popular: true },
+                { cert: "Certification Bundle", consultant: "$10,000 – $30,000", price: "$2,000", save: "Up to 93%", popular: false },
               ].map(row => (
                 <div key={row.cert} style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr", padding: "16px 28px", borderBottom: "1px solid rgba(255,255,255,.05)", alignItems: "center" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,.03)")}

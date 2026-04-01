@@ -26,6 +26,7 @@ export default function PortalPage() {
   const [eligibility, setEligibility] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [betaMode, setBetaMode] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -51,6 +52,7 @@ export default function PortalPage() {
       }
     }
     trackPageView("portal-home");
+    apiRequest("/api/pricing").then((p: any) => setBetaMode(p?.betaMode === true)).catch(() => {});
     fetchMyCerts();
   }, []);
 
@@ -225,8 +227,8 @@ export default function PortalPage() {
             </div>
           </div>
 
-          {/* Beta Testing — Dummy Data Package */}
-          <div style={{ background: "linear-gradient(135deg, #EEF2FF 0%, #F0FDF4 100%)", border: "1px solid #C7D2FE", borderRadius: 12, padding: "20px 24px", marginBottom: 20, display: "flex", gap: 16, alignItems: "center" }}>
+          {/* Beta Testing — Dummy Data Package (only visible when beta mode is ON) */}
+          {betaMode && <div style={{ background: "linear-gradient(135deg, #EEF2FF 0%, #F0FDF4 100%)", border: "1px solid #C7D2FE", borderRadius: 12, padding: "20px 24px", marginBottom: 20, display: "flex", gap: 16, alignItems: "center" }}>
             <span style={{ fontSize: 32, flexShrink: 0 }}>📦</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: "#4338CA", marginBottom: 4 }}>Beta Testing — Sample Data Package</div>
@@ -249,7 +251,7 @@ export default function PortalPage() {
               style={{ padding: "10px 20px", background: "#4338CA", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const, boxShadow: "0 2px 10px rgba(67,56,202,.3)" }}>
               Download Sample Files
             </button>
-          </div>
+          </div>}
 
           {/* Eligibility Scorecard */}
           {clientId && (

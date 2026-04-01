@@ -117,6 +117,7 @@ function PortalEligibilityPageInner() {
   const [client, setClient] = useState<any>(null);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [betaMode, setBetaMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [assessing, setAssessing] = useState(false);
   const [domainMatch, setDomainMatch] = useState<any>(null);
@@ -192,6 +193,7 @@ function PortalEligibilityPageInner() {
       setUser(parsed);
     }
     fetchClientAndData();
+    apiRequest("/api/pricing").then((p: any) => setBetaMode(p?.betaMode === true)).catch(() => {});
   }, []);
 
   async function fetchClientAndData() {
@@ -763,8 +765,8 @@ function PortalEligibilityPageInner() {
                 Watch the overview above, then download your sample data package below. These files contain a fictional company profile that you can upload to test every feature of the platform.
               </p>
 
-              {/* Beta Sample Data Download */}
-              <div style={{ background: "#EEF2FF", border: "1px solid #C7D2FE", borderRadius: 10, padding: "16px 20px", marginBottom: 20 }}>
+              {/* Beta Sample Data Download — only visible when beta mode is ON */}
+              {betaMode && <div style={{ background: "#EEF2FF", border: "1px solid #C7D2FE", borderRadius: 10, padding: "16px 20px", marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
                   <span style={{ fontSize: 24 }}>📦</span>
                   <div>
@@ -791,7 +793,7 @@ function PortalEligibilityPageInner() {
                 >
                   Download Sample Files
                 </button>
-              </div>
+              </div>}
 
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, padding: "12px 16px", background: "var(--cream)", borderRadius: 8 }}>
                 <span style={{ fontSize: 20 }}>📋</span>

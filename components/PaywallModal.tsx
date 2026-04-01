@@ -145,6 +145,7 @@ export default function PaywallModal({ certType, certLabel, price, betaMode, onU
               }}>
               {purchasing ? "Processing..." : `Pay $${price.toLocaleString()} with Card`}
             </button>
+            {/* PayPal disabled until credentials are configured
             <button onClick={() => handlePurchase("paypal")} disabled={purchasing}
               style={{
                 width: "100%", padding: "12px", background: "#FFC439",
@@ -153,6 +154,7 @@ export default function PaywallModal({ certType, certLabel, price, betaMode, onU
               }}>
               {purchasing ? "Processing..." : "Pay with PayPal"}
             </button>
+            */}
           </div>
         )}
 

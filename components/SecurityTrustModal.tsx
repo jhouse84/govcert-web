@@ -20,7 +20,7 @@ export function SecurityTrustModal({ onClose }: Props) {
     {
       icon: "\uD83D\uDCCB",
       title: "Your Documents, Your Control",
-      body: "GovCert functions as your secure document vault. Every file you upload is available for you to download at any time, in its original format \u2014 ready to submit directly to eOffer, certify.sba.gov, or any certification portal.",
+      body: "GovCert functions as your secure document vault. Every file you upload is available for you to download at any time, in its original format \u2014 ready to submit directly to eOffer, certifications.sba.gov, or any certification portal.",
       detail: "We organize your documents in the exact sequence requested by each certification agency. When it\u2019s time to submit, you\u2019ll have everything pre-organized and ready to go \u2014 no more hunting through folders or email chains. Your advisor can only access documents you individually approve, and every access is logged.",
     },
     {

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { trackPageView } from "@/lib/activity";
 import CertSidebar from "@/components/CertSidebar";
+import FinancialReadiness from "@/components/FinancialReadiness";
 import { OASIS_SECTIONS, OASIS_DOMAINS, OASIS_SOLICITATION_TYPES, OASIS_SCORING_CATEGORIES } from "@/lib/oasis-domains";
 
 /* ------------------------------------------------------------------ */
@@ -83,6 +84,90 @@ const accordionHeader: React.CSSProperties = {
 };
 
 /* ------------------------------------------------------------------ */
+/*  OASIS+ Submission Checklist                                        */
+/* ------------------------------------------------------------------ */
+
+const OASIS_PLUS_CHECKLIST = [
+  { id: "pastPerformance", label: "Past Performance (min. 5 Relevant Contracts with CPARS Ratings)",
+    what: "Documentation of at least 5 relevant government contracts with CPARS (Contractor Performance Assessment Reporting System) ratings. Each must demonstrate work in the domain(s) you are proposing for, with ratings of Satisfactory or above.",
+    where: "Log into CPARS at cpars.gov to pull your official ratings. If you don't have CPARS access, contact your Contracting Officer's Representative (COR) from each contract to request copies of completed evaluations.",
+    sbaPortal: "In the Symphony Portal (idiq.gsa.gov) → Proposal → Past Performance tab → upload CPARS report PDFs and complete the Attachment J.P-6 Past Performance Rating Form for each contract.",
+    format: "PDF. Official CPARS report exports or scanned signed evaluations. One file per contract recommended. Include contract number, agency, period of performance, and final rating.",
+    docCategory: "CONTRACT",
+  },
+  { id: "relevantExperience", label: "Relevant Experience by Domain",
+    what: "Narrative and supporting documentation demonstrating your company's relevant experience in each OASIS+ domain you are proposing (Management & Advisory, Technical & Engineering, Intelligence Services, etc.). Must align with the domain-specific evaluation criteria in the solicitation.",
+    where: "GovCert compiled your domain experience from qualifying projects and contract history. Review in the Qualifying Projects section. Supplement with project summaries, SOWs, and deliverable examples.",
+    sbaPortal: "In the Symphony Portal (idiq.gsa.gov) → Qualifying Projects tab → enter each project's details and upload supporting narratives per the Attachment J.P-3 Project Verification Form.",
+    format: "Use the J.P-3 template (available in the solicitation documents on SAM.gov). One completed form per qualifying project. PDF format.",
+    docCategory: "CONTRACT",
+  },
+  { id: "accountingSystem", label: "Accounting System Documentation (DCAA-Compliant)",
+    what: "Evidence that your accounting system is adequate for cost-type contracts. Ideally a DCAA (Defense Contract Audit Agency) pre-award survey or audit opinion letter. If not DCAA-audited, provide documentation of your system's compliance with FAR 16.301-3 and DFARS 252.242-7006.",
+    where: "If you have a DCAA audit, request a copy of the SF 1408 Pre-Award Survey from DCAA. If not yet audited, your CPA can prepare an accounting system description with your chart of accounts, timekeeping procedures, and indirect rate structure.",
+    sbaPortal: "In the Symphony Portal (idiq.gsa.gov) → Business Systems section → upload your DCAA audit letter or accounting system adequacy documentation.",
+    format: "PDF. DCAA audit letter preferred. Alternatively, a CPA-prepared accounting system description (10-20 pages) covering cost segregation, timekeeping, billing, and indirect rate methodology.",
+    docCategory: "FINANCIAL_STATEMENT",
+  },
+  { id: "ociPlan", label: "Organizational Conflict of Interest (OCI) Plan",
+    what: "A written plan describing how your organization identifies, mitigates, and avoids organizational conflicts of interest per FAR Subpart 9.5. Required for all OASIS+ offerors to demonstrate you can manage potential conflicts across multiple task orders.",
+    where: "Your contracts or legal team should draft this. It should cover your current contract portfolio, describe potential conflicts, and outline mitigation procedures. Templates are available from GSA OASIS+ resources.",
+    sbaPortal: "In the Symphony Portal (idiq.gsa.gov) → Required Documents → upload your OCI Mitigation Plan as a standalone PDF.",
+    format: "PDF. Typically 5-15 pages. Must address FAR 9.505 requirements, include specific mitigation strategies, and be signed by an authorized company official.",
+    docCategory: "CERTIFICATION_DOCUMENT",
+  },
+  { id: "subcontractingPlan", label: "Small Business Subcontracting Plan (if applicable)",
+    what: "Required for large businesses proposing on the Unrestricted pool. Details your plan to subcontract work to small businesses, including percentage goals by category (SDB, WOSB, HUBZone, SDVOSB, etc.). Small businesses are exempt.",
+    where: "Your contracts team or small business liaison officer prepares this. Use the SBA's subcontracting plan template or the format specified in the OASIS+ solicitation. Include historical subcontracting data and projected goals.",
+    sbaPortal: "In the Symphony Portal (idiq.gsa.gov) → Required Documents → Subcontracting Plan section → upload the completed plan.",
+    format: "PDF. Follow the format in FAR 52.219-9. Must include specific dollar and percentage goals per small business category, a description of outreach efforts, and the name of your small business liaison.",
+    docCategory: "CERTIFICATION_DOCUMENT",
+  },
+  { id: "corporateExperience", label: "Corporate Experience Narrative per Domain",
+    what: "A written narrative for each domain describing your company's corporate-level capabilities, experience depth, and competitive differentiators. This is separate from individual project write-ups — it tells the story of your organization's expertise in that domain.",
+    where: "GovCert drafted domain narratives from your capability statement and past performance. Review them in each domain's section. Refine to emphasize breadth of experience, key differentiators, and workforce depth.",
+    sbaPortal: "In the Symphony Portal (idiq.gsa.gov) → Qualifying Projects tab → Corporate Experience section → paste or upload narratives per domain.",
+    format: "Text narrative or PDF. Typically 2-5 pages per domain. Should reference specific contracts, NAICS codes, and quantified outcomes.",
+    docCategory: "CAPABILITY_STATEMENT",
+  },
+  { id: "keyPersonnel", label: "Key Personnel Resumes",
+    what: "Professional resumes for key personnel who will lead OASIS+ task order execution — typically your Program Manager, Project Managers, and domain-specific technical leads. Resumes should emphasize relevant government contract experience and clearances.",
+    where: "Collect updated resumes from each key person. Ensure they highlight relevant certifications (PMP, ITIL, etc.), security clearances, and specific contract experience aligned with your proposed domains.",
+    sbaPortal: "In the Symphony Portal (idiq.gsa.gov) → Key Personnel section → upload individual resume PDFs for each named key person.",
+    format: "PDF. Standard professional resume, 2-4 pages each. Include education, certifications, clearance level, and relevant contract experience with contract numbers where possible.",
+    docCategory: "RESUME",
+  },
+  { id: "samRegistration", label: "SAM.gov Registration (Active, Matching NAICS)",
+    what: "Your company must have an active SAM.gov registration with the correct NAICS codes and size standard for each domain you're proposing. The UEI, CAGE code, and entity information in your proposal must exactly match your SAM.gov record.",
+    where: "Log into SAM.gov → Entity Management → verify your registration is active and not expired. Confirm your NAICS codes include those required for your selected OASIS+ domains. Update if needed (changes take 24-48 hours).",
+    sbaPortal: "The Symphony Portal auto-validates against SAM.gov. Ensure your UEI is entered correctly in Tab 1 (Company Information). Mismatches will flag errors during submission.",
+    format: "No upload needed — verified electronically. Print a SAM.gov entity registration summary PDF for your records. Ensure registration does not expire before the proposal deadline.",
+    docCategory: null,
+  },
+  { id: "financialStatements", label: "Financial Statements Demonstrating Viability",
+    what: "Audited or reviewed financial statements for the 3 most recent fiscal years — Balance Sheet, Income Statement, and Cash Flow Statement. GSA evaluates your financial viability and ability to perform on potentially large task orders.",
+    where: "Your CPA or accounting firm prepares these. Audited statements carry more weight than reviewed or compiled. If publicly traded, use your SEC filings (10-K). Ensure statements show the legal entity name that matches your SAM.gov registration.",
+    sbaPortal: "In the Symphony Portal (idiq.gsa.gov) → Required Documents → Financial Statements section → upload each year's statements as separate PDFs.",
+    format: "PDF. Audited financial statements preferred. Must include Balance Sheet, Income Statement, and Cash Flow Statement for each year. CPA letter or audit opinion should be included.",
+    docCategory: "FINANCIAL_STATEMENT",
+  },
+  { id: "qualityManagement", label: "Quality Management System Documentation",
+    what: "Documentation of your Quality Management System (QMS) — ISO 9001 certification, CMMI appraisal, or equivalent. Demonstrates your organization maintains consistent quality standards in service delivery. Even without formal certification, document your QMS processes.",
+    where: "If ISO 9001 certified, obtain a copy of your current certificate from your registrar. For CMMI, get your appraisal letter from the CMMI Institute. If neither, prepare a QMS description covering your quality policy, procedures, and continuous improvement processes.",
+    sbaPortal: "In the Symphony Portal (idiq.gsa.gov) → Business Systems → Certifications section → upload your ISO/CMMI certificate or QMS documentation.",
+    format: "PDF. Current ISO 9001 certificate or CMMI appraisal letter preferred. Alternatively, a QMS policy document (5-10 pages) describing quality processes, metrics, and corrective action procedures.",
+    docCategory: "CERTIFICATION_DOCUMENT",
+  },
+  { id: "securityClearance", label: "Security Clearance Documentation (if applicable)",
+    what: "Facility Clearance Letter (FCL) from DCSA (Defense Counterintelligence and Security Agency) if your company holds or requires a facility security clearance. Many OASIS+ task orders require cleared facilities and personnel for classified work.",
+    where: "Request your FCL verification letter through NISS (National Industrial Security System) at dcsa.mil. Your Facility Security Officer (FSO) can pull this. If you don't have an FCL, note this — it's scored but not always required.",
+    sbaPortal: "In the Symphony Portal (idiq.gsa.gov) → Business Systems → Security Clearance section → upload your FCL letter or DCSA verification.",
+    format: "PDF. Official DCSA/NISS FCL verification letter showing clearance level (Confidential, Secret, Top Secret), facility name, and cage code. Must be current and not expired.",
+    docCategory: "CERTIFICATION_DOCUMENT",
+  },
+];
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -108,6 +193,8 @@ export default function OASISSubmitPage({ params }: { params: Promise<{ id: stri
   const [systemsData, setSystemsData] = useState<any>(null);
   const [contractHistory, setContractHistory] = useState<any[]>([]);
   const [completedSections, setCompletedSections] = useState<Record<string, boolean>>({});
+  const [manualChecks, setManualChecks] = useState<Record<string, boolean>>({});
+  const [clientDocs, setClientDocs] = useState<Record<string, any[]>>({});
 
   // Accordion state — all expanded by default
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
@@ -159,6 +246,20 @@ export default function OASISSubmitPage({ params }: { params: Promise<{ id: stri
         if (app.oasisSystemsData) completed["systems-certs"] = true;
       }
       setCompletedSections(completed);
+
+      // Fetch all client documents grouped by category
+      if (data.clientId) {
+        try {
+          const allCats = "FINANCIAL_STATEMENT,CONTRACT,CERTIFICATION_DOCUMENT,CAPABILITY_STATEMENT,RESUME,TAX_RETURN,BANK_STATEMENT,BUSINESS_LICENSE,INVOICE,OTHER";
+          const docs = await apiRequest(`/api/upload/documents/by-category/${data.clientId}/${allCats}`);
+          const grouped: Record<string, any[]> = {};
+          for (const doc of docs) {
+            if (!grouped[doc.category]) grouped[doc.category] = [];
+            grouped[doc.category].push(doc);
+          }
+          setClientDocs(grouped);
+        } catch {}
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to load certification data.");
@@ -199,18 +300,6 @@ export default function OASISSubmitPage({ params }: { params: Promise<{ id: stri
   ];
   const completedCount = sectionStatuses.filter(s => s.done).length;
   const completenessPercent = Math.round((completedCount / sectionStatuses.length) * 100);
-
-  // Document checklist
-  const docChecklist = [
-    { label: "Attachment J.P-1 Self-Scoring Worksheet", done: completedSections["scorecard"], href: "scorecard" },
-    { label: "Attachment J.P-2 FPDS Report", done: contractHistory.length > 0, href: "contract-history" },
-    { label: "Attachment J.P-3 Project Verification Form (per QP)", done: qps.length > 0, href: "qualifying-projects" },
-    { label: "Attachment J.P-6 Past Performance Rating Form", done: ppData.length > 0, href: "past-performance" },
-    { label: "Attachment J.P-7 Joint Venture Template (if applicable)", done: false, href: null },
-    { label: "Cybersecurity & Supply Chain Risk Management (J-3)", done: false, href: null },
-    { label: "Subcontracting Plan", done: false, href: null },
-    { label: "Pricing / Cost Spreadsheet", done: false, href: null },
-  ];
 
   /* ---- loading / error ---- */
   if (loading) return (
@@ -310,6 +399,8 @@ export default function OASISSubmitPage({ params }: { params: Promise<{ id: stri
               <div style={{ height: "100%", width: `${completenessPercent}%`, background: "var(--gold)", borderRadius: 100, transition: "width .5s" }} />
             </div>
           </div>
+
+          {cert?.clientId && <FinancialReadiness clientId={cert.clientId} certType="OASIS_PLUS" />}
 
           {/* ============================================================ */}
           {/*  TAB 1 — Company Information                                  */}
@@ -743,33 +834,128 @@ export default function OASISSubmitPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* ============================================================ */}
-          {/*  TAB 7 — Required Documents Checklist                         */}
+          {/*  TAB 7 — OASIS+ Submission Document Guide                     */}
           {/* ============================================================ */}
           <div style={cardStyle}>
             <div style={accordionHeader} onClick={() => toggle("docs")}>
               <div>
                 <div style={sectionLabel}>Tab 7 &mdash; Required Documents</div>
-                <div style={sectionTitle}>OSP Attachment Checklist</div>
+                <div style={sectionTitle}>OASIS+ Submission Document Guide</div>
               </div>
-              <span style={{ fontSize: 18, color: "var(--ink4)", transform: expanded.docs ? "rotate(180deg)" : "rotate(0deg)", transition: "transform .2s" }}>{"\u25BE"}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <a href="https://idiq.gsa.gov" target="_blank" rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  style={{ padding: "8px 16px", background: "var(--navy)", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "var(--gold2)", textDecoration: "none", whiteSpace: "nowrap" as const }}>
+                  Open Symphony Portal &#8599;
+                </a>
+                <span style={{ fontSize: 18, color: "var(--ink4)", transform: expanded.docs ? "rotate(180deg)" : "rotate(0deg)", transition: "transform .2s" }}>{"\u25BE"}</span>
+              </div>
             </div>
             {expanded.docs && (
-              <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 6 }}>
-                {docChecklist.map((item, idx) => (
-                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: idx < docChecklist.length - 1 ? "1px solid var(--border)" : "none" }}>
-                    <span style={{ ...checkMark, background: item.done ? "var(--green)" : "var(--cream2)", border: item.done ? "none" : "1px solid var(--border2)", color: item.done ? "#fff" : "var(--ink4)" }}>
-                      {item.done ? "\u2713" : "\u2717"}
-                    </span>
-                    <span style={{ flex: 1, fontSize: 13, color: item.done ? "var(--navy)" : "var(--ink3)", fontWeight: item.done ? 500 : 400 }}>
-                      {item.label}
-                    </span>
-                    {item.href && (
-                      <a href={`/certifications/${certId}/oasis-plus/${item.href}`} style={{ fontSize: 11, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
-                        {item.done ? "View" : "Go \u2192"}
-                      </a>
-                    )}
-                  </div>
-                ))}
+              <div style={{ marginTop: 16 }}>
+                <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 6 }}>Every document required for your OASIS+ proposal. Click any item for detailed guidance on what it is, where to find it, and exactly where to upload it on the Symphony Portal.</p>
+                <div style={{ padding: "10px 14px", background: "rgba(200,155,60,.05)", borderRadius: "var(--r)", border: "1px solid rgba(200,155,60,.12)", marginBottom: 16, fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
+                  <strong style={{ color: "var(--gold)" }}>Tip:</strong> Work through this list top to bottom. Items with green checkmarks have matching documents already uploaded. For remaining items, click to expand and follow the guidance.
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {OASIS_PLUS_CHECKLIST.map(item => {
+                    const complete = manualChecks[item.id] || (item.docCategory ? (clientDocs[item.docCategory] || []).length > 0 : false);
+                    const isExpanded = manualChecks[`expanded_${item.id}`];
+                    return (
+                      <div key={item.id} style={{
+                        border: `1px solid ${complete ? "var(--green-b)" : isExpanded ? "rgba(200,155,60,.25)" : "var(--border)"}`,
+                        borderRadius: "var(--r)", overflow: "hidden",
+                        background: complete ? "var(--green-bg)" : isExpanded ? "rgba(200,155,60,.02)" : "#fff",
+                      }}>
+                        <div style={{
+                          display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                          cursor: "pointer",
+                        }}
+                          onClick={() => setManualChecks(prev => ({ ...prev, [`expanded_${item.id}`]: !prev[`expanded_${item.id}`] }))}>
+                          <div onClick={(e) => { e.stopPropagation(); setManualChecks(prev => ({ ...prev, [item.id]: !prev[item.id] })); }} style={{
+                            width: 22, height: 22, borderRadius: 4,
+                            border: `2px solid ${complete ? "var(--green)" : "var(--border2)"}`,
+                            background: complete ? "var(--green)" : "#fff",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 12, color: "#fff", fontWeight: 700, flexShrink: 0,
+                          }}>
+                            {complete ? "\u2713" : ""}
+                          </div>
+                          <span style={{ fontSize: 14, color: complete ? "var(--green)" : "var(--navy)", fontWeight: complete ? 500 : 400, flex: 1 }}>{item.label}</span>
+                          {complete && item.docCategory && (clientDocs[item.docCategory] || []).length > 0 && (
+                            <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 500, marginRight: 8 }}>Docs on file</span>
+                          )}
+                          <span style={{ fontSize: 10, color: "var(--ink4)", fontWeight: 600 }}>{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                        </div>
+
+                        {isExpanded && (
+                          <div style={{ padding: "0 14px 14px", borderTop: "1px solid var(--border)" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                              <div style={{ padding: "12px", background: "rgba(26,35,50,.02)", borderRadius: 8, border: "1px solid rgba(0,0,0,.04)" }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 6 }}>What is this?</div>
+                                <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{item.what}</div>
+                              </div>
+                              <div style={{ padding: "12px", background: "rgba(26,35,50,.02)", borderRadius: 8, border: "1px solid rgba(0,0,0,.04)" }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 6 }}>Where to find it</div>
+                                <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{item.where}</div>
+                              </div>
+                              <div style={{ padding: "12px", background: "rgba(11,25,41,.03)", borderRadius: 8, border: "1px solid rgba(11,25,41,.06)" }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--navy)", marginBottom: 6 }}>On the Symphony Portal</div>
+                                <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{item.sbaPortal}</div>
+                              </div>
+                              <div style={{ padding: "12px", background: "rgba(26,35,50,.02)", borderRadius: 8, border: "1px solid rgba(0,0,0,.04)" }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 6 }}>Format requirements</div>
+                                <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{item.format}</div>
+                              </div>
+                            </div>
+                            {/* Show matching uploaded documents */}
+                            {item.docCategory && (clientDocs[item.docCategory] || []).length > 0 && (
+                              <div style={{ marginTop: 12, padding: "12px", background: "var(--green-bg)", borderRadius: 8, border: "1px solid var(--green-b)" }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--green)", marginBottom: 8 }}>Your uploaded files -- ready to submit</div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                  {(clientDocs[item.docCategory] || []).map((doc: any) => (
+                                    <div key={doc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: "#fff", borderRadius: 6, border: "1px solid var(--border)" }}>
+                                      <div>
+                                        <div style={{ fontSize: 12, fontWeight: 500, color: "var(--navy)" }}>{doc.originalName}</div>
+                                        {doc.documentYear && <span style={{ fontSize: 10, color: "var(--ink4)" }}>{doc.documentYear}</span>}
+                                      </div>
+                                      <button onClick={async () => {
+                                        try {
+                                          const resp = await fetch(
+                                            `${process.env.NEXT_PUBLIC_API_URL || ''}/api/documents/download/${doc.id}`,
+                                            { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+                                          );
+                                          if (!resp.ok) { alert('Download failed'); return; }
+                                          const blob = await resp.blob();
+                                          const url = URL.createObjectURL(blob);
+                                          const a = document.createElement('a');
+                                          a.href = url; a.download = doc.originalName || 'document'; a.click();
+                                          URL.revokeObjectURL(url);
+                                        } catch { alert('Download failed'); }
+                                      }} style={{
+                                        padding: "4px 12px", fontSize: 11, fontWeight: 600,
+                                        color: "var(--green)", border: "1px solid var(--green-b)",
+                                        borderRadius: 5, background: "transparent", cursor: "pointer",
+                                      }}>
+                                        Download
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {item.docCategory && (!clientDocs[item.docCategory] || clientDocs[item.docCategory].length === 0) && (
+                              <div style={{ marginTop: 12, padding: "10px 12px", background: "rgba(200,60,60,.03)", borderRadius: 8, border: "1px solid rgba(200,60,60,.1)", fontSize: 12, color: "var(--red)" }}>
+                                No matching file uploaded yet. Upload this document in <a href={`/portal/documents`} style={{ color: "var(--gold)", fontWeight: 600 }}>My Documents</a> or gather it from the source described above.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

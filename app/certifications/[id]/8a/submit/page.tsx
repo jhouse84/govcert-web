@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/api";
 import { usePaywall } from "@/lib/usePaywall";
 import PaywallModal from "@/components/PaywallModal";
 import CertSidebar from "@/components/CertSidebar";
+import FinancialReadiness from "@/components/FinancialReadiness";
 
 const EIGHT_A_SECTIONS = [
   { id: "social-disadvantage", label: "Social Disadvantage" },
@@ -20,112 +21,112 @@ const SBA_FORM_1010_CHECKLIST = [
   { id: "socialNarrative", label: "Social Disadvantage Narrative", section: "social-disadvantage", field: "socialDisadvantageNarrative",
     what: "A personal statement explaining how you've been socially disadvantaged based on race, ethnicity, gender, or other qualifying factors. This is the heart of your 8(a) application.",
     where: "GovCert drafted this for you in Section 1. Review and refine it — it should be personal and specific.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Social Disadvantage → paste your narrative into the text field.",
-    format: "Text narrative, typically 2-5 pages. No character limit on certify.sba.gov but be concise and specific.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Social Disadvantage → you can either fill out the structured questionnaire (1,000 characters per incident box, 2 incidents required) OR upload a complete narrative as a PDF. GovCert prepares both formats for you.",
+    format: "Text narrative (1,000 characters per incident box on certifications.sba.gov) or PDF upload. Be concise and specific.",
     docCategory: null,
   },
   { id: "economicData", label: "SBA Form 413 (Personal Financial Statement)", section: "economic-disadvantage", field: "economicDisadvantageData",
     what: "A detailed breakdown of your personal net worth, assets, liabilities, and income. SBA uses this to verify economic disadvantage (net worth must be below $850K excluding primary residence and business equity).",
     where: "Download SBA Form 413 from sba.gov/document/sba-form-413. Fill it out with your CPA or use the figures from your tax return.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Economic Disadvantage → upload the completed Form 413 PDF.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Financial Information → Personal Financial Statement → upload the signed PDF.",
     format: "PDF. Must be the official SBA Form 413. Handwritten or typed both accepted.",
     docCategory: "FINANCIAL_STATEMENT",
   },
   { id: "businessPlan", label: "Comprehensive Business Plan", section: "business-plan", field: "businessPlanData",
     what: "A forward-looking plan covering your business goals, target markets, marketing strategy, management team, and financial projections. SBA wants to see you have a viable path to growth.",
     where: "GovCert drafted key sections for you. Review in Section 3. For projections, work with your accountant.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Business Plan → upload as a single PDF document.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Business Information → fill in structured fields for market analysis, competitive environment, goals, and projections. These are individual text fields, not a single document upload.",
     format: "PDF, typically 15-30 pages. Include financial projections for at least 3 years.",
     docCategory: null,
   },
   { id: "corporateNarrative", label: "Corporate Experience Narrative", section: "corporate", field: "narrativeCorp8a",
     what: "A description of your company's history, capabilities, key contracts, and relevant experience that demonstrates you can perform government work.",
     where: "GovCert drafted this from your capability statement and past performance data. Review in Section 4.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Entity Information → Business Description field.",
-    format: "Text narrative. Keep under 5,000 characters for the certify.sba.gov text field.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Entity Information → Business Description. This is a text field — paste your narrative directly.",
+    format: "Text narrative. Paste directly into the certifications.sba.gov text field.",
     docCategory: "CAPABILITY_STATEMENT",
   },
   { id: "pastPerformance", label: "Past Performance References", section: "past-performance", field: null,
     what: "Details on your completed and active government/commercial contracts — agency name, contract number, value, period of performance, and a reference contact (Contracting Officer).",
     where: "GovCert pre-populated these from your uploaded documents. Review and add reference contacts in Section 5.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Past Performance → enter each contract individually in the provided fields.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Past Performance → enter each contract individually in the provided fields.",
     format: "Entered directly in the portal. Have contract numbers, values, and CO contact info ready.",
     docCategory: "CONTRACT",
   },
   { id: "financials", label: "2 Years Business Financial Statements", section: "financials", field: "financialData8a",
     what: "Profit & Loss statement and Balance Sheet for the 2 most recent complete fiscal years. Must be prepared by your accountant — SBA may cross-reference with your tax returns.",
     where: "Your accountant or bookkeeper has these. If you use QuickBooks, export P&L and Balance Sheet reports. They must show the company name, period covered, and be signed or on letterhead.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Financial Information → Documents → upload as PDF.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
     format: "PDF. One file per year or combined. Must include P&L AND Balance Sheet.",
     docCategory: "FINANCIAL_STATEMENT",
   },
   { id: "personalFinancials", label: "Personal Financial Statements (each owner)", section: "financials", field: "financialData8a",
     what: "SBA Form 413 for EACH owner with 20%+ ownership. Lists all personal assets (real estate, vehicles, investments, bank accounts) and liabilities (mortgages, loans, credit cards).",
     where: "Download from sba.gov/document/sba-form-413. Each qualifying owner fills out their own form with their CPA.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Financial Information → Personal Financial Statement → upload per owner.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Financial Information → Personal Financial Statement → upload the signed PDF.",
     format: "PDF. Official SBA Form 413 required. One per qualifying owner.",
     docCategory: "FINANCIAL_STATEMENT",
   },
   { id: "birthCert", label: "Birth Certificate or Naturalization Papers", section: null, field: null,
     what: "Proof of U.S. citizenship for each disadvantaged owner. SBA requires this to verify eligibility — the 8(a) program is only available to U.S. citizens.",
     where: "Your birth certificate is typically in your personal records. If lost, order a replacement from your state's vital records office (vitalchek.com). For naturalized citizens, use your Certificate of Naturalization (N-550 or N-570).",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Individual Information → Documents → upload scan/photo.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
     format: "PDF or image (JPG/PNG). Clear, legible scan of the full document.",
     docCategory: "CERTIFICATION_DOCUMENT",
   },
   { id: "taxReturns", label: "3 Years Personal Tax Returns", section: null, field: null,
     what: "Complete personal federal tax returns (Form 1040 with ALL schedules and attachments) for the 3 most recent tax years. SBA uses these to verify your personal income and net worth claims.",
     where: "Your tax preparer/CPA has copies. You can also download from the IRS at irs.gov/individuals/get-transcript. Select 'Tax Return Transcript' for each year needed.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Tax Information → upload all 3 years as separate PDFs.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
     format: "PDF. Complete returns including all schedules. One file per year is easiest for the reviewer.",
     docCategory: "TAX_RETURN",
   },
   { id: "bizTaxReturns", label: "3 Years Business Tax Returns", section: null, field: null,
     what: "Complete business federal tax returns for the 3 most recent years. For LLCs this is typically Form 1065, for S-Corps Form 1120-S, for C-Corps Form 1120.",
     where: "Your business CPA/tax preparer has these. Also available from irs.gov/businesses/get-transcript for the business EIN.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Tax Information → Business Tax Returns → upload per year.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
     format: "PDF. Complete returns with all schedules and K-1s.",
     docCategory: "TAX_RETURN",
   },
   { id: "articles", label: "Articles of Incorporation / Organization", section: null, field: null,
     what: "The founding document filed with your state to create your business entity. Shows formation date, registered agent, initial members/shareholders.",
     where: "Your state's Secretary of State website. Search your business name at the state website to find and download. In most states you can get a certified copy for $5-15.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Entity Information → Documents → upload.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
     format: "PDF. State-certified copy preferred but filed copy is acceptable.",
     docCategory: "BUSINESS_LICENSE",
   },
   { id: "bylaws", label: "Bylaws or Operating Agreement", section: null, field: null,
     what: "The internal governance document for your company. For LLCs this is the Operating Agreement; for corporations it's the Bylaws. Shows ownership percentages, voting rights, management structure.",
     where: "You should have a copy from when the business was formed. Your business attorney created this. If you don't have one, you need to create one — SBA requires it.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Entity Information → Documents → upload.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
     format: "PDF. Must show current ownership percentages and be signed by all members/shareholders.",
     docCategory: "CERTIFICATION_DOCUMENT",
   },
   { id: "stockCerts", label: "Stock Certificates / Membership Certificates", section: null, field: null,
     what: "Proof of ownership in the company. For corporations, these are stock certificates showing who owns what shares. For LLCs, membership interest certificates or the relevant section of the Operating Agreement.",
     where: "Your corporate records book or your attorney's files. If your LLC doesn't issue certificates, the Operating Agreement suffices.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Ownership → Documents → upload.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
     format: "PDF or image. Clear scan showing names, ownership percentages, and signatures.",
     docCategory: "CERTIFICATION_DOCUMENT",
   },
   { id: "resume", label: "Resume of Disadvantaged Owner", section: null, field: null,
     what: "A professional resume for each disadvantaged owner showing education, work history, relevant experience, and qualifications. SBA uses this to assess the owner's ability to manage the business.",
     where: "Update your current resume to emphasize management experience, industry knowledge, and technical skills relevant to your NAICS codes.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Individual Information → Resume → upload.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
     format: "PDF. Standard professional resume format. 1-3 pages.",
     docCategory: "RESUME",
   },
   { id: "bankStatements", label: "6 Months Business Bank Statements", section: null, field: null,
     what: "The 6 most recent consecutive monthly bank statements for ALL business bank accounts. SBA uses these to verify cash flow, revenue claims, and current financial health.",
     where: "Download from your business bank's online portal. Log into your bank → Statements → download each month as PDF.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Financial Information → Bank Statements → upload all as a single combined PDF or individual files.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
     format: "PDF. Must show account holder name (your business), account number, and full transaction history for each month.",
     docCategory: "BANK_STATEMENT",
   },
   { id: "leases", label: "Business Lease / Rental Agreement", section: null, field: null,
     what: "Your current commercial lease or rental agreement for your business location. If you work from home, a home office declaration may suffice. SBA wants to verify your place of business.",
     where: "Your landlord or property manager has a copy. Check your email for the signed lease. If home-based, write a simple declaration stating your home office address.",
-    sbaPortal: "In certify.sba.gov → 8(a) Application → Entity Information → Lease → upload.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
     format: "PDF. Current lease showing business name, address, term, and signatures. For home-based, a signed declaration.",
     docCategory: "CERTIFICATION_DOCUMENT",
   },
@@ -365,16 +366,19 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
             </div>
           )}
 
+          {/* Financial Readiness Check */}
+          {cert?.clientId && <FinancialReadiness clientId={cert.clientId} certType="EIGHT_A" />}
+
           {/* SBA Form 1010 Submission Wizard */}
           <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
               <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400 }}>SBA Form 1010 Submission Guide</h3>
-              <a href="https://certify.sba.gov" target="_blank" rel="noopener noreferrer"
+              <a href="https://certifications.sba.gov" target="_blank" rel="noopener noreferrer"
                 style={{ padding: "8px 16px", background: "var(--navy)", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "var(--gold2)", textDecoration: "none", whiteSpace: "nowrap" }}>
-                Open certify.sba.gov ↗
+                Open certifications.sba.gov ↗
               </a>
             </div>
-            <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 6 }}>Every document required for your 8(a) application. Click any item for detailed guidance on what it is, where to find it, and exactly where to upload it on certify.sba.gov.</p>
+            <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 6 }}>Every document required for your 8(a) application. Click any item for detailed guidance on what it is, where to find it, and exactly where to upload it on certifications.sba.gov.</p>
             <div style={{ padding: "10px 14px", background: "rgba(200,155,60,.05)", borderRadius: "var(--r)", border: "1px solid rgba(200,155,60,.12)", marginBottom: 16, fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
               <strong style={{ color: "var(--gold)" }}>💡 Tip:</strong> Work through this list top to bottom. GovCert has already prepared several items for you (marked green). For remaining items, click to expand and follow the guidance.
             </div>
@@ -429,7 +433,7 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                             <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{(item as any).where}</div>
                           </div>
                           <div style={{ padding: "12px", background: "rgba(11,25,41,.03)", borderRadius: 8, border: "1px solid rgba(11,25,41,.06)" }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--navy)", marginBottom: 6 }}>🏛️ On certify.sba.gov</div>
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--navy)", marginBottom: 6 }}>🏛️ On certifications.sba.gov</div>
                             <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{(item as any).sbaPortal}</div>
                           </div>
                           <div style={{ padding: "12px", background: "rgba(26,35,50,.02)", borderRadius: 8, border: "1px solid rgba(0,0,0,.04)" }}>
@@ -576,7 +580,7 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                   🔍 Run GovCert Analysis
                 </a>
                 <a
-                  href="https://certify.sba.gov"
+                  href="https://certifications.sba.gov"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{

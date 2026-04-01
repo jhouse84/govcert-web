@@ -539,6 +539,11 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
                     rows={4}
                     style={{ width: "100%", padding: "12px 14px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.7, resize: "vertical", outline: "none", boxSizing: "border-box" as const }}
                   />
+                  {(q.id === "incident1" || q.id === "incident2") && (
+                    <div style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", marginTop: 4, textAlign: "right" as const, color: (answers[q.id] || "").length > 1000 ? "var(--red)" : "var(--gold)" }}>
+                      {(answers[q.id] || "").length.toLocaleString()} / 1,000 characters
+                    </div>
+                  )}
                   {!isCoachingOpen && <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 4, fontStyle: "italic" }}>{q.hint}</div>}
                 </div>
                 );

@@ -27,7 +27,7 @@ const RESOURCE_LINKS: Record<string, { url: string; label: string; desc: string 
     desc: "System for Award Management registration is free and required before any federal agency can award you a contract. Renew annually.",
   },
   HUBZONE_MAP: {
-    url: "https://maps.certify.sba.gov/hubzone/map",
+    url: "https://maps.certifications.sba.gov/hubzone/map",
     label: "Check if your address is in a HUBZone",
     desc: "Use the SBA's HUBZone map to verify if your principal office and employee addresses qualify.",
   },
@@ -44,7 +44,7 @@ const RESOURCE_LINKS: Record<string, { url: string; label: string; desc: string 
   WOSB_CERTIFY: {
     url: "https://www.sba.gov/federal-contracting/contracting-assistance-programs/women-owned-small-business-federal-contracting-program",
     label: "WOSB self-certification on SBA.gov",
-    desc: "WOSB is a self-certification program. You certify your status through the SBA's beta.certify.sba.gov portal. No third-party certifier required.",
+    desc: "WOSB is a self-certification program. You certify your status through the SBA's beta.certifications.sba.gov portal. No third-party certifier required.",
   },
   VA_LETTER: {
     url: "https://www.va.gov/records/download-va-letters/",

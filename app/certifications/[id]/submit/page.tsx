@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { usePaywall } from "@/lib/usePaywall";
 import PaywallModal from "@/components/PaywallModal";
+import FinancialReadiness from "@/components/FinancialReadiness";
 
 // GSA eOffer field mapping — which section feeds which eOffer tab
 const EOFFER_FIELDS = [
@@ -64,6 +65,86 @@ const EOFFER_FIELDS = [
   },
 ];
 
+const GSA_MAS_CHECKLIST = [
+  { id: "digitalCert", label: "Digital Certificate (for eOffer access)", section: null, field: null,
+    what: "A PIV or digital certificate that lets you log into eoffer.gsa.gov. GSA requires certificate-based authentication — a standard username/password will not work.",
+    where: "Request a digital certificate through the GSA Vendor Support Center at vsc.gsa.gov. Processing takes 1-3 business days. You may also use a PIV card if your organization issues them.",
+    sbaPortal: "In eoffer.gsa.gov → you need the certificate installed in your browser before you can log in. Chrome/Edge: Settings → Privacy & Security → Manage certificates → import your .p12 file.",
+    format: "Digital file (.p12 or .pfx) installed in your browser's certificate store. No upload required — it authenticates automatically.",
+    docCategory: null,
+  },
+  { id: "financialStatements", label: "Financial Statements (2 Years P&L + Balance Sheet)", section: null, field: null,
+    what: "Profit & Loss statements and Balance Sheets for the 2 most recent complete fiscal years. GSA uses these to verify your company is financially stable and capable of performing on a long-term contract.",
+    where: "Your accountant or bookkeeper has these. If you use QuickBooks, export P&L and Balance Sheet reports. They must show the company name, period covered, and be signed or on CPA letterhead.",
+    sbaPortal: "Upload as PDF in eOffer → Upload Documents section.",
+    format: "PDF. One file per year or combined. Must include BOTH P&L AND Balance Sheet for each year.",
+    docCategory: "FINANCIAL_STATEMENT",
+  },
+  { id: "pastPerformance", label: "Past Performance (3+ Federal/Commercial Contracts)", section: null, field: null,
+    what: "Documentation of at least 3 completed or active contracts (federal or commercial) with references. GSA evaluators want to see relevant experience, contract values, and positive performance history.",
+    where: "GovCert pre-populated past performance from your uploaded documents. Check Section 4 (Past Performance tab) in eOffer. For federal contracts, download CPARS reports from cpars.gov. For commercial contracts, prepare a reference sheet with company name, contact, contract value, and period of performance.",
+    sbaPortal: "In eoffer.gsa.gov → Tab 4 (Past Performance) → upload each CPARS report or completed Past Performance Questionnaire (PPQ) as a separate PDF attachment.",
+    format: "PDF. Each reference as a separate file. Include contract number, value, period of performance, and a reference contact name/phone/email.",
+    docCategory: "CONTRACT",
+  },
+  { id: "csp1", label: "CSP-1 Commercial Supplier Pricelist", section: null, field: null,
+    what: "Your proposed pricing in GSA's required CSP-1 format. Lists every labor category or product with your Most Favored Customer (MFC) pricing, proposed GSA pricing, and the basis for that pricing.",
+    where: "GovCert has a pricing builder — go to the Pricing page to configure your labor categories and rates. Then use the 'Download CSP-1' button below to export the formatted file.",
+    sbaPortal: "Upload as CSV in eOffer → Upload Documents section.",
+    format: "Excel (.xlsx) or CSV in GSA's required CSP-1 template format. Must include labor category titles, descriptions, education/experience requirements, MFC rates, and proposed GSA rates.",
+    docCategory: null,
+  },
+  { id: "qcp", label: "Quality Control Plan / QMS Manual", section: null, field: null,
+    what: "A written plan describing how your company ensures quality in the services or products you deliver. Covers supervision, personnel qualifications, corrective actions, and subcontractor oversight.",
+    where: "GovCert drafted your Quality Control Plan in the QCP section. Review and refine it — Tab 3 in eOffer maps to these narratives.",
+    sbaPortal: "In eOffer → Technical Proposal → Quality Control (Factor 3). This is a 10,000-character text field — paste directly. GSA will NOT accept uploaded documents for this factor.",
+    format: "Text (pasted into eOffer fields) or PDF upload. Typically 5-15 pages covering all required QCP elements.",
+    docCategory: null,
+  },
+  { id: "corpExperience", label: "Corporate Experience Narrative", section: null, field: null,
+    what: "A comprehensive description of your company's history, capabilities, key personnel, organizational structure, and relevant experience that demonstrates your ability to perform under a GSA Schedule contract.",
+    where: "GovCert drafted this from your capability statement and company data. Review in Tab 2 (Corporate Experience) — each sub-section is ready to copy.",
+    sbaPortal: "In eOffer → Technical Proposal → Corporate Experience (Factor 1). This is a 10,000-character text field — paste directly. GSA will NOT accept uploaded documents for this factor.",
+    format: "Text narrative pasted into eOffer fields. Each field has character limits — check the field-level guidance below.",
+    docCategory: "CAPABILITY_STATEMENT",
+  },
+  { id: "technicalProposal", label: "Technical Proposal / Capability Statement", section: null, field: null,
+    what: "A formal document summarizing your company's technical approach, relevant experience, and ability to deliver the services or products offered under your GSA Schedule SIN categories.",
+    where: "Your existing capability statement can serve as a starting point. Tailor it to emphasize the specific SIN categories you are proposing. Include relevant certifications (ISO, CMMI, etc.).",
+    sbaPortal: "In eoffer.gsa.gov → Offer Documents → Technical Proposal → upload as a single PDF.",
+    format: "PDF. Typically 10-25 pages. Should directly address each SIN category you are proposing and demonstrate relevant experience.",
+    docCategory: "CAPABILITY_STATEMENT",
+  },
+  { id: "subconPlan", label: "Subcontracting Plan (if applicable, >$750K expected)", section: null, field: null,
+    what: "Required if your expected annual GSA sales exceed $750K and you are NOT a small business. Describes your plan to subcontract work to small, disadvantaged, women-owned, veteran-owned, and HUBZone businesses.",
+    where: "If required, use SBA's subcontracting plan template from sba.gov. Work with your contracts team to set realistic small business subcontracting goals.",
+    sbaPortal: "In eoffer.gsa.gov → Offer Documents → Subcontracting Plan → upload as PDF. If you are a small business, you may be exempt — select 'Small Business Exempt' in the portal.",
+    format: "PDF. Must follow FAR 52.219-9 format. Include specific dollar and percentage goals for each small business category.",
+    docCategory: "CERTIFICATION_DOCUMENT",
+  },
+  { id: "samRegistration", label: "SAM.gov Registration (Active, Matching NAICS)", section: null, field: null,
+    what: "An active registration in the System for Award Management (SAM.gov) with current NAICS codes that match the SIN categories you are proposing. Your UEI, CAGE code, and business information must be up to date.",
+    where: "Log into sam.gov and verify your registration is active and not expired. Check that your NAICS codes, business size, and entity information are current. Renewals are required annually.",
+    sbaPortal: "In eoffer.gsa.gov → Tab 1 (Company Information) → your SAM.gov data (UEI, CAGE, business name) must match exactly. eOffer pulls from SAM — if there's a mismatch, update SAM first and wait 24-48 hours.",
+    format: "No upload required. SAM.gov registration must be active. Print your SAM.gov entity registration summary as a backup PDF.",
+    docCategory: null,
+  },
+  { id: "priceProposal", label: "Price Proposal / Rate Card", section: null, field: null,
+    what: "A document showing how you arrived at your proposed GSA pricing. Includes your commercial price list, discount structure, Most Favored Customer pricing, and the basis for your proposed GSA discount off commercial rates.",
+    where: "Work with your pricing team or accountant. You need your commercial rate card plus documentation of any discounts given to your best commercial customers (MFC). GSA expects a discount off your MFC pricing.",
+    sbaPortal: "In eoffer.gsa.gov → Offer Documents → Price Proposal / Commercial Sales Practices (CSP) → upload as PDF alongside your CSP-1 spreadsheet.",
+    format: "PDF. Should include your commercial price list, MFC identification, discount rationale, and any supporting invoices or contracts showing commercial pricing.",
+    docCategory: "INVOICE",
+  },
+  { id: "authNegotiator", label: "Authorized Negotiator Letter", section: null, field: null,
+    what: "A letter on company letterhead designating who is authorized to negotiate and bind the company to a GSA Schedule contract. Must be signed by a corporate officer (CEO, President, or authorized partner).",
+    where: "Draft on your company letterhead. Include the negotiator's full name, title, phone, and email. Have your CEO or President sign it. If you are the owner AND negotiator, you still need this letter.",
+    sbaPortal: "In eoffer.gsa.gov → Offer Documents → Authorized Negotiator Letter → upload as PDF.",
+    format: "PDF on company letterhead. Must include: company name, negotiator name and title, contact information, authorizing officer signature, and date.",
+    docCategory: "CERTIFICATION_DOCUMENT",
+  },
+];
+
 function extractNarrativeField(narrativeJson: string | undefined, key: string): string {
   if (!narrativeJson) return "";
   try {
@@ -97,6 +178,9 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   }, []);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedTab, setExpandedTab] = useState<string | null>("Tab 1 — Company Information");
+  const [manualChecks, setManualChecks] = useState<Record<string, boolean>>({});
+  const [clientDocs, setClientDocs] = useState<Record<string, any[]>>({});
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState<string | null>(null);
 
   const pw = usePaywall("GSA_MAS");
@@ -151,6 +235,19 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           email: data.client.email || "",
           website: data.client.website || "",
         });
+      }
+      // Fetch all client documents grouped by category
+      if (data.clientId) {
+        try {
+          const allCats = "FINANCIAL_STATEMENT,CONTRACT,CAPABILITY_STATEMENT,CERTIFICATION_DOCUMENT,INVOICE,TAX_RETURN,RESUME,BANK_STATEMENT,BUSINESS_LICENSE,OTHER";
+          const docs = await apiRequest(`/api/upload/documents/by-category/${data.clientId}/${allCats}`);
+          const grouped: Record<string, any[]> = {};
+          for (const doc of docs) {
+            if (!grouped[doc.category]) grouped[doc.category] = [];
+            grouped[doc.category].push(doc);
+          }
+          setClientDocs(grouped);
+        } catch {}
       }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -270,6 +367,54 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
       setTimeout(() => setCopiedId(null), 2000);
     }
   }
+
+  function isChecklistItemComplete(item: typeof GSA_MAS_CHECKLIST[0]): boolean {
+    if (manualChecks[item.id]) return true;
+    return false;
+  }
+
+  function getNarrativeText(field: string): string {
+    if (!cert?.application) return "";
+    const val = cert.application[field];
+    if (!val) return "";
+    try {
+      const parsed = JSON.parse(val);
+      if (typeof parsed === "object" && parsed.narratives) {
+        return Object.entries(parsed.narratives).map(([k, v]) => `## ${k}\n${v}`).join("\n\n");
+      }
+      if (typeof parsed === "object") {
+        return Object.entries(parsed).map(([k, v]) => `## ${k}\n${v}`).join("\n\n");
+      }
+      return String(val);
+    } catch {
+      return String(val);
+    }
+  }
+
+  async function copyNarrative(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopySuccess(label);
+      setTimeout(() => setCopySuccess(null), 2000);
+    } catch {
+      const el = document.createElement("textarea");
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopySuccess(label);
+      setTimeout(() => setCopySuccess(null), 2000);
+    }
+  }
+
+  const checklistCompleted = GSA_MAS_CHECKLIST.filter(item => isChecklistItemComplete(item)).length;
+  const checklistTotal = GSA_MAS_CHECKLIST.length;
+
+  const narrativeSections = [
+    { label: "Corporate Experience", field: "narrativeCorp" },
+    { label: "Quality Control Plan", field: "narrativeQCP" },
+  ];
 
   function getCompletenessScore() {
     let total = 0, complete = 0;
@@ -413,6 +558,180 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
               <div style={{ height: 6, width: 120, background: "rgba(255,255,255,.1)", borderRadius: 100, overflow: "hidden", marginTop: 6 }}>
                 <div style={{ height: "100%", width: `${score.pct}%`, background: score.pct === 100 ? "var(--green)" : "var(--gold)", borderRadius: 100 }} />
               </div>
+            </div>
+          </div>
+
+          {cert?.clientId && <FinancialReadiness clientId={cert.clientId} certType="GSA_MAS" />}
+
+          {/* GSA MAS Document Checklist Wizard */}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400 }}>GSA MAS Submission Guide</h3>
+              <a href="https://eoffer.gsa.gov" target="_blank" rel="noopener noreferrer"
+                style={{ padding: "8px 16px", background: "var(--navy)", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "var(--gold2)", textDecoration: "none", whiteSpace: "nowrap" }}>
+                Open eOffer.gsa.gov ↗
+              </a>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 6 }}>Every document required for your GSA MAS application. Click any item for detailed guidance on what it is, where to find it, and exactly where to upload it on eOffer.</p>
+            <div style={{ padding: "10px 14px", background: "rgba(200,155,60,.05)", borderRadius: "var(--r)", border: "1px solid rgba(200,155,60,.12)", marginBottom: 10, fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
+              <strong style={{ color: "var(--gold)" }}>Tip:</strong> Work through this list top to bottom. Items with uploaded documents are shown in green. For remaining items, click to expand and follow the guidance.
+            </div>
+
+            {/* Checklist progress */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, padding: "10px 14px", background: "var(--cream)", borderRadius: "var(--r)" }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: checklistCompleted === checklistTotal ? "var(--green)" : "var(--navy)", fontWeight: 400 }}>
+                {checklistCompleted}<span style={{ fontSize: 14, color: "var(--ink3)" }}> / {checklistTotal}</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ height: 6, background: "var(--cream2)", borderRadius: 100, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${(checklistCompleted / checklistTotal) * 100}%`, background: checklistCompleted === checklistTotal ? "var(--green)" : "var(--gold)", borderRadius: 100, transition: "width .5s" }} />
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--ink4)" }}>items confirmed</div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {GSA_MAS_CHECKLIST.map(item => {
+                const complete = isChecklistItemComplete(item);
+                const isExpanded = manualChecks[`expanded_${item.id}`];
+                return (
+                  <div key={item.id} style={{
+                    border: `1px solid ${complete ? "var(--green-b)" : isExpanded ? "rgba(200,155,60,.25)" : "var(--border)"}`,
+                    borderRadius: "var(--r)", overflow: "hidden",
+                    background: complete ? "var(--green-bg)" : isExpanded ? "rgba(200,155,60,.02)" : "#fff",
+                  }}>
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                      cursor: "pointer",
+                    }}
+                      onClick={() => setManualChecks(prev => ({ ...prev, [`expanded_${item.id}`]: !prev[`expanded_${item.id}`] }))}>
+                      <div onClick={(e) => { e.stopPropagation(); setManualChecks(prev => ({ ...prev, [item.id]: !prev[item.id] })); }} style={{
+                        width: 22, height: 22, borderRadius: 4,
+                        border: `2px solid ${complete ? "var(--green)" : "var(--border2)"}`,
+                        background: complete ? "var(--green)" : "#fff",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, color: "#fff", fontWeight: 700, flexShrink: 0,
+                        cursor: "pointer",
+                      }}>
+                        {complete ? "\u2713" : ""}
+                      </div>
+                      <span style={{ fontSize: 14, color: complete ? "var(--green)" : "var(--navy)", fontWeight: complete ? 500 : 400, flex: 1 }}>{item.label}</span>
+                      {complete && (
+                        <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 500, marginRight: 8 }}>Confirmed</span>
+                      )}
+                      <span style={{ fontSize: 10, color: "var(--ink4)", fontWeight: 600 }}>{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                    </div>
+
+                    {isExpanded && (
+                      <div style={{ padding: "0 14px 14px", borderTop: "1px solid var(--border)" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                          <div style={{ padding: "12px", background: "rgba(26,35,50,.02)", borderRadius: 8, border: "1px solid rgba(0,0,0,.04)" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 6 }}>What is this?</div>
+                            <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{item.what}</div>
+                          </div>
+                          <div style={{ padding: "12px", background: "rgba(26,35,50,.02)", borderRadius: 8, border: "1px solid rgba(0,0,0,.04)" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 6 }}>Where to find it</div>
+                            <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{item.where}</div>
+                          </div>
+                          <div style={{ padding: "12px", background: "rgba(11,25,41,.03)", borderRadius: 8, border: "1px solid rgba(11,25,41,.06)" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--navy)", marginBottom: 6 }}>On eOffer / GSA portal</div>
+                            <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{item.sbaPortal}</div>
+                          </div>
+                          <div style={{ padding: "12px", background: "rgba(26,35,50,.02)", borderRadius: 8, border: "1px solid rgba(0,0,0,.04)" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 6 }}>Format requirements</div>
+                            <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{item.format}</div>
+                          </div>
+                        </div>
+                        {/* Show matching uploaded documents */}
+                        {item.docCategory && (clientDocs[item.docCategory] || []).length > 0 && (
+                          <div style={{ marginTop: 12, padding: "12px", background: "var(--green-bg)", borderRadius: 8, border: "1px solid var(--green-b)" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--green)", marginBottom: 8 }}>Your uploaded files — ready to submit</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              {(clientDocs[item.docCategory] || []).map((doc: any) => (
+                                <div key={doc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: "#fff", borderRadius: 6, border: "1px solid var(--border)" }}>
+                                  <div>
+                                    <div style={{ fontSize: 12, fontWeight: 500, color: "var(--navy)" }}>{doc.originalName}</div>
+                                    {doc.documentYear && <span style={{ fontSize: 10, color: "var(--ink4)" }}>{doc.documentYear}</span>}
+                                  </div>
+                                  <button onClick={async () => {
+                                    try {
+                                      const resp = await fetch(
+                                        `${process.env.NEXT_PUBLIC_API_URL || ''}/api/documents/download/${doc.id}`,
+                                        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+                                      );
+                                      if (!resp.ok) { alert('Download failed'); return; }
+                                      const blob = await resp.blob();
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement('a');
+                                      a.href = url; a.download = doc.originalName || 'document'; a.click();
+                                      URL.revokeObjectURL(url);
+                                    } catch { alert('Download failed'); }
+                                  }} style={{
+                                    padding: "4px 12px", fontSize: 11, fontWeight: 600,
+                                    color: "var(--green)", border: "1px solid var(--green-b)",
+                                    borderRadius: 5, background: "transparent", cursor: "pointer",
+                                  }}>
+                                    Download
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {item.docCategory && (!clientDocs[item.docCategory] || clientDocs[item.docCategory].length === 0) && (
+                          <div style={{ marginTop: 12, padding: "10px 12px", background: "rgba(200,60,60,.03)", borderRadius: 8, border: "1px solid rgba(200,60,60,.1)", fontSize: 12, color: "var(--red)" }}>
+                            No matching file uploaded yet. Upload this document in <a href={`/portal/documents`} style={{ color: "var(--gold)", fontWeight: 600 }}>My Documents</a> or gather it from the source described above.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Copy Narratives for eOffer */}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>Copy Narratives for eOffer</h3>
+            <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 16 }}>Click to copy each section for pasting into GSA eOffer tabs.</p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {narrativeSections.map(ns => {
+                const text = getNarrativeText(ns.field);
+                const hasText = text.trim().length > 0;
+                return (
+                  <div key={ns.field} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px",
+                    background: hasText ? "var(--cream)" : "var(--cream2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--r)",
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: hasText ? "var(--navy)" : "var(--ink4)" }}>{ns.label}</div>
+                      <div style={{ fontSize: 12, fontFamily: "'DM Mono', monospace", color: hasText && text.length > 10000 ? "var(--red)" : "var(--ink4)" }}>
+                        {hasText ? `${text.length.toLocaleString()} / 10,000 characters${text.length > 10000 ? " — over limit, trim before pasting" : ""}` : "Not yet drafted"}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => copyNarrative(text, ns.label)}
+                      disabled={!hasText}
+                      style={{
+                        padding: "8px 16px",
+                        background: hasText ? (copySuccess === ns.label ? "var(--green)" : "var(--gold)") : "var(--cream2)",
+                        border: "none",
+                        borderRadius: "var(--r)",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: hasText ? "#fff" : "var(--ink4)",
+                        cursor: hasText ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      {copySuccess === ns.label ? "\u2713 Copied!" : "Copy to Clipboard"}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

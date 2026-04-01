@@ -443,12 +443,35 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                           </div>
                         </div>
                         {/* Generate Form 413 button */}
-                        {(item as any).generateForm413 && cert?.clientId && (
-                          <div style={{ marginTop: 12, padding: "14px", background: "rgba(200,155,60,.06)", borderRadius: 8, border: "1px solid rgba(200,155,60,.2)" }}>
+                        {(item as any).generateForm413 && cert?.clientId && (() => {
+                          // Check if economic data has enough for Form 413
+                          let econData: any = {};
+                          try { if (cert?.application?.economicDisadvantageData) econData = JSON.parse(cert.application.economicDisadvantageData); } catch {}
+                          const hasAssets = !!(econData.cashOnHand || econData.cash || econData.savings || econData.realEstate || econData.retirement);
+                          const hasLiabilities = !!(econData.mortgage || econData.mortgageBalance || econData.notesPayable || econData.installmentDebt);
+                          const hasIncome = !!(econData.salary || econData.adjustedGrossIncome);
+                          const fieldsPresent = [hasAssets, hasLiabilities, hasIncome].filter(Boolean).length;
+                          const isReady = fieldsPresent >= 2;
+
+                          return (
+                          <div style={{ marginTop: 12, padding: "14px", background: isReady ? "rgba(200,155,60,.06)" : "rgba(200,60,60,.04)", borderRadius: 8, border: `1px solid ${isReady ? "rgba(200,155,60,.2)" : "rgba(200,60,60,.15)"}` }}>
+                            {!isReady && (
+                              <div style={{ marginBottom: 10, padding: "8px 10px", background: "var(--red-bg)", borderRadius: 6, border: "1px solid var(--red-b)", fontSize: 12, color: "var(--red)", lineHeight: 1.6 }}>
+                                <strong>⚠️ Not enough data to generate Form 413.</strong> The Economic Disadvantage section needs more detail:
+                                {!hasAssets && <div style={{ marginLeft: 12 }}>• Assets: cash on hand, savings, real estate values, retirement accounts</div>}
+                                {!hasLiabilities && <div style={{ marginLeft: 12 }}>• Liabilities: mortgages, loans, installment debt</div>}
+                                {!hasIncome && <div style={{ marginLeft: 12 }}>• Income: salary, investment income</div>}
+                                <div style={{ marginTop: 6 }}><a href={`/certifications/${certId}/8a/economic-disadvantage`} style={{ color: "var(--gold)", fontWeight: 600 }}>Complete Economic Disadvantage section →</a></div>
+                              </div>
+                            )}
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <div>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>📄 Pre-Filled SBA Form 413</div>
-                                <div style={{ fontSize: 11, color: "var(--ink3)", marginTop: 2 }}>Generated from your Economic Disadvantage data. Review, sign, and upload to the portal.</div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>📄 {isReady ? "Pre-Filled SBA Form 413" : "SBA Form 413 — Data Incomplete"}</div>
+                                <div style={{ fontSize: 11, color: "var(--ink3)", marginTop: 2 }}>
+                                  {isReady
+                                    ? "Generated from your Economic Disadvantage data. Review with your CPA, sign, and upload to the portal."
+                                    : "Complete the Economic Disadvantage section before generating. The Form 413 requires complete asset, liability, and income data to be valid."}
+                                </div>
                               </div>
                               <div style={{ display: "flex", gap: 8 }}>
                                 <button onClick={async () => {
@@ -464,12 +487,13 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                                     a.href = url; a.download = `SBA_Form_413_${cert.client?.businessName?.replace(/\s+/g, '_') || 'Company'}.pdf`; a.click();
                                     URL.revokeObjectURL(url);
                                   } catch { alert('Failed to generate Form 413'); }
-                                }} style={{
+                                }} disabled={!isReady} style={{
                                   padding: "8px 16px", fontSize: 12, fontWeight: 600,
-                                  background: "var(--gold)", color: "#fff",
-                                  border: "none", borderRadius: "var(--r)", cursor: "pointer",
+                                  background: isReady ? "var(--gold)" : "var(--cream2)", color: isReady ? "#fff" : "var(--ink4)",
+                                  border: "none", borderRadius: "var(--r)", cursor: isReady ? "pointer" : "not-allowed",
+                                  opacity: isReady ? 1 : 0.6,
                                 }}>
-                                  ⬇ Download Pre-Filled 413
+                                  {isReady ? "⬇ Download Pre-Filled 413" : "🔒 Complete Data First"}
                                 </button>
                                 <a href="https://www.sba.gov/document/sba-form-413" target="_blank" rel="noopener noreferrer" style={{
                                   padding: "8px 16px", fontSize: 12, fontWeight: 500,
@@ -482,7 +506,8 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                               </div>
                             </div>
                           </div>
-                        )}
+                          );
+                        })()}
 
                         {/* Show matching uploaded documents */}
                         {(item as any).docCategory && (clientDocs[(item as any).docCategory] || []).length > 0 && (

@@ -131,31 +131,17 @@ export default function LandingPage() {
           <p style={{ fontSize: 15, color: "var(--ink3)", maxWidth: 600, margin: "0 auto 28px", fontWeight: 300, lineHeight: 1.6 }}>
             Built by the founders of House Strategies Group — a government contracting firm that spent months assembling certification applications by hand. We knew there had to be an easier way.
           </p>
-          {/* Top row: two product videos side by side */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 16, border: "1px solid rgba(200,155,60,.1)", boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #C89B3C, #E8B84B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#fff" }}>▶</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>GovCert Overview</div>
-                  <div style={{ fontSize: 11, color: "var(--ink3)" }}>What the platform does and how it saves you time</div>
-                </div>
-              </div>
-              <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 10, overflow: "hidden", background: "var(--navy)" }}>
-                <iframe src="https://www.youtube.com/embed/PhevgTFZiOg" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+          {/* Product Demo Video */}
+          <div style={{ background: "#fff", borderRadius: 16, padding: 20, border: "1px solid rgba(200,155,60,.15)", boxShadow: "0 4px 24px rgba(0,0,0,.06)", marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <span style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #C89B3C, #E8B84B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#fff" }}>▶</span>
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "var(--navy)" }}>Full Platform Walkthrough</div>
+                <div style={{ fontSize: 12, color: "var(--ink3)" }}>See a new customer go from document upload to submission-ready 8(a) application</div>
               </div>
             </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 16, border: "1px solid rgba(200,155,60,.1)", boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #4338CA, #6366F1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#fff" }}>▶</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>Full Platform Demo</div>
-                  <div style={{ fontSize: 11, color: "var(--ink3)" }}>Walk through every feature from upload to submission</div>
-                </div>
-              </div>
-              <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 10, overflow: "hidden", background: "var(--navy)" }}>
-                <iframe src="https://www.youtube.com/embed/SVfWc-31Xbw" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-              </div>
+            <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 12, overflow: "hidden", background: "var(--navy)" }}>
+              <iframe src="https://www.youtube.com/embed/fSlW-c9PDb8?start=237" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
             </div>
           </div>
           {/* Bottom row: security video — distinct dark treatment */}

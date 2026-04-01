@@ -37,8 +37,11 @@ export default function PaywallModal({ certType, certLabel, price, betaMode, onU
       });
       if (data.success || data.paymentRequired === false) {
         onUnlock();
+      } else if (data.paymentRequired && data.checkoutUrl) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.checkoutUrl;
       } else if (data.paymentRequired) {
-        setError("Payment integration coming soon. Contact support for manual activation.");
+        setError("Payment processing is not configured. Contact support for activation.");
       }
     } catch (err: any) {
       setError(err.message || "Purchase failed. Please try again.");

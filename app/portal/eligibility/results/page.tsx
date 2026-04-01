@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { ApplicationCoachingModal } from "@/components/ApplicationCoachingModal";
+import PaywallModal from "@/components/PaywallModal";
 
 /* ── Resource links for common items users need to obtain ── */
 const RESOURCE_LINKS: Record<string, { url: string; label: string; desc: string }> = {
@@ -341,8 +342,33 @@ export default function EligibilityResultsPage() {
   const [pendingCertId, setPendingCertId] = useState<string | null>(null);
   const [pendingCertType, setPendingCertType] = useState<string | null>(null);
 
+  // Paywall state
+  const [paywallCertType, setPaywallCertType] = useState<string | null>(null);
+  const [paywallPrice, setPaywallPrice] = useState(0);
+  const [paywallBetaMode, setPaywallBetaMode] = useState(true);
+
   async function startApplication(certType: string) {
     if (!clientId || creatingCert) return;
+
+    // Check payment access before creating the application
+    try {
+      const access = await apiRequest(`/api/pricing/check-access?certType=${certType}`);
+      if (!access.generationAccess) {
+        // Show paywall — user needs to pay first
+        setPaywallCertType(certType);
+        setPaywallPrice(access.price || 0);
+        setPaywallBetaMode(access.betaMode || false);
+        return;
+      }
+    } catch {
+      // If access check fails, try to proceed (backend requirePayment will catch it)
+    }
+
+    await createApplication(certType);
+  }
+
+  async function createApplication(certType: string) {
+    if (!clientId) return;
     setCreatingCert(certType);
     try {
       const newCert = await apiRequest("/api/certifications", {
@@ -849,6 +875,21 @@ export default function EligibilityResultsPage() {
 
         </div>
       </div>
+
+      {/* Paywall Modal — shown when user needs to pay before starting application */}
+      {paywallCertType && (
+        <PaywallModal
+          certType={paywallCertType}
+          price={paywallPrice}
+          betaMode={paywallBetaMode}
+          onUnlock={() => {
+            const ct = paywallCertType;
+            setPaywallCertType(null);
+            createApplication(ct);
+          }}
+          onClose={() => setPaywallCertType(null)}
+        />
+      )}
 
       {/* Coaching Modal — shown when user starts a new application */}
       {coachingCertType && clientId && (

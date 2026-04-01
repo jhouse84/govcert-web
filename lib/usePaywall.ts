@@ -30,9 +30,9 @@ export function usePaywall(certType: string): PaywallState {
       setBetaMode(data.betaMode);
       setPrice(data.price || 0);
     } catch {
-      // If check fails, default to allowing access (fail open during beta)
-      setGenerationAccess(true);
-      setBetaMode(true);
+      // Fail closed — block access when backend is unreachable
+      setGenerationAccess(false);
+      setBetaMode(false);
     } finally {
       setLoading(false);
     }

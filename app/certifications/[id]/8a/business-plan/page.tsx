@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import CertSidebar from "@/components/CertSidebar";
+import { ProvenanceBadge } from "@/components/SecurityBadge";
 
 const EIGHT_A_SECTIONS = [
   { id: "social-disadvantage", label: "Social Disadvantage" },
@@ -61,6 +62,7 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
   const [docCount, setDocCount] = useState(0);
   const [prefilling, setPrefilling] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -184,6 +186,14 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
         newAnswers.legalStructure = (newAnswers.legalStructure || "") + `, based in ${bi.location}`;
       }
 
+      // Track which fields were auto-filled from documents
+      const filled: Record<string, string> = {};
+      for (const key of Object.keys(newAnswers)) {
+        if (newAnswers[key] && (!bpAnswers[key] || !bpAnswers[key].trim())) {
+          filled[key] = "extractedProfile";
+        }
+      }
+      setAutoFilledFields(prev => ({ ...prev, ...filled }));
       setBpAnswers(newAnswers);
       setPrefilled(true);
     } catch (err: any) {
@@ -488,6 +498,7 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
                       {bpAnswers[q.id]?.trim() ? "\u2713" : i + 1}
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{q.question}</span>
+                    {autoFilledFields[q.id] && <ProvenanceBadge source={autoFilledFields[q.id]} confidence="MEDIUM" />}
                   </div>
                   <textarea value={bpAnswers[q.id] || ""} onChange={e => setBpAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
                     placeholder="Type your answer..." rows={2}

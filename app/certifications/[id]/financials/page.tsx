@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { parseCurrencyRaw } from "@/lib/formatters";
-import { SecurityBanner } from "@/components/SecurityBadge";
+import { SecurityBanner, ProvenanceBadge } from "@/components/SecurityBadge";
 
 function fmtNum(v: string | number | null | undefined): string {
   if (!v) return "";
@@ -80,6 +80,7 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
   const [qbConnected, setQbConnected] = useState(false);
   const [qbSyncing, setQbSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoFilledSource, setAutoFilledSource] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -121,6 +122,7 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
               notes: "Pre-filled from your uploaded documents. Review and complete the remaining fields.",
             };
             setFinancials(prefilled);
+            setAutoFilledSource("eligibility");
             setMode("review");
           }
         } catch {}
@@ -223,6 +225,7 @@ RULES:
         const clean = data.text.replace(/```json|```/g, "").trim();
         const parsed = JSON.parse(clean);
         setFinancials({ ...parsed, source: "upload", uploadedFileNames: fileNames });
+        setAutoFilledSource("extractedProfile");
         setMode("review");
       } catch {
         setFinancials(prev => ({ ...prev, source: "upload", uploadedFileNames: fileNames }));
@@ -559,7 +562,12 @@ RULES:
                   {PL_FIELDS.map((field, i) => (
                     <div key={field.key} style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr", gap: 12, marginBottom: 8, padding: "8px 0", borderTop: i === 0 ? "1px solid var(--border)" : "none" }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{field.label}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{field.label}</span>
+                          {autoFilledSource && field.key === "revenue" && (financials.year1[field.key] || financials.year2[field.key]) && (
+                            <ProvenanceBadge source={autoFilledSource} confidence="MEDIUM" />
+                          )}
+                        </div>
                         <div style={{ fontSize: 11, color: "var(--ink4)" }}>{field.hint}</div>
                       </div>
                       {YEARS.map(y => (

@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import RedraftWizard from "@/components/RedraftWizard";
 
 const PROMPTS = [
   { id: "overview", label: "Quality Control Overview", hint: "Overall QC approach and philosophy", maxChars: 2000 },
@@ -80,6 +81,7 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
     } catch {}
   }, []);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [redraftSection, setRedraftSection] = useState<string | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
   const [generatingAll, setGeneratingAll] = useState(false);
   const [listening, setListening] = useState<string | null>(null);
@@ -221,15 +223,21 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
     finally { setGeneratingAll(false); }
   }
 
-  async function regenerateSection(promptId: string) {
+  async function regenerateSection(promptId: string, guidance?: { emphases: string[]; details: Record<string, string> }) {
     setGenerating(promptId);
     try {
       const prompt = PROMPTS.find(p => p.id === promptId);
+      let guidanceStr = "";
+      if (guidance) {
+        if (guidance.emphases.length > 0) guidanceStr += "\n\nEMPHASIZE:\n" + guidance.emphases.map(e => `- ${e}`).join("\n");
+        const details = Object.entries(guidance.details).filter(([_, v]) => v.trim());
+        if (details.length > 0) guidanceStr += "\n\nADDITIONAL CONTEXT:\n" + details.map(([_, v]) => v).join("\n\n");
+      }
       const data = await apiRequest("/api/applications/ai/draft", {
         method: "POST",
         body: JSON.stringify({
           section: prompt?.label,
-          prompt: `Write the ${prompt?.label} section of a GSA MAS Quality Control Plan. ${prompt?.hint}`,
+          prompt: `Write the ${prompt?.label} section of a GSA MAS Quality Control Plan. ${prompt?.hint}${guidanceStr}`,
           context: {
             businessName: cert?.client?.businessName,
             entityType: cert?.client?.entityType,
@@ -645,7 +653,7 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
                         {listening === prompt.id ? "⏹ Stop" : "🎤 Speak"}
                       </button>
                       <button
-                        onClick={() => regenerateSection(prompt.id)}
+                        onClick={() => generating === prompt.id ? null : setRedraftSection(prompt.id)}
                         disabled={generating === prompt.id}
                         style={{ padding: "7px 14px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
                         {generating === prompt.id ? "Drafting..." : "✦ Redraft"}
@@ -682,6 +690,20 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
           )}
         </div>
       </div>
+
+      {/* RedraftWizard Modal */}
+      {redraftSection && (
+        <RedraftWizard
+          sectionId={redraftSection}
+          sectionLabel={PROMPTS.find(p => p.id === redraftSection)?.label || redraftSection}
+          generating={generating === redraftSection}
+          onGenerate={(guidance) => {
+            regenerateSection(redraftSection, guidance);
+            setRedraftSection(null);
+          }}
+          onClose={() => setRedraftSection(null)}
+        />
+      )}
     </div>
   );
 }

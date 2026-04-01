@@ -2,7 +2,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
-import { SecurityBanner } from "@/components/SecurityBadge";
+import { SecurityBanner, ProvenanceBadge } from "@/components/SecurityBadge";
+import RedraftWizard from "@/components/RedraftWizard";
 
 // ── STRUCTURED QUESTIONS ──
 const GUIDED_QUESTIONS = [
@@ -76,6 +77,9 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
   const [generating, setGenerating] = useState<string | null>(null);
   const [generatingAll, setGeneratingAll] = useState(false);
   const [listening, setListening] = useState<string | null>(null);
+
+  const [redraftSection, setRedraftSection] = useState<string | null>(null);
+  const [autoFilledFields, setAutoFilledFields] = useState<Record<string, string>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -172,9 +176,14 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
         if (Object.keys(auto).length > 0) {
           setGuidedAnswers(prev => {
             const merged = { ...prev };
+            const filled: Record<string, string> = {};
             for (const [k, v] of Object.entries(auto)) {
-              if (!merged[k] || merged[k].trim() === "") merged[k] = v;
+              if (!merged[k] || merged[k].trim() === "") {
+                merged[k] = v;
+                filled[k] = "eligibility";
+              }
             }
+            setAutoFilledFields(prev => ({ ...prev, ...filled }));
             return merged;
           });
         }
@@ -328,16 +337,22 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
   }
 
   // ── AI: Regenerate single section ──
-  async function regenerateSection(sectionId: string) {
+  async function regenerateSection(sectionId: string, guidance?: { emphases: string[]; details: Record<string, string> }) {
     setGenerating(sectionId);
     try {
       const section = NARRATIVE_SECTIONS.find(s => s.id === sectionId);
       const guidedContext = GUIDED_QUESTIONS.map(q => `${q.label}: ${guidedAnswers[q.id] || ""}`).filter(s => s.split(":")[1].trim()).join("\n\n");
+      let guidanceStr = "";
+      if (guidance) {
+        if (guidance.emphases.length > 0) guidanceStr += "\n\nEMPHASIZE:\n" + guidance.emphases.map(e => `- ${e}`).join("\n");
+        const details = Object.entries(guidance.details).filter(([_, v]) => v.trim());
+        if (details.length > 0) guidanceStr += "\n\nADDITIONAL CONTEXT:\n" + details.map(([_, v]) => v).join("\n\n");
+      }
       const data = await apiRequest("/api/applications/ai/draft", {
         method: "POST",
         body: JSON.stringify({
           section: section?.label,
-          prompt: `Write the "${section?.label}" section of a GSA Multiple Award Schedule Corporate Experience narrative for this company. Max ${section?.maxChars} characters. Be specific and credible. Use real data from the context provided.`,
+          prompt: `Write the "${section?.label}" section of a GSA Multiple Award Schedule Corporate Experience narrative for this company. Max ${section?.maxChars} characters. Be specific and credible. Use real data from the context provided.${guidanceStr}`,
           context: {
             businessName: cert?.client?.businessName,
             entityType: cert?.client?.entityType,
@@ -680,7 +695,10 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
                     <div key={q.id}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                         <div style={{ flex: 1 }}>
-                          <label style={{ display: "block", fontSize: 13.5, fontWeight: 500, color: "var(--navy)", marginBottom: 3 }}>{q.label}</label>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                            <label style={{ fontSize: 13.5, fontWeight: 500, color: "var(--navy)" }}>{q.label}</label>
+                            {autoFilledFields[q.id] && <ProvenanceBadge source={autoFilledFields[q.id]} confidence="MEDIUM" />}
+                          </div>
                           <div style={{ fontSize: 12, color: "var(--ink3)", fontStyle: "italic" }}>{q.question}</div>
                         </div>
                         <button
@@ -772,7 +790,7 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
                         {listening === section.id ? "⏹ Stop" : "🎤 Speak"}
                       </button>
                       <button
-                        onClick={() => regenerateSection(section.id)}
+                        onClick={() => generating === section.id ? null : setRedraftSection(section.id)}
                         disabled={generating === section.id}
                         style={{ padding: "7px 14px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 500, cursor: generating === section.id ? "not-allowed" : "pointer", opacity: generating === section.id ? 0.7 : 1 }}>
                         {generating === section.id ? "✦ Drafting..." : "✦ Redraft"}
@@ -809,6 +827,20 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
 
         </div>
       </div>
+
+      {/* RedraftWizard Modal */}
+      {redraftSection && (
+        <RedraftWizard
+          sectionId={redraftSection}
+          sectionLabel={NARRATIVE_SECTIONS.find(s => s.id === redraftSection)?.label || redraftSection}
+          generating={generating === redraftSection}
+          onGenerate={(guidance) => {
+            regenerateSection(redraftSection, guidance);
+            setRedraftSection(null);
+          }}
+          onClose={() => setRedraftSection(null)}
+        />
+      )}
     </div>
   );
 }

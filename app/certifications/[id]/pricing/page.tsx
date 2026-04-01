@@ -324,6 +324,70 @@ Return ONLY the JSON array.`,
     }
   }
 
+  async function processExistingDocs() {
+    const relevantDocs = [
+      ...(existingDocs.INVOICE || []),
+      ...(existingDocs.RATE_CARD || []),
+      ...(existingDocs.PAST_PROPOSAL || []),
+      ...(existingDocs.CONTRACT || []),
+    ];
+    if (relevantDocs.length === 0) return;
+    setProcessingInvoices(true);
+    setError(null);
+    try {
+      const clientId = cert?.clientId || cert?.client?.id;
+      const docs = await apiRequest(`/api/upload/documents?clientId=${clientId}`);
+      const relevantIds = new Set(relevantDocs.map((d: any) => d.id));
+      const withText = (Array.isArray(docs) ? docs : []).filter(
+        (d: any) => relevantIds.has(d.id) && d.extractedText?.trim()
+      );
+      if (withText.length === 0) {
+        setError("Your uploaded invoices don't have extractable text. Try re-uploading them as PDF files.");
+        setProcessingInvoices(false);
+        return;
+      }
+      let combined = "";
+      for (const doc of withText) {
+        const snippet = `--- ${doc.originalName} ---\n${doc.extractedText.substring(0, 3000)}\n\n`;
+        if (combined.length + snippet.length > 8000) break;
+        combined += snippet;
+      }
+      const selectedSINs = cert?.application?.selectedSINs || "";
+      const data = await apiRequest("/api/applications/ai/draft", {
+        method: "POST",
+        body: JSON.stringify({
+          section: "Invoice Analysis for GSA CSP-1 Pricing",
+          prompt: `Analyze these invoices/documents and extract all billable service line items. Group similar services together. Return a JSON array:
+[
+  {
+    "serviceType": "plain English name",
+    "description": "what work was performed",
+    "invoiceCount": number,
+    "rateRange": "e.g. $125-$175/hr",
+    "highestRate": "150.00",
+    "suggestedLcatTitle": "GSA-compliant LCAT title",
+    "suggestedEducation": "Bachelor's Degree",
+    "suggestedYearsExp": "5",
+    "rationale": "one sentence explaining why this maps to this LCAT"
+  }
+]
+Selected SINs: ${selectedSINs}
+Company: ${cert?.client?.businessName}
+Return ONLY the JSON array.`,
+          context: { businessName: cert?.client?.businessName, otherSections: combined },
+          clientId,
+        }),
+      });
+      const clean = data.text.replace(/```json|```/g, "").trim();
+      setInvoiceGroups(JSON.parse(clean));
+      setInvoicesProcessed(true);
+    } catch (err) {
+      setError("Failed to analyze uploaded documents. Please try again.");
+    } finally {
+      setProcessingInvoices(false);
+    }
+  }
+
   function addGroupAsLcat(group: any) {
     addLcat({
       title: group.suggestedLcatTitle || group.serviceType,
@@ -653,8 +717,48 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                 </div>
               </div>
 
+              {/* Pull from already-uploaded docs */}
+              {(() => {
+                const uploadedInvoiceDocs = [
+                  ...(existingDocs.INVOICE || []),
+                  ...(existingDocs.RATE_CARD || []),
+                  ...(existingDocs.PAST_PROPOSAL || []),
+                  ...(existingDocs.CONTRACT || []),
+                ];
+                if (uploadedInvoiceDocs.length === 0 || invoicesProcessed) return null;
+                return (
+                  <div style={{ background: "linear-gradient(135deg, rgba(180, 155, 80, 0.06), rgba(26, 47, 69, 0.04))", border: "1px solid rgba(180, 155, 80, 0.25)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 20 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+                      <div style={{ fontSize: 32, flexShrink: 0 }}>📂</div>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>
+                          You already have {uploadedInvoiceDocs.length} document{uploadedInvoiceDocs.length !== 1 ? "s" : ""} uploaded
+                        </h3>
+                        <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 12, lineHeight: 1.6 }}>
+                          GovCert found invoices, rate cards, and proposals in your document library. Pull LCATs directly from these instead of re-uploading.
+                        </p>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 14 }}>
+                          {uploadedInvoiceDocs.slice(0, 5).map((d: any, i: number) => (
+                            <span key={i} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 4, background: "rgba(180,155,80,.1)", color: "#8B7A3E", border: "1px solid rgba(180,155,80,.2)" }}>
+                              {d.originalName?.substring(0, 35)}{d.originalName?.length > 35 ? "..." : ""}
+                            </span>
+                          ))}
+                          {uploadedInvoiceDocs.length > 5 && <span style={{ fontSize: 11, color: "var(--ink4)", alignSelf: "center" }}>+{uploadedInvoiceDocs.length - 5} more</span>}
+                        </div>
+                        <button onClick={processExistingDocs} disabled={processingInvoices}
+                          style={{ padding: "11px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: processingInvoices ? "not-allowed" : "pointer", opacity: processingInvoices ? 0.7 : 1, boxShadow: "0 4px 16px rgba(200,155,60,.3)" }}>
+                          {processingInvoices ? "✦ Analyzing your documents..." : "✦ Pull LCATs from uploaded documents →"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
-                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>Upload Your Documents</h3>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>
+                  {(existingDocs.INVOICE?.length || existingDocs.RATE_CARD?.length) ? "Or Upload New Documents" : "Upload Your Documents"}
+                </h3>
                 <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 20, lineHeight: 1.6 }}>Select as many files as you have — invoices, rate sheets, proposals. PDF, Word, Excel, and CSV all work.</p>
                 <input ref={invoiceInputRef} type="file" multiple accept=".pdf,.docx,.xlsx,.xls,.csv,.txt" style={{ display: "none" }}
                   onChange={e => { if (e.target.files) setInvoiceFiles(Array.from(e.target.files)); }} />

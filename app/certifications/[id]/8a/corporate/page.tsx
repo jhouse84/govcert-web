@@ -3,6 +3,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import CertSidebar from "@/components/CertSidebar";
+import RedraftWizard from "@/components/RedraftWizard";
+import { ProvenanceBadge } from "@/components/SecurityBadge";
 
 const EIGHT_A_SECTIONS = [
   { id: "social-disadvantage", label: "Social Disadvantage" },
@@ -48,6 +50,8 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
   const [mode, setMode] = useState<"gather" | "refine">("gather");
   const [guidedAnswers, setGuidedAnswers] = useState<Record<string, string>>({});
   const [narratives, setNarratives] = useState<Record<string, string>>({});
+  const [redraftSection, setRedraftSection] = useState<string | null>(null);
+  const [autoFilledFields, setAutoFilledFields] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState<string | null>(null);
   const [generatingAll, setGeneratingAll] = useState(false);
   const [listening, setListening] = useState<string | null>(null);
@@ -180,6 +184,14 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
       if (sec.employees && !newAnswers.ownerExperience) newAnswers.ownerExperience = sec.employees;
       if (sec.overview && !newAnswers.coreServices) newAnswers.coreServices = sec.overview;
 
+      // Track which fields were auto-filled
+      const filled: Record<string, string> = {};
+      for (const key of Object.keys(newAnswers)) {
+        if (newAnswers[key] && (!guidedAnswers[key] || !guidedAnswers[key].trim())) {
+          filled[key] = "extractedProfile";
+        }
+      }
+      if (Object.keys(filled).length > 0) setAutoFilledFields(prev => ({ ...prev, ...filled }));
       setGuidedAnswers(newAnswers);
     } catch (err: any) {
       setError("Document scan failed: " + (err.message || "Try uploading more documents."));
@@ -212,17 +224,23 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
     finally { setGeneratingAll(false); }
   }
 
-  async function regenerateSection(sectionId: string) {
+  async function regenerateSection(sectionId: string, guidance?: { emphases: string[]; details: Record<string, string> }) {
     setGenerating(sectionId);
     try {
       const section = NARRATIVE_SECTIONS.find(s => s.id === sectionId);
       const guidedContext = GUIDED_QUESTIONS.map(q => `${q.label}: ${guidedAnswers[q.id] || ""}`).filter(s => s.split(":")[1].trim()).join("\n\n");
+      let guidanceStr = "";
+      if (guidance) {
+        if (guidance.emphases.length > 0) guidanceStr += "\n\nEMPHASIZE:\n" + guidance.emphases.map(e => `- ${e}`).join("\n");
+        const details = Object.entries(guidance.details).filter(([_, v]) => v.trim());
+        if (details.length > 0) guidanceStr += "\n\nADDITIONAL CONTEXT:\n" + details.map(([_, v]) => v).join("\n\n");
+      }
       const data = await apiRequest("/api/applications/ai/draft", {
         method: "POST",
         body: JSON.stringify({
           section: section?.label,
           certType: "8a",
-          prompt: `Write the "${section?.label}" section of an 8(a) Corporate Experience narrative. Max ${section?.maxChars} chars. Be specific, credible, aligned with SBA 8(a) requirements.`,
+          prompt: `Write the "${section?.label}" section of an 8(a) Corporate Experience narrative. Max ${section?.maxChars} chars. Be specific, credible, aligned with SBA 8(a) requirements.${guidanceStr}`,
           context: {
             businessName: cert?.client?.businessName,
             otherSections: guidedContext + "\n\n" + Object.entries(narratives).filter(([k]) => k !== sectionId).map(([k, v]) => `${k}: ${v}`).join("\n\n"),
@@ -458,7 +476,10 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
                   {GUIDED_QUESTIONS.map(q => (
                     <div key={q.id}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <label style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500 }}>{q.question}</label>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                          <label style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500 }}>{q.question}</label>
+                          {autoFilledFields[q.id] && <ProvenanceBadge source={autoFilledFields[q.id]} confidence="MEDIUM" />}
+                        </div>
                         <button
                           onClick={() => listening === q.id ? stopVoice() : startVoice(q.id, true)}
                           style={{ padding: "4px 10px", background: listening === q.id ? "#C62828" : "var(--cream)", border: `1px solid ${listening === q.id ? "#C62828" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 11, color: listening === q.id ? "#fff" : "var(--ink3)", cursor: "pointer" }}>
@@ -504,7 +525,7 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
                         style={{ padding: "6px 12px", background: listening === s.id ? "#C62828" : "var(--cream)", border: `1px solid ${listening === s.id ? "#C62828" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 12, color: listening === s.id ? "#fff" : "var(--ink3)", cursor: "pointer" }}>
                         {listening === s.id ? "\u23F9" : "\uD83C\uDF99\uFE0F"}
                       </button>
-                      <button onClick={() => regenerateSection(s.id)} disabled={generating === s.id}
+                      <button onClick={() => generating === s.id ? null : setRedraftSection(s.id)} disabled={generating === s.id}
                         style={{ padding: "6px 12px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", opacity: generating === s.id ? 0.7 : 1 }}>
                         {generating === s.id ? "..." : "\u2728 Redraft"}
                       </button>
@@ -542,6 +563,20 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
           </div>
         </div>
       </div>
+
+      {/* RedraftWizard Modal */}
+      {redraftSection && (
+        <RedraftWizard
+          sectionId={redraftSection}
+          sectionLabel={NARRATIVE_SECTIONS.find(s => s.id === redraftSection)?.label || redraftSection}
+          generating={generating === redraftSection}
+          onGenerate={(guidance) => {
+            regenerateSection(redraftSection, guidance);
+            setRedraftSection(null);
+          }}
+          onClose={() => setRedraftSection(null)}
+        />
+      )}
     </div>
   );
 }

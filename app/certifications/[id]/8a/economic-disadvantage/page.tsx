@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { parseCurrencyRaw } from "@/lib/formatters";
 import CertSidebar from "@/components/CertSidebar";
-import { SecurityBanner } from "@/components/SecurityBadge";
+import { SecurityBanner, ProvenanceBadge } from "@/components/SecurityBadge";
 
 function fmtNum(v: string | number | null | undefined): string {
   if (!v) return "";
@@ -90,6 +90,7 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
   const [vehDecoding, setVehDecoding] = useState(false);
   // Tool panel
   const [activeToolIdx, setActiveToolIdx] = useState<number | null>(null);
+  const [autoFilledSources, setAutoFilledSources] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -117,6 +118,7 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
           const intake = typeof data.client.intakeData === "string" ? JSON.parse(data.client.intakeData) : data.client.intakeData;
           if (intake.incomeYears && incomeYears.every(y => !y.adjustedGross)) {
             setIncomeYears(intake.incomeYears);
+            setAutoFilledSources(prev => ({ ...prev, incomeYears: "client" }));
           }
         } catch {}
       }
@@ -150,30 +152,33 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
       });
       setAiScanResult(data);
       // Auto-apply extracted data
+      const filled: Record<string, string> = {};
       if (data.assets) {
         const newAssets: Record<string, string> = { ...assets };
-        if (data.assets.cash && !assets.cash) newAssets.cash = data.assets.cash;
-        if (data.assets.savings && !assets.savings) newAssets.savings = data.assets.savings;
-        if (data.assets.retirement && !assets.ira) newAssets.ira = data.assets.retirement;
-        if (data.assets.investments && !assets.stocks) newAssets.stocks = data.assets.investments;
-        if (data.assets.realEstate && !assets.realEstate) newAssets.realEstate = data.assets.realEstate;
-        if (data.assets.vehicles && !assets.vehicles) newAssets.vehicles = data.assets.vehicles;
-        if (data.assets.other && !assets.otherAssets) newAssets.otherAssets = data.assets.other;
+        if (data.assets.cash && !assets.cash) { newAssets.cash = data.assets.cash; filled.cash = "extractedProfile"; }
+        if (data.assets.savings && !assets.savings) { newAssets.savings = data.assets.savings; filled.savings = "extractedProfile"; }
+        if (data.assets.retirement && !assets.ira) { newAssets.ira = data.assets.retirement; filled.ira = "extractedProfile"; }
+        if (data.assets.investments && !assets.stocks) { newAssets.stocks = data.assets.investments; filled.stocks = "extractedProfile"; }
+        if (data.assets.realEstate && !assets.realEstate) { newAssets.realEstate = data.assets.realEstate; filled.realEstate = "extractedProfile"; }
+        if (data.assets.vehicles && !assets.vehicles) { newAssets.vehicles = data.assets.vehicles; filled.vehicles = "extractedProfile"; }
+        if (data.assets.other && !assets.otherAssets) { newAssets.otherAssets = data.assets.other; filled.otherAssets = "extractedProfile"; }
         setAssets(newAssets);
       }
       if (data.liabilities) {
         const newLiab: Record<string, string> = { ...liabilities };
-        if (data.liabilities.mortgages && !liabilities.mortgages) newLiab.mortgages = data.liabilities.mortgages;
-        if (data.liabilities.loans && !liabilities.loans) newLiab.loans = data.liabilities.loans;
-        if (data.liabilities.creditCards && !liabilities.creditCards) newLiab.creditCards = data.liabilities.creditCards;
-        if (data.liabilities.other && !liabilities.otherLiabilities) newLiab.otherLiabilities = data.liabilities.other;
+        if (data.liabilities.mortgages && !liabilities.mortgages) { newLiab.mortgages = data.liabilities.mortgages; filled.mortgages = "extractedProfile"; }
+        if (data.liabilities.loans && !liabilities.loans) { newLiab.loans = data.liabilities.loans; filled.loans = "extractedProfile"; }
+        if (data.liabilities.creditCards && !liabilities.creditCards) { newLiab.creditCards = data.liabilities.creditCards; filled.creditCards = "extractedProfile"; }
+        if (data.liabilities.other && !liabilities.otherLiabilities) { newLiab.otherLiabilities = data.liabilities.other; filled.otherLiabilities = "extractedProfile"; }
         setLiabilities(newLiab);
       }
       if (data.incomeYears?.length > 0 && incomeYears.every(y => !y.adjustedGross)) {
         setIncomeYears(data.incomeYears.slice(0, 3).map((y: any) => ({
           year: y.year || "", adjustedGross: y.adjustedGross || "", source: y.source || "",
         })));
+        filled.incomeYears = "extractedProfile";
       }
+      if (Object.keys(filled).length > 0) setAutoFilledSources(prev => ({ ...prev, ...filled }));
     } catch (err: any) {
       setError("AI scan failed: " + (err.message || "Try uploading more financial documents."));
     } finally {
@@ -504,7 +509,10 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
               {ASSET_CATEGORIES.map(cat => (
                 <div key={cat.key}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <label style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500 }}>{cat.label}</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <label style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500 }}>{cat.label}</label>
+                      {autoFilledSources[cat.key] && <ProvenanceBadge source={autoFilledSources[cat.key]} confidence="MEDIUM" />}
+                    </div>
                     <span style={{ fontSize: 11, color: "var(--ink4)" }}>{cat.hint}</span>
                   </div>
                   <div style={{ position: "relative" }}>
@@ -542,7 +550,10 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
               {LIABILITY_CATEGORIES.map(cat => (
                 <div key={cat.key}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <label style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500 }}>{cat.label}</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <label style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500 }}>{cat.label}</label>
+                      {autoFilledSources[cat.key] && <ProvenanceBadge source={autoFilledSources[cat.key]} confidence="MEDIUM" />}
+                    </div>
                     <span style={{ fontSize: 11, color: "var(--ink4)" }}>{cat.hint}</span>
                   </div>
                   <div style={{ position: "relative" }}>
@@ -572,7 +583,10 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
 
           {/* 3-Year Income Table */}
           <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
-            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 16 }}>3-Year Income History</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400 }}>3-Year Income History</h3>
+              {autoFilledSources.incomeYears && <ProvenanceBadge source={autoFilledSources.incomeYears} confidence="MEDIUM" />}
+            </div>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
                 <thead>

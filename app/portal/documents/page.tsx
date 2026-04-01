@@ -1042,17 +1042,37 @@ export default function PortalDocumentsPage() {
                           </td>
                           {/* Download */}
                           <td style={{ padding: "12px 8px", whiteSpace: "nowrap" as const }}>
-                            {doc.fileUrl && (
-                              <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{
-                                display: "inline-flex", alignItems: "center", gap: 4,
-                                padding: "4px 10px", fontSize: 11.5, fontWeight: 500,
-                                color: "#C89B3C", textDecoration: "none",
-                                border: "1px solid rgba(200,155,60,.25)", borderRadius: 6,
-                                background: "rgba(200,155,60,.04)",
-                              }}>
-                                {"\u2B07"} Download
-                              </a>
-                            )}
+                            <button onClick={async (e) => {
+                              e.preventDefault();
+                              try {
+                                const resp = await fetch(
+                                  `${process.env.NEXT_PUBLIC_API_URL || ''}/api/documents/download/${doc.id}`,
+                                  { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+                                );
+                                if (!resp.ok) {
+                                  const err = await resp.json().catch(() => ({}));
+                                  alert(err.error || 'Download failed');
+                                  return;
+                                }
+                                const blob = await resp.blob();
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = doc.originalName || doc.name || 'document';
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              } catch (err: any) {
+                                alert('Download failed: ' + (err.message || 'Unknown error'));
+                              }
+                            }} style={{
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                              padding: "4px 10px", fontSize: 11.5, fontWeight: 500,
+                              color: "#C89B3C", cursor: "pointer",
+                              border: "1px solid rgba(200,155,60,.25)", borderRadius: 6,
+                              background: "rgba(200,155,60,.04)",
+                            }}>
+                              {"\u2B07"} Download
+                            </button>
                           </td>
                           {/* Delete */}
                           <td style={{ padding: "12px 12px 12px 4px" }}>

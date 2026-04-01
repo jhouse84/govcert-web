@@ -45,14 +45,43 @@ export default function EightAReviewPage({ params }: { params: Promise<{ id: str
     try {
       const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
-      // Load previous review from localStorage
-      const stored = localStorage.getItem(`govcert-review-${certId}`);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setReview(parsed.review);
-          setReviewHistory(parsed.history || []);
-        } catch {}
+      // Load previous reviews from database first, then fallback to localStorage
+      try {
+        const savedReviews = await apiRequest(`/api/applications/ai/reviews/${certId}`);
+        if (savedReviews && savedReviews.length > 0) {
+          const latest = savedReviews[0];
+          const parsed = {
+            overallScore: latest.overallScore,
+            overallVerdict: latest.overallVerdict,
+            readinessLevel: latest.readinessLevel,
+            sections: JSON.parse(latest.sectionsJson || "[]"),
+            criticalIssues: latest.criticalIssues ? JSON.parse(latest.criticalIssues) : [],
+            strengths: latest.strengths ? JSON.parse(latest.strengths) : [],
+            disclaimer: latest.disclaimer,
+          };
+          setReview(parsed);
+          setReviewHistory(savedReviews.map((r: any) => ({ score: r.overallScore, date: r.createdAt })));
+        } else {
+          // Fallback to localStorage
+          const stored = localStorage.getItem(`govcert-review-${certId}`);
+          if (stored) {
+            try {
+              const p = JSON.parse(stored);
+              setReview(p.review);
+              setReviewHistory(p.history || []);
+            } catch {}
+          }
+        }
+      } catch {
+        // Fallback to localStorage if API fails
+        const stored = localStorage.getItem(`govcert-review-${certId}`);
+        if (stored) {
+          try {
+            const p = JSON.parse(stored);
+            setReview(p.review);
+            setReviewHistory(p.history || []);
+          } catch {}
+        }
       }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }

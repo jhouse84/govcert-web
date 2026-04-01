@@ -18,6 +18,7 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
   const [error, setError] = useState<string | null>(null);
 
   const [reviewResult, setReviewResult] = useState<any>(null);
+  const [reviewHistory, setReviewHistory] = useState<{ score: number; date: string }[]>([]);
   const [completedSections, setCompletedSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -44,6 +45,45 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
         if (app.oasisSystemsData) completed["systems-certs"] = true;
       }
       setCompletedSections(completed);
+
+      // Load previous reviews from database first, then fallback to localStorage
+      try {
+        const savedReviews = await apiRequest(`/api/applications/ai/reviews/${certId}`);
+        if (savedReviews && savedReviews.length > 0) {
+          const latest = savedReviews[0];
+          const parsed = {
+            overallScore: latest.overallScore,
+            overallVerdict: latest.overallVerdict,
+            readinessLevel: latest.readinessLevel,
+            sections: JSON.parse(latest.sectionsJson || "[]"),
+            criticalIssues: latest.criticalIssues ? JSON.parse(latest.criticalIssues) : [],
+            strengths: latest.strengths ? JSON.parse(latest.strengths) : [],
+            disclaimer: latest.disclaimer,
+          };
+          setReviewResult(parsed);
+          setReviewHistory(savedReviews.map((r: any) => ({ score: r.overallScore, date: r.createdAt })));
+        } else {
+          // Fallback to localStorage
+          const stored = localStorage.getItem(`govcert-review-${certId}`);
+          if (stored) {
+            try {
+              const p = JSON.parse(stored);
+              setReviewResult(p.review);
+              setReviewHistory(p.history || []);
+            } catch {}
+          }
+        }
+      } catch {
+        // Fallback to localStorage if API fails
+        const stored = localStorage.getItem(`govcert-review-${certId}`);
+        if (stored) {
+          try {
+            const p = JSON.parse(stored);
+            setReviewResult(p.review);
+            setReviewHistory(p.history || []);
+          } catch {}
+        }
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to load certification data.");

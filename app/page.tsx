@@ -46,7 +46,12 @@ export default function LandingPage() {
               onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,.6)")}>{l}</a>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <a href="tel:+14349815295" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", fontSize: 13, color: "rgba(255,255,255,.7)", textDecoration: "none", transition: "color .2s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#E8B84B")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,.7)")}>
+            <span style={{ fontSize: 14 }}>📞</span> (434) 981-5295
+          </a>
           <a href="/login" style={{ padding: "8px 20px", borderRadius: "var(--r)", fontSize: 13, fontWeight: 500, background: "rgba(255,255,255,.06)", color: "rgba(255,255,255,.85)", border: "1px solid rgba(255,255,255,.12)", textDecoration: "none", backdropFilter: "blur(8px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,.12)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.2)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,.06)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.12)"; }}>Sign In</a>
@@ -98,6 +103,12 @@ export default function LandingPage() {
                 <svg width="10" height="12" viewBox="0 0 10 12" fill="none"><path d="M1 1L9 6L1 11V1Z" fill="white" /></svg>
               </span>
               Watch the Demo
+            </a>
+            <a href="tel:+14349815295" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,.7)", fontSize: 14, textDecoration: "none", marginTop: 8, transition: "color .25s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#E8B84B")}
+              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,.7)")}>
+              <span style={{ fontSize: 16 }}>📞</span>
+              Questions? Call (434) 981-5295
             </a>
           </div>
         </div>

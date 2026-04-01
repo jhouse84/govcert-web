@@ -144,6 +144,7 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
   const [manualChecks, setManualChecks] = useState<Record<string, boolean>>({});
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [clientDocs, setClientDocs] = useState<Record<string, any[]>>({});
 
   const pw = usePaywall("EIGHT_A");
 
@@ -170,6 +171,19 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
         if (app.financialData8a) completed["financials"] = true;
       }
       setCompletedSections(completed);
+      // Fetch all client documents grouped by category
+      if (data.clientId) {
+        try {
+          const allCats = "FINANCIAL_STATEMENT,TAX_RETURN,CAPABILITY_STATEMENT,CONTRACT,CERTIFICATION_DOCUMENT,RESUME,BANK_STATEMENT,BUSINESS_LICENSE,INVOICE,OTHER";
+          const docs = await apiRequest(`/api/upload/documents/by-category/${data.clientId}/${allCats}`);
+          const grouped: Record<string, any[]> = {};
+          for (const doc of docs) {
+            if (!grouped[doc.category]) grouped[doc.category] = [];
+            grouped[doc.category].push(doc);
+          }
+          setClientDocs(grouped);
+        } catch {}
+      }
     } catch (err) { console.error(err); setError("Failed to load."); }
     finally { setLoading(false); }
   }
@@ -423,6 +437,47 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                             <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{(item as any).format}</div>
                           </div>
                         </div>
+                        {/* Show matching uploaded documents */}
+                        {(item as any).docCategory && (clientDocs[(item as any).docCategory] || []).length > 0 && (
+                          <div style={{ marginTop: 12, padding: "12px", background: "var(--green-bg)", borderRadius: 8, border: "1px solid var(--green-b)" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--green)", marginBottom: 8 }}>📁 Your uploaded files — ready to submit</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              {(clientDocs[(item as any).docCategory] || []).map((doc: any) => (
+                                <div key={doc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: "#fff", borderRadius: 6, border: "1px solid var(--border)" }}>
+                                  <div>
+                                    <div style={{ fontSize: 12, fontWeight: 500, color: "var(--navy)" }}>{doc.originalName}</div>
+                                    {doc.documentYear && <span style={{ fontSize: 10, color: "var(--ink4)" }}>{doc.documentYear}</span>}
+                                  </div>
+                                  <button onClick={async () => {
+                                    try {
+                                      const resp = await fetch(
+                                        `${process.env.NEXT_PUBLIC_API_URL || ''}/api/documents/download/${doc.id}`,
+                                        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+                                      );
+                                      if (!resp.ok) { alert('Download failed'); return; }
+                                      const blob = await resp.blob();
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement('a');
+                                      a.href = url; a.download = doc.originalName || 'document'; a.click();
+                                      URL.revokeObjectURL(url);
+                                    } catch { alert('Download failed'); }
+                                  }} style={{
+                                    padding: "4px 12px", fontSize: 11, fontWeight: 600,
+                                    color: "var(--green)", border: "1px solid var(--green-b)",
+                                    borderRadius: 5, background: "transparent", cursor: "pointer",
+                                  }}>
+                                    ⬇ Download
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {(item as any).docCategory && (!clientDocs[(item as any).docCategory] || clientDocs[(item as any).docCategory].length === 0) && (
+                          <div style={{ marginTop: 12, padding: "10px 12px", background: "rgba(200,60,60,.03)", borderRadius: 8, border: "1px solid rgba(200,60,60,.1)", fontSize: 12, color: "var(--red)" }}>
+                            ⚠️ No matching file uploaded yet. Upload this document in <a href={`/portal/documents`} style={{ color: "var(--gold)", fontWeight: 600 }}>My Documents</a> or gather it from the source described above.
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

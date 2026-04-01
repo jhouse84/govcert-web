@@ -49,8 +49,8 @@ const labelStyle: React.CSSProperties = {
 };
 const selectStyle: React.CSSProperties = { ...inputStyle, appearance: "none" as const, backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' fill='none'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center" };
 
-const emptyOwner = () => ({
-  name: "", ownershipPercentage: "", gender: "", ethnicity: "",
+const emptyOwner = (isFirst = false) => ({
+  name: "", ownershipPercentage: isFirst ? "100" : "", gender: "", ethnicity: "",
   veteranStatus: "Not a Veteran", disabilityStatus: false, usCitizen: true, managesDailyOps: false,
 });
 
@@ -80,7 +80,7 @@ export default function AdminEligibilityPage({ params }: { params: Promise<{ id:
   const [naicsCodes, setNaicsCodes] = useState("");
 
   // Step 2
-  const [owners, setOwners] = useState<any[]>([emptyOwner()]);
+  const [owners, setOwners] = useState<any[]>([emptyOwner(true)]);
 
   // Step 3
   const [revenueYear1, setRevenueYear1] = useState("");
@@ -98,7 +98,7 @@ export default function AdminEligibilityPage({ params }: { params: Promise<{ id:
   const [hubzoneEmployeePct, setHubzoneEmployeePct] = useState("");
 
   // Step 5
-  const [samRegistered, setSamRegistered] = useState("");
+  const [samRegistered, setSamRegistered] = useState("Yes");
   const [activeContracts, setActiveContracts] = useState(false);
   const [completedContracts, setCompletedContracts] = useState("");
   const [cparsAvailable, setCparsAvailable] = useState(false);

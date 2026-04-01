@@ -27,10 +27,11 @@ const SBA_FORM_1010_CHECKLIST = [
   },
   { id: "economicData", label: "SBA Form 413 (Personal Financial Statement)", section: "economic-disadvantage", field: "economicDisadvantageData",
     what: "A detailed breakdown of your personal net worth, assets, liabilities, and income. SBA uses this to verify economic disadvantage (net worth must be below $850K excluding primary residence and business equity).",
-    where: "Download SBA Form 413 from sba.gov/document/sba-form-413. Fill it out with your CPA or use the figures from your tax return.",
+    where: "GovCert can generate a pre-filled Form 413 from your Economic Disadvantage data. Download it, review with your CPA, sign it, and upload to the portal. You can also download the blank form from sba.gov/document/sba-form-413.",
     sbaPortal: "In certifications.sba.gov → 8(a) Application → Financial Information → Personal Financial Statement → upload the signed PDF.",
-    format: "PDF. Must be the official SBA Form 413. Handwritten or typed both accepted.",
-    docCategory: "FINANCIAL_STATEMENT",
+    format: "PDF. Must be the official SBA Form 413. Review all figures, sign, then upload. Handwritten or typed both accepted.",
+    docCategory: null,
+    generateForm413: true,
   },
   { id: "businessPlan", label: "Comprehensive Business Plan", section: "business-plan", field: "businessPlanData",
     what: "A forward-looking plan covering your business goals, target markets, marketing strategy, management team, and financial projections. SBA wants to see you have a viable path to growth.",
@@ -441,6 +442,48 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                             <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{(item as any).format}</div>
                           </div>
                         </div>
+                        {/* Generate Form 413 button */}
+                        {(item as any).generateForm413 && cert?.clientId && (
+                          <div style={{ marginTop: 12, padding: "14px", background: "rgba(200,155,60,.06)", borderRadius: 8, border: "1px solid rgba(200,155,60,.2)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>📄 Pre-Filled SBA Form 413</div>
+                                <div style={{ fontSize: 11, color: "var(--ink3)", marginTop: 2 }}>Generated from your Economic Disadvantage data. Review, sign, and upload to the portal.</div>
+                              </div>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <button onClick={async () => {
+                                  try {
+                                    const resp = await fetch(
+                                      `${process.env.NEXT_PUBLIC_API_URL || ''}/api/applications/generate-form-413/${cert.clientId}`,
+                                      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+                                    );
+                                    if (!resp.ok) { alert('Failed to generate Form 413'); return; }
+                                    const blob = await resp.blob();
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url; a.download = `SBA_Form_413_${cert.client?.businessName?.replace(/\s+/g, '_') || 'Company'}.pdf`; a.click();
+                                    URL.revokeObjectURL(url);
+                                  } catch { alert('Failed to generate Form 413'); }
+                                }} style={{
+                                  padding: "8px 16px", fontSize: 12, fontWeight: 600,
+                                  background: "var(--gold)", color: "#fff",
+                                  border: "none", borderRadius: "var(--r)", cursor: "pointer",
+                                }}>
+                                  ⬇ Download Pre-Filled 413
+                                </button>
+                                <a href="https://www.sba.gov/document/sba-form-413" target="_blank" rel="noopener noreferrer" style={{
+                                  padding: "8px 16px", fontSize: 12, fontWeight: 500,
+                                  color: "var(--gold)", border: "1px solid rgba(200,155,60,.3)",
+                                  borderRadius: "var(--r)", textDecoration: "none",
+                                  display: "inline-flex", alignItems: "center",
+                                }}>
+                                  Blank Form ↗
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Show matching uploaded documents */}
                         {(item as any).docCategory && (clientDocs[(item as any).docCategory] || []).length > 0 && (
                           <div style={{ marginTop: 12, padding: "12px", background: "var(--green-bg)", borderRadius: 8, border: "1px solid var(--green-b)" }}>
@@ -532,6 +575,102 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                 );
               })}
             </div>
+          </div>
+
+          {/* Past Performance — Ready to Enter in Portal */}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>Past Performance for certifications.sba.gov</h3>
+            <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 8, lineHeight: 1.6 }}>
+              On certifications.sba.gov, you enter each contract separately into structured fields. Below is each of your contracts formatted and ready to copy into the portal fields.
+            </p>
+            <div style={{ padding: "8px 12px", background: "rgba(200,155,60,.05)", borderRadius: "var(--r)", border: "1px solid rgba(200,155,60,.12)", marginBottom: 16, fontSize: 12, color: "var(--ink3)" }}>
+              <strong style={{ color: "var(--gold)" }}>Portal navigation:</strong> certifications.sba.gov → 8(a) Application → Business Activity → Government & Commercial Contracts → Add Contract
+            </div>
+
+            {(() => {
+              let contracts: any[] = [];
+              try {
+                const pp = cert?.application?.pastPerformance8a || cert?.application?.pastPerformance;
+                if (pp) contracts = typeof pp === "string" ? JSON.parse(pp) : pp;
+              } catch {}
+
+              if (contracts.length === 0) return (
+                <div style={{ padding: "20px", background: "var(--cream2)", borderRadius: "var(--r)", textAlign: "center", color: "var(--ink4)", fontSize: 13 }}>
+                  No past performance contracts entered yet. <a href={`/certifications/${certId}/8a/past-performance`} style={{ color: "var(--gold)", fontWeight: 600 }}>Add contracts →</a>
+                </div>
+              );
+
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {contracts.map((c: any, i: number) => {
+                    const fields = [
+                      { label: "Agency / Client Name", value: c.agencyName },
+                      { label: "Contract Number", value: c.contractNumber },
+                      { label: "Contract Type", value: c.contractType },
+                      { label: "Contract Value", value: c.contractValue },
+                      { label: "Period of Performance", value: `${c.periodStart || ''} to ${c.periodEnd || ''}` },
+                      { label: "Description / Scope", value: c.sowDescription || c.description },
+                      { label: "Reference Name", value: `${c.referenceFirstName || ''} ${c.referenceLastName || ''}`.trim() },
+                      { label: "Reference Title", value: c.referenceTitle },
+                      { label: "Reference Email", value: c.referenceEmail },
+                      { label: "Reference Phone", value: c.referencePhone },
+                    ].filter(f => f.value && f.value.trim());
+
+                    const copyText = fields.map(f => `${f.label}: ${f.value}`).join('\n');
+
+                    return (
+                      <div key={i} style={{ border: "1px solid var(--border)", borderRadius: "var(--r)", overflow: "hidden" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "var(--cream)", borderBottom: "1px solid var(--border)" }}>
+                          <div>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>{c.agencyName || `Contract ${i + 1}`}</span>
+                            {c.contractValue && <span style={{ fontSize: 12, color: "var(--ink4)", marginLeft: 8 }}>{c.contractValue}</span>}
+                          </div>
+                          <button onClick={() => copyToClipboard(copyText, `contract-${i}`)} style={{
+                            padding: "6px 14px", fontSize: 12, fontWeight: 600,
+                            background: copySuccess === `contract-${i}` ? "var(--green)" : "var(--gold)",
+                            color: "#fff", border: "none", borderRadius: "var(--r)", cursor: "pointer",
+                          }}>
+                            {copySuccess === `contract-${i}` ? "✓ Copied!" : "📋 Copy All Fields"}
+                          </button>
+                        </div>
+                        <div style={{ padding: "12px 16px" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                            {fields.map((f, fi) => (
+                              <div key={fi} style={{ padding: "6px 0" }}>
+                                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink4)", fontWeight: 600 }}>{f.label}</div>
+                                <div style={{ fontSize: 13, color: "var(--navy)", marginTop: 2 }}>{f.value}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {c.narrative && (
+                            <div style={{ marginTop: 10, padding: "10px 12px", background: "rgba(200,155,60,.04)", borderRadius: 6, border: "1px solid rgba(200,155,60,.1)" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--gold)", fontWeight: 600 }}>Performance Narrative</span>
+                                <button onClick={() => copyToClipboard(c.narrative, `narrative-${i}`)} style={{
+                                  padding: "3px 10px", fontSize: 11, fontWeight: 600,
+                                  background: copySuccess === `narrative-${i}` ? "var(--green)" : "transparent",
+                                  color: copySuccess === `narrative-${i}` ? "#fff" : "var(--gold)",
+                                  border: `1px solid ${copySuccess === `narrative-${i}` ? "var(--green)" : "rgba(200,155,60,.3)"}`,
+                                  borderRadius: 4, cursor: "pointer",
+                                }}>
+                                  {copySuccess === `narrative-${i}` ? "✓" : "Copy"}
+                                </button>
+                              </div>
+                              <div style={{ fontSize: 12, color: "var(--ink2)", lineHeight: 1.6 }}>{c.narrative.substring(0, 300)}{c.narrative.length > 300 ? "..." : ""}</div>
+                            </div>
+                          )}
+                          {(!c.referenceEmail) && (
+                            <div style={{ marginTop: 8, padding: "6px 10px", background: "var(--red-bg)", borderRadius: 4, border: "1px solid var(--red-b)", fontSize: 11, color: "var(--red)" }}>
+                              ⚠️ Missing reference contact — SBA may contact your references. <a href={`/certifications/${certId}/8a/past-performance`} style={{ color: "var(--gold)", fontWeight: 600 }}>Add reference →</a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Download & Submit */}

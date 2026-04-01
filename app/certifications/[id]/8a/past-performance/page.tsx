@@ -484,10 +484,15 @@ export default function PastPerformance8aPage({ params }: { params: Promise<{ id
                 <label style={{ fontSize: 12, color: "var(--ink3)", fontWeight: 500, marginBottom: 4, display: "block" }}>Scope of Work</label>
                 <textarea value={newContract.sowDescription} onChange={e => setNewContract(p => ({ ...p, sowDescription: e.target.value }))} rows={4} style={{ ...inputStyle, resize: "vertical" as const }} placeholder="Describe the work performed..." />
               </div>
-              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>Reference Contact</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 14 }}>📋</span>
+                <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)" }}>Contracting Officer / Reference Contact</span>
+                <span style={{ fontSize: 10, color: "var(--ink4)", fontStyle: "italic" }}>SBA may contact for verification</span>
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
                 <input value={newContract.referenceFirstName} onChange={e => setNewContract(p => ({ ...p, referenceFirstName: e.target.value }))} style={inputStyle} placeholder="First Name" />
                 <input value={newContract.referenceLastName} onChange={e => setNewContract(p => ({ ...p, referenceLastName: e.target.value }))} style={inputStyle} placeholder="Last Name" />
+                <input value={newContract.referenceTitle} onChange={e => setNewContract(p => ({ ...p, referenceTitle: e.target.value }))} style={inputStyle} placeholder="Title (e.g. Contracting Officer)" />
                 <input value={newContract.referenceEmail} onChange={e => setNewContract(p => ({ ...p, referenceEmail: e.target.value }))} style={inputStyle} placeholder="Email" />
                 <input value={newContract.referencePhone} onChange={e => setNewContract(p => ({ ...p, referencePhone: e.target.value }))} style={inputStyle} placeholder="Phone" />
               </div>
@@ -554,6 +559,37 @@ export default function PastPerformance8aPage({ params }: { params: Promise<{ id
                     </div>
                     <textarea value={contract.narrative} onChange={e => updateContract(i, "narrative", e.target.value)} rows={6} style={{ ...inputStyle, resize: "vertical" as const }} placeholder="Describe the work performed, results, and relevance..." />
                   </div>
+                  {/* Reference Contact — SBA may contact for verification */}
+                  <div style={{ marginTop: 16, padding: "16px 18px", background: "rgba(200,155,60,.03)", borderRadius: "var(--r)", border: "1px solid rgba(200,155,60,.12)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                      <span style={{ fontSize: 16 }}>📋</span>
+                      <label style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>Contracting Officer / Reference Contact</label>
+                      <span style={{ fontSize: 11, color: "var(--ink4)", fontStyle: "italic" }}>SBA may contact this person to verify performance</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <label style={{ fontSize: 11, color: "var(--ink3)", fontWeight: 500, marginBottom: 3, display: "block" }}>First Name</label>
+                        <input value={contract.referenceFirstName || ""} onChange={e => updateContract(i, "referenceFirstName", e.target.value)} style={inputStyle} placeholder="John" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, color: "var(--ink3)", fontWeight: 500, marginBottom: 3, display: "block" }}>Last Name</label>
+                        <input value={contract.referenceLastName || ""} onChange={e => updateContract(i, "referenceLastName", e.target.value)} style={inputStyle} placeholder="Smith" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, color: "var(--ink3)", fontWeight: 500, marginBottom: 3, display: "block" }}>Title / Role</label>
+                        <input value={contract.referenceTitle || ""} onChange={e => updateContract(i, "referenceTitle", e.target.value)} style={inputStyle} placeholder="Contracting Officer" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, color: "var(--ink3)", fontWeight: 500, marginBottom: 3, display: "block" }}>Email</label>
+                        <input type="email" value={contract.referenceEmail || ""} onChange={e => updateContract(i, "referenceEmail", e.target.value)} style={inputStyle} placeholder="john.smith@agency.gov" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, color: "var(--ink3)", fontWeight: 500, marginBottom: 3, display: "block" }}>Phone</label>
+                        <input value={contract.referencePhone || ""} onChange={e => updateContract(i, "referencePhone", e.target.value)} style={inputStyle} placeholder="(202) 555-0100" />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* PPQ Section */}
                   {contract.id && contract.referenceEmail && (
                     <div style={{ marginTop: 16, padding: "14px 18px", background: "var(--cream)", borderRadius: "var(--r)", border: "1px solid var(--border)" }}>

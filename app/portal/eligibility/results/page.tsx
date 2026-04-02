@@ -474,7 +474,7 @@ export default function EligibilityResultsPage() {
             </h1>
             <div style={{ width: 48, height: 2, background: "linear-gradient(90deg, #C89B3C, #E8B84B)", borderRadius: 2, marginBottom: 10 }} />
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300, lineHeight: 1.6, maxWidth: 640 }}>
-              Based on the information you've provided, here's a preliminary look at which certifications you may qualify for.
+              Based on the information you've provided so far, here's a preliminary look at which certifications you may qualify for. You may have additional qualifying documents or credentials not yet uploaded — scores will improve as more information is added.
             </p>
           </div>
 
@@ -492,7 +492,7 @@ export default function EligibilityResultsPage() {
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#8A6D1B", marginBottom: 6 }}>Important</div>
                 <p style={{ fontSize: 12.5, color: "#6B5516", lineHeight: 1.7, margin: 0 }}>
-                  This assessment is a preliminary analysis based on the information you've provided. It is not a guarantee of certification approval. Actual eligibility is determined by the certifying agency (SBA, GSA, VA, or your state agency) upon review of your complete application. GovCert provides this assessment as a guide to help you focus your efforts on the most promising certifications. We recommend consulting with a certification specialist for complex situations.
+                  This assessment is based only on the documents and information you've provided to GovCert so far. You may have additional qualifying documents, financial records, past performance evidence, or credentials that have not yet been uploaded — adding them will improve the accuracy of your scores. This is not a guarantee of certification approval. Actual eligibility is determined by the certifying agency (SBA, GSA, VA, or your state agency) upon review of your complete application. GovCert provides this assessment as a guide to help you focus your efforts on the most promising certifications.
                 </p>
               </div>
             </div>
@@ -542,7 +542,7 @@ export default function EligibilityResultsPage() {
                 Data Completeness
               </div>
               <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, margin: 0, marginBottom: 8 }}>
-                Your assessment is based on {completeness}% of available data. Providing more information improves accuracy.
+                Your assessment is based on {completeness}% of the information we recommend. Uploading additional documents and completing more fields will improve the accuracy of your scores.
               </p>
               <a
                 href="/portal/eligibility"

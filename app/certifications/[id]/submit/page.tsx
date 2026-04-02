@@ -182,6 +182,10 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   const [clientDocs, setClientDocs] = useState<Record<string, any[]>>({});
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState<string | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, string>>({});
+  const [uploadingItem, setUploadingItem] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const pw = usePaywall("GSA_MAS");
 
@@ -373,6 +377,30 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     return false;
   }
 
+  async function handleChecklistDrop(itemId: string, file: File, docCategory: string | null) {
+    setDragOverItem(null);
+    setUploadingItem(itemId);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", file);
+      if (cert?.clientId) formData.append("clientId", cert.clientId);
+      if (docCategory) formData.append("category", docCategory);
+      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload/document`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!resp.ok) throw new Error("Upload failed");
+      setUploadedFiles(prev => ({ ...prev, [itemId]: file.name }));
+      setManualChecks(prev => ({ ...prev, [itemId]: true }));
+    } catch (err: any) {
+      setError("Failed to upload: " + (err.message || "Unknown error"));
+    } finally {
+      setUploadingItem(null);
+    }
+  }
+
   function getNarrativeText(field: string): string {
     if (!cert?.application) return "";
     const val = cert.application[field];
@@ -561,6 +589,13 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
             </div>
           </div>
 
+          {error && (
+            <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "var(--red)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>{error}</span>
+              <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>&times;</button>
+            </div>
+          )}
+
           {cert?.clientId && <FinancialReadiness clientId={cert.clientId} certType="GSA_MAS" />}
 
           {/* GSA MAS Document Checklist Wizard */}
@@ -594,11 +629,18 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
               {GSA_MAS_CHECKLIST.map(item => {
                 const complete = isChecklistItemComplete(item);
                 const isExpanded = manualChecks[`expanded_${item.id}`];
+                const isDragTarget = dragOverItem === item.id;
                 return (
-                  <div key={item.id} style={{
-                    border: `1px solid ${complete ? "var(--green-b)" : isExpanded ? "rgba(200,155,60,.25)" : "var(--border)"}`,
+                  <div key={item.id}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverItem(item.id); }}
+                    onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
+                    onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.[0]) handleChecklistDrop(item.id, e.dataTransfer.files[0], item.docCategory || null); }}
+                    style={{
+                    border: `1px solid ${isDragTarget ? "var(--gold)" : complete ? "var(--green-b)" : isExpanded ? "rgba(200,155,60,.25)" : "var(--border)"}`,
                     borderRadius: "var(--r)", overflow: "hidden",
-                    background: complete ? "var(--green-bg)" : isExpanded ? "rgba(200,155,60,.02)" : "#fff",
+                    background: isDragTarget ? "rgba(200,155,60,.08)" : complete ? "var(--green-bg)" : isExpanded ? "rgba(200,155,60,.02)" : "#fff",
+                    borderStyle: isDragTarget ? "dashed" : "solid",
+                    transition: "all .15s",
                   }}>
                     <div style={{
                       display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
@@ -616,7 +658,15 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                         {complete ? "\u2713" : ""}
                       </div>
                       <span style={{ fontSize: 14, color: complete ? "var(--green)" : "var(--navy)", fontWeight: complete ? 500 : 400, flex: 1 }}>{item.label}</span>
-                      {complete && (
+                      {uploadingItem === item.id && (
+                        <span style={{ fontSize: 11, color: "var(--gold)", fontWeight: 500, marginRight: 8 }}>Uploading...</span>
+                      )}
+                      {uploadedFiles[item.id] && (
+                        <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 500, marginRight: 8, display: "flex", alignItems: "center", gap: 4 }}>
+                          &#x2713; {uploadedFiles[item.id]}
+                        </span>
+                      )}
+                      {complete && !uploadedFiles[item.id] && (
                         <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 500, marginRight: 8 }}>Confirmed</span>
                       )}
                       <span style={{ fontSize: 10, color: "var(--ink4)", fontWeight: 600 }}>{isExpanded ? "\u25B2" : "\u25BC"}</span>

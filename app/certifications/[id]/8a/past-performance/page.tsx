@@ -68,6 +68,12 @@ export default function PastPerformance8aPage({ params }: { params: Promise<{ id
   const [newContract, setNewContract] = useState({ ...EMPTY_CONTRACT });
   const [generatingNarrative, setGeneratingNarrative] = useState<string | null>(null);
 
+  // AI file upload extraction
+  const [ppUploading, setPpUploading] = useState(false);
+  const [ppExtracted, setPpExtracted] = useState<any[]>([]);
+  const [ppDragOver, setPpDragOver] = useState(false);
+  const ppFileRef = useRef<HTMLInputElement>(null);
+
   // PPQ Flow Modal
   const [ppqModal, setPpqModal] = useState<{
     open: boolean; step: 1 | 2 | 3; contractIndex: number | null;
@@ -162,6 +168,87 @@ export default function PastPerformance8aPage({ params }: { params: Promise<{ id
       setCert((prev: any) => ({ ...prev, application: app }));
     }
     return appId;
+  }
+
+  async function handlePPFileUpload(file: File) {
+    setPpUploading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", file);
+      const extractRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload/extract-text`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!extractRes.ok) throw new Error("Failed to extract text from file");
+      const { text } = await extractRes.json();
+      const aiRes = await apiRequest("/api/applications/ai/extract-past-performance", {
+        method: "POST",
+        body: JSON.stringify({ text, clientId: cert?.clientId, certType: "8a" }),
+      });
+      setPpExtracted(aiRes.contracts || aiRes || []);
+    } catch (err: any) {
+      setError("Failed to extract contract data: " + (err.message || "Unknown error"));
+    } finally {
+      setPpUploading(false);
+    }
+  }
+
+  async function addExtractedContract(extracted: any) {
+    setSaving(true);
+    setError(null);
+    try {
+      const appId = await ensureApplication();
+      const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
+        method: "POST",
+        body: JSON.stringify({
+          agencyName: extracted.agencyName || "",
+          contractNumber: extracted.contractNumber || "",
+          contractType: extracted.contractType || "Federal Government",
+          contractValue: extracted.contractValue || "",
+          periodStart: extracted.periodStart || "",
+          periodEnd: extracted.periodEnd || "",
+          description: extracted.sowDescription || extracted.description || "",
+          referenceFirstName: extracted.referenceFirstName || "",
+          referenceLastName: extracted.referenceLastName || "",
+          referenceEmail: extracted.referenceEmail || "",
+          referencePhone: extracted.referencePhone || "",
+          referenceTitle: extracted.referenceTitle || "",
+          narrative: extracted.narrative || "",
+          performanceType: extracted.performanceType || "CORPORATE",
+          personnelName: extracted.personnelName || "",
+          personnelRole: extracted.personnelRole || "",
+          certType: "8a",
+        }),
+      });
+      setContracts(prev => [...prev, {
+        ...EMPTY_CONTRACT,
+        id: result.id,
+        agencyName: extracted.agencyName || "",
+        contractNumber: extracted.contractNumber || "",
+        contractType: extracted.contractType || "Federal Government",
+        contractValue: extracted.contractValue || "",
+        periodStart: extracted.periodStart || "",
+        periodEnd: extracted.periodEnd || "",
+        sowDescription: extracted.sowDescription || extracted.description || "",
+        referenceFirstName: extracted.referenceFirstName || "",
+        referenceLastName: extracted.referenceLastName || "",
+        referenceEmail: extracted.referenceEmail || "",
+        referencePhone: extracted.referencePhone || "",
+        referenceTitle: extracted.referenceTitle || "",
+        narrative: extracted.narrative || "",
+        performanceType: extracted.performanceType || "CORPORATE",
+        personnelName: extracted.personnelName || "",
+        personnelRole: extracted.personnelRole || "",
+      }]);
+      setPpExtracted(prev => prev.filter(c => c !== extracted));
+    } catch (err: any) {
+      setError("Failed to add contract: " + (err.message || "Unknown error"));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function addNewContract() {
@@ -430,6 +517,91 @@ export default function PastPerformance8aPage({ params }: { params: Promise<{ id
               <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>&times;</button>
             </div>
           )}
+
+          {/* AI Upload Section */}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <span style={{ fontSize: 20 }}>&#x1F4C4;</span>
+              <div>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400, margin: 0 }}>Upload Past Performance Documents</h3>
+                <p style={{ fontSize: 12, color: "var(--ink4)", margin: 0, marginTop: 2 }}>AI will extract contract details automatically</p>
+              </div>
+            </div>
+            <input
+              ref={ppFileRef}
+              type="file"
+              accept=".pdf,.docx,.xlsx,.csv,.txt"
+              style={{ display: "none" }}
+              onChange={(e) => { if (e.target.files?.[0]) handlePPFileUpload(e.target.files[0]); e.target.value = ""; }}
+            />
+            <div
+              onDragOver={(e) => { e.preventDefault(); setPpDragOver(true); }}
+              onDragLeave={() => setPpDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setPpDragOver(false); if (e.dataTransfer.files?.[0]) handlePPFileUpload(e.dataTransfer.files[0]); }}
+              style={{
+                border: `2px dashed ${ppDragOver ? "var(--gold)" : "var(--border2)"}`,
+                borderRadius: "var(--r)",
+                padding: ppUploading ? "24px" : "28px",
+                textAlign: "center" as const,
+                cursor: ppUploading ? "default" : "pointer",
+                background: ppDragOver ? "rgba(200,155,60,.06)" : "var(--cream)",
+                transition: "all .2s",
+              }}
+              onClick={() => !ppUploading && ppFileRef.current?.click()}
+            >
+              {ppUploading ? (
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Extracting contract data...</div>
+                  <div style={{ fontSize: 12, color: "var(--ink4)" }}>AI is reading your document and identifying contracts</div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 24, marginBottom: 8 }}>&#x1F4E4;</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Upload a PPQ, CPARS report, or past performance document</div>
+                  <div style={{ fontSize: 12, color: "var(--ink4)", marginBottom: 10 }}>Drag and drop or click to browse. Supports PDF, DOCX, XLSX, CSV, TXT</div>
+                  <button onClick={(e) => { e.stopPropagation(); ppFileRef.current?.click(); }}
+                    style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
+                    Choose File
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Extracted contracts review */}
+            {ppExtracted.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 10 }}>
+                  AI Extracted {ppExtracted.length} Contract{ppExtracted.length !== 1 ? "s" : ""} — Review & Add
+                </div>
+                {ppExtracted.map((ex, idx) => (
+                  <div key={idx} style={{ background: "var(--cream)", border: "1px solid rgba(200,155,60,.2)", borderRadius: "var(--r)", padding: "14px 18px", marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{ex.agencyName || "Unknown Agency"}</div>
+                        <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>
+                          {[ex.contractNumber, ex.contractType, ex.contractValue].filter(Boolean).join(" \u00B7 ")}
+                        </div>
+                        {(ex.periodStart || ex.periodEnd) && (
+                          <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>{ex.periodStart} — {ex.periodEnd}</div>
+                        )}
+                        {(ex.sowDescription || ex.description) && (
+                          <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 4, lineHeight: 1.5 }}>
+                            {(ex.sowDescription || ex.description || "").substring(0, 200)}{(ex.sowDescription || ex.description || "").length > 200 ? "..." : ""}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => addExtractedContract(ex)}
+                        disabled={saving}
+                        style={{ padding: "7px 16px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", flexShrink: 0, marginLeft: 12 }}>
+                        {saving ? "Adding..." : "Add This Contract"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Progress */}
           <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "16px 24px", marginBottom: 24, boxShadow: "var(--shadow)" }}>

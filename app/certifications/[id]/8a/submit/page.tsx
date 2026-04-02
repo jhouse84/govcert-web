@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { usePaywall } from "@/lib/usePaywall";
@@ -147,6 +147,9 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [clientDocs, setClientDocs] = useState<Record<string, any[]>>({});
+  const [dragOverItem, setDragOverItem] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, string>>({});
+  const [uploadingItem, setUploadingItem] = useState<string | null>(null);
 
   const pw = usePaywall("EIGHT_A");
 
@@ -243,6 +246,30 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
       setError("Download not yet available. Please copy individual sections.");
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handleChecklistDrop(itemId: string, file: File, docCategory: string | null) {
+    setDragOverItem(null);
+    setUploadingItem(itemId);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", file);
+      if (cert?.clientId) formData.append("clientId", cert.clientId);
+      if (docCategory) formData.append("category", docCategory);
+      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload/document`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!resp.ok) throw new Error("Upload failed");
+      setUploadedFiles(prev => ({ ...prev, [itemId]: file.name }));
+      setManualChecks(prev => ({ ...prev, [itemId]: true }));
+    } catch (err: any) {
+      setError("Failed to upload: " + (err.message || "Unknown error"));
+    } finally {
+      setUploadingItem(null);
     }
   }
 
@@ -388,11 +415,18 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
               {SBA_FORM_1010_CHECKLIST.map(item => {
                 const complete = isItemComplete(item);
                 const isExpanded = manualChecks[`expanded_${item.id}`];
+                const isDragTarget = dragOverItem === item.id;
                 return (
-                  <div key={item.id} style={{
-                    border: `1px solid ${complete ? "var(--green-b)" : isExpanded ? "rgba(200,155,60,.25)" : "var(--border)"}`,
+                  <div key={item.id}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverItem(item.id); }}
+                    onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
+                    onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.[0]) handleChecklistDrop(item.id, e.dataTransfer.files[0], (item as any).docCategory || null); }}
+                    style={{
+                    border: `1px solid ${isDragTarget ? "var(--gold)" : complete ? "var(--green-b)" : isExpanded ? "rgba(200,155,60,.25)" : "var(--border)"}`,
                     borderRadius: "var(--r)", overflow: "hidden",
-                    background: complete ? "var(--green-bg)" : isExpanded ? "rgba(200,155,60,.02)" : "#fff",
+                    background: isDragTarget ? "rgba(200,155,60,.08)" : complete ? "var(--green-bg)" : isExpanded ? "rgba(200,155,60,.02)" : "#fff",
+                    borderStyle: isDragTarget ? "dashed" : "solid",
+                    transition: "all .15s",
                   }}>
                     <div style={{
                       display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
@@ -409,14 +443,22 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                         {complete ? "\u2713" : ""}
                       </div>
                       <span style={{ fontSize: 14, color: complete ? "var(--green)" : "var(--navy)", fontWeight: complete ? 500 : 400, flex: 1 }}>{item.label}</span>
-                      {item.section && !complete && (
+                      {uploadingItem === item.id && (
+                        <span style={{ fontSize: 11, color: "var(--gold)", fontWeight: 500, marginRight: 8 }}>Uploading...</span>
+                      )}
+                      {uploadedFiles[item.id] && (
+                        <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 500, marginRight: 8, display: "flex", alignItems: "center", gap: 4 }}>
+                          &#x2713; {uploadedFiles[item.id]}
+                        </span>
+                      )}
+                      {item.section && !complete && !uploadedFiles[item.id] && (
                         <a href={`/certifications/${certId}/8a/${item.section}`}
                           onClick={e => e.stopPropagation()}
                           style={{ fontSize: 12, color: "var(--gold)", textDecoration: "none", fontWeight: 500, marginRight: 8 }}>
                           Complete →
                         </a>
                       )}
-                      {complete && item.field && (
+                      {complete && item.field && !uploadedFiles[item.id] && (
                         <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 500, marginRight: 8 }}>Auto-detected</span>
                       )}
                       <span style={{ fontSize: 10, color: "var(--ink4)", fontWeight: 600 }}>{isExpanded ? "▲" : "▼"}</span>

@@ -19,6 +19,9 @@ export default function GSAScheduleApplication() {
       title="GSA Schedule Application Help That Actually Works"
       subtitle="Stop paying consultants $15,000+ for GSA Schedule prep. GovCert builds your entire MAS offer package from your uploaded documents — with human help where you need it."
     >
+      <p style={{ fontSize: 17, lineHeight: 1.7, color: "#1a2b3c", marginBottom: 8 }}>A GSA Multiple Award Schedule (MAS) allows your business to sell products and services to federal agencies through a pre-negotiated contract vehicle. GovCert automates the application — corporate experience narratives, CSP-1 labor category pricing, quality control plans, and eOffer submission — for $1,000.</p>
+      <p style={{ fontSize: 13, color: "#8B7A3E", marginBottom: 32 }}><em>Last updated: April 2, 2026</em></p>
+
       <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, marginBottom: 16 }}>What Is the GSA Multiple Award Schedule?</h2>
       <p>The GSA Multiple Award Schedule (MAS), formerly known as GSA Schedule or Federal Supply Schedule, is the largest government-wide contracting vehicle in the federal marketplace. It provides federal, state, and local agencies with streamlined access to over 11 million commercial products and services at pre-negotiated prices.</p>
       <p>Once on the GSA Schedule, your company can compete for task orders across all federal agencies without having to re-bid your pricing or qualifications each time. Schedule holders gain visibility on GSA Advantage, the federal government&apos;s online shopping platform, and can receive orders directly from contracting officers. The average GSA Schedule contract runs for 20 years (a 5-year base period with three 5-year option periods), making it one of the most valuable long-term revenue channels in federal contracting.</p>
@@ -75,6 +78,23 @@ export default function GSAScheduleApplication() {
       </div>
 
       <p>GovCert was built by <strong>House Strategies Group LLC</strong> — a government contracting firm that navigated the GSA Schedule process firsthand. We built the tool we wished existed when we were preparing our own offer.</p>
+
+      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Frequently Asked Questions</h2>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>How long does GSA Schedule take?</h3>
+      <p style={{ marginBottom: 24 }}>The GSA Schedule application process typically takes 6 to 12 months from initial offer submission to contract award. GSA reviews your offer in stages — initial review, clarifications, negotiations, and Final Proposal Revision (FPR). Incomplete or non-compliant offers can add months. GovCert helps you submit a complete, compliant offer the first time to minimize back-and-forth with the contracting officer.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>What are SIN codes?</h3>
+      <p style={{ marginBottom: 24 }}>Special Item Numbers (SINs) are product and service category codes under the GSA MAS solicitation. Each SIN represents a specific type of offering — such as IT professional services, facilities maintenance, or office supplies. You must select the SINs that match your capabilities and demonstrate relevant experience for each one. GovCert analyzes your past contracts to recommend the strongest SINs for your offer.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>Do I need past performance?</h3>
+      <p style={{ marginBottom: 24 }}>Yes. GSA requires demonstrated past performance on contracts relevant to the SINs you are proposing. You typically need at least two years of corporate experience supported by financial statements and tax returns, plus project references from government or commercial customers. GovCert generates compliant corporate experience narratives from your uploaded contracts and performance documentation.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>What is a CSP-1?</h3>
+      <p style={{ marginBottom: 24 }}>The Commercial Sales Practices format (CSP-1) is a disclosure document where you report your commercial pricing history, identify your Most Favored Customer, and explain your discount relationships. It is the section where GSA evaluates whether your proposed government pricing is fair and reasonable. Errors in the CSP-1 are one of the most common reasons offers are rejected or returned for revision.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>How much does GSA Schedule application cost?</h3>
+      <p style={{ marginBottom: 24 }}>There is no government fee to submit a GSA Schedule offer. The costs come from preparation. Traditional GSA consultants charge $10,000 to $25,000, often with additional fees for FPR revisions. GovCert provides complete offer preparation — SIN selection, narratives, CSP-1 pricing, QCP, and eOffer submission guidance — for a flat $1,000 with unlimited revisions and human support included.</p>
     </SEOPageLayout>
   );
 }

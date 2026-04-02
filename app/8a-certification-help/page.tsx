@@ -19,6 +19,9 @@ export default function EightACertificationHelp() {
       title="8(a) Certification Help That Actually Works"
       subtitle="Stop paying $10,000 for what AI can do in days. GovCert drafts your entire 8(a) application from your uploaded documents — with human help where you need it."
     >
+      <p style={{ fontSize: 17, lineHeight: 1.7, color: "#1a2b3c", marginBottom: 8 }}>8(a) certification is a nine-year SBA program for socially and economically disadvantaged small businesses. GovCert automates the application process — from social disadvantage narrative drafting to financial validation — for $1,000 with human support included. Most applicants complete their application in days, not months.</p>
+      <p style={{ fontSize: 13, color: "#8B7A3E", marginBottom: 32 }}><em>Last updated: April 2, 2026</em></p>
+
       <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, marginBottom: 16 }}>What Is 8(a) Certification?</h2>
       <p>The SBA 8(a) Business Development Program is a nine-year program designed to help socially and economically disadvantaged small businesses compete for federal contracts. It provides access to sole-source contracts up to $4 million, set-aside competitions, mentorship programs, and management and technical assistance.</p>
       <p>The 8(a) application is one of the most complex federal certification processes. It requires a detailed social disadvantage narrative under 13 CFR 124.103, economic disadvantage documentation including a Personal Financial Statement (SBA Form 413), a comprehensive business plan, corporate experience narratives, past performance references, and two years of financial statements.</p>
@@ -77,6 +80,23 @@ export default function EightACertificationHelp() {
       </div>
 
       <p>GovCert was built by <strong>House Strategies Group LLC</strong> — a government contracting firm that went through the certification process firsthand. We built the tool we wished existed.</p>
+
+      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Frequently Asked Questions</h2>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>How long does 8(a) certification take?</h3>
+      <p style={{ marginBottom: 24 }}>The SBA typically processes 8(a) applications within 90 days of receiving a complete package. However, incomplete applications or requests for additional documentation can extend the timeline to 6 months or more. GovCert helps you submit a complete application the first time, reducing delays caused by missing documents or non-compliant narratives.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>What documents do I need?</h3>
+      <p style={{ marginBottom: 24 }}>Key documents include two years of business tax returns, two years of personal tax returns, a Personal Financial Statement (SBA Form 413), business financial statements (balance sheet and income statement), your business plan, articles of incorporation or operating agreement, proof of US citizenship, and any relevant contracts or capability statements. GovCert tells you exactly what to upload and flags anything missing.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>Can I apply without a consultant?</h3>
+      <p style={{ marginBottom: 24 }}>Yes. Many businesses successfully apply for 8(a) certification on their own through certify.sba.gov. The challenge is that the application requires a regulation-compliant social disadvantage narrative, precise financial documentation, and a comprehensive business plan. GovCert automates these components for $1,000 — far less than a consultant — while still providing human support where needed.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>What is the social disadvantage narrative?</h3>
+      <p style={{ marginBottom: 24 }}>The social disadvantage narrative is a written statement required under 13 CFR 124.103 that describes specific, chronic, and substantial experiences of bias or discrimination based on race, ethnicity, gender, physical disability, or other qualifying factors. SBA evaluates it against a three-part standard: the basis for disadvantage, specific incidents, and their long-term impact on your business career. It is widely considered the hardest section of the 8(a) application.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>How much does 8(a) certification cost?</h3>
+      <p style={{ marginBottom: 24 }}>There is no government fee to apply for 8(a) certification through certify.sba.gov. The costs come from application preparation. Traditional consultants charge $3,000 to $15,000. GovCert provides complete application preparation — including narrative drafting, financial validation, and submission guidance — for a flat $1,000 with human support included.</p>
     </SEOPageLayout>
   );
 }

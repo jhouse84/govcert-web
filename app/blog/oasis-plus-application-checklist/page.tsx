@@ -19,6 +19,9 @@ export default function OasisPlusChecklist() {
       title="The Complete OASIS+ Application Checklist for 2026"
       subtitle="OASIS+ is the largest professional services GWAC in federal history. Here is everything you need to submit a winning application."
     >
+      <p style={{ fontSize: 18, lineHeight: 1.7, color: "#1a1a1a", marginBottom: 8 }}>An OASIS+ application requires domain selection, qualifying project narratives demonstrating relevant experience, past performance references, and submission through GSA&apos;s Symphony portal. GovCert automates domain matching, contract history mapping, and narrative generation for $1,000.</p>
+      <p style={{ fontSize: 13, color: "#8B7A3E", marginBottom: 32 }}><em>Last updated: April 2, 2026</em></p>
+
       <p>OASIS+ (One Acquisition Solution for Integrated Services Plus) is GSA&apos;s next-generation government-wide acquisition contract for professional services. It replaced the original OASIS contracts and represents the single largest vehicle for professional services procurement across the federal government. Winning a spot on OASIS+ gives your company access to billions of dollars in task orders spanning management consulting, IT services, engineering, logistics, environmental services, and more.</p>
       <p>The application process is conducted through GSA&apos;s Symphony portal and requires careful preparation. Unlike some federal certifications, OASIS+ is not a self-certification — it is a competitive evaluation based on your company&apos;s demonstrated experience, past performance, and organizational capability. This checklist covers everything you need to prepare a complete application in 2026.</p>
 
@@ -133,6 +136,20 @@ export default function OasisPlusChecklist() {
 
       <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>How GovCert Helps With OASIS+</h2>
       <p>GovCert&apos;s platform is expanding to support OASIS+ application preparation. The AI can analyze your existing contract portfolio, identify your strongest qualifying projects for each domain, and help draft compelling project narratives that meet GSA&apos;s evaluation criteria. If you are preparing for the next OASIS+ on-ramp, start with a free eligibility assessment to see which domains and pools you are best positioned to compete in.</p>
+
+      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Frequently Asked Questions</h2>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>How many qualifying projects do I need for OASIS+?</h3>
+      <p>The minimum number of qualifying projects varies by domain and pool. Generally, you need at least three to five qualifying projects per domain that demonstrate relevant experience within the recency period. Check the current OASIS+ solicitation on GSA&apos;s website for the exact requirements for each domain you are targeting.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Can I apply for multiple OASIS+ domains?</h3>
+      <p>Yes. You can apply for as many domains as you have qualifying experience for. However, each domain is evaluated independently, so only apply for domains where you have strong qualifying projects. A weak application in one domain does not affect your evaluation in another, but it wastes preparation effort.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>What is the Symphony portal?</h3>
+      <p>Symphony is GSA&apos;s procurement portal used for OASIS+ submissions. It is separate from SAM.gov and requires its own registration. You use Symphony to enter company information, upload qualifying project narratives, attach supporting documents, and submit your application. Register early because account verification can take several business days.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>When does OASIS+ accept new applications?</h3>
+      <p>OASIS+ uses periodic on-ramp windows where new applications are accepted. These windows open on a schedule announced by GSA and have fixed deadlines. Late submissions are not accepted. Monitor GSA&apos;s Interact community and the OASIS+ program page for announcements about upcoming on-ramp opportunities.</p>
     </SEOPageLayout>
   );
 }

@@ -19,6 +19,9 @@ export default function WOSBCertification() {
       title="WOSB Certification Help That Actually Works"
       subtitle="Navigate the WOSB and EDWOSB certification process with confidence. GovCert validates your eligibility, reviews your documents, and walks you through every step of self-certification — with human help where you need it."
     >
+      <p style={{ fontSize: 17, lineHeight: 1.7, color: "#1a2b3c", marginBottom: 8 }}>Women-Owned Small Business (WOSB) certification is a self-certification program that gives women-owned firms access to federal set-aside contracts. GovCert&apos;s free eligibility assessment checks your WOSB and EDWOSB qualification instantly and guides you through the SAM.gov certification process.</p>
+      <p style={{ fontSize: 13, color: "#8B7A3E", marginBottom: 32 }}><em>Last updated: April 2, 2026</em></p>
+
       <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, marginBottom: 16 }}>What Is WOSB Certification?</h2>
       <p>The Women-Owned Small Business (WOSB) Federal Contracting Program is designed to increase the participation of women-owned businesses in federal procurement. The federal government has a statutory goal of awarding at least 5% of all federal contracting dollars to women-owned small businesses, and the WOSB program creates set-aside and sole-source contract opportunities to help meet that goal.</p>
       <p>There are two designations under the program: WOSB (Women-Owned Small Business) and EDWOSB (Economically Disadvantaged Women-Owned Small Business). EDWOSB provides access to an even broader range of set-aside industries and contract opportunities. Both designations allow firms to compete for contracts specifically reserved for women-owned businesses across hundreds of NAICS codes that SBA has identified as underrepresented.</p>
@@ -83,6 +86,23 @@ export default function WOSBCertification() {
       </div>
 
       <p>GovCert was built by <strong>House Strategies Group LLC</strong> — a government contracting firm that understands the certification landscape from the inside. We built the tool we wished existed.</p>
+
+      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Frequently Asked Questions</h2>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>What is the difference between WOSB and EDWOSB?</h3>
+      <p style={{ marginBottom: 24 }}>Both require at least 51% ownership and control by women who are US citizens. EDWOSB (Economically Disadvantaged Women-Owned Small Business) adds economic thresholds: personal net worth under $850,000 (excluding primary residence and business equity) and average adjusted gross income under $400,000 over three years. EDWOSB firms can compete for both EDWOSB and WOSB set-asides, giving them access to a wider pool of contract opportunities.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>Is WOSB certification free?</h3>
+      <p style={{ marginBottom: 24 }}>Self-certification through SAM.gov is free. There is no government fee to certify as a WOSB or EDWOSB. If you choose to use an SBA-approved third-party certifier instead of self-certifying, those organizations may charge their own fees. GovCert&apos;s eligibility assessment is free, and full application preparation costs $1,000 — significantly less than the $2,000 to $5,000 that traditional consultants charge.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>Do I need to recertify?</h3>
+      <p style={{ marginBottom: 24 }}>Yes. WOSB certification must be recertified annually through SAM.gov. You must confirm that your business still meets all eligibility requirements — ownership percentage, management control, citizenship, small business size, and (for EDWOSB) economic disadvantage thresholds. Failure to recertify can result in loss of your WOSB designation and ineligibility for set-aside contracts.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>What documents are required?</h3>
+      <p style={{ marginBottom: 24 }}>Required documents include your articles of incorporation or organization, operating agreement or bylaws, proof of US citizenship for qualifying women owners, business tax returns, personal tax returns (for EDWOSB), a Personal Financial Statement (for EDWOSB), and any shareholder or partnership agreements. GovCert reviews your documents against every requirement and flags anything missing before you submit.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>Can a man own part of a WOSB?</h3>
+      <p style={{ marginBottom: 24 }}>Yes, but the qualifying woman or women must unconditionally and directly own at least 51% of the business and control its management and daily operations. A man can own up to 49% as a minority stakeholder, provided the ownership structure does not give him veto power, super-majority voting rights, or disproportionate control over business decisions. GovCert reviews your operating agreement to identify any provisions that could undermine the control requirement.</p>
     </SEOPageLayout>
   );
 }

@@ -19,6 +19,9 @@ export default function HUBZoneCertification() {
       title="HUBZone Certification Help That Actually Works"
       subtitle="Stop guessing whether your address qualifies and your employees meet residency requirements. GovCert validates everything and guides you through the entire HUBZone application — with human help where you need it."
     >
+      <p style={{ fontSize: 17, lineHeight: 1.7, color: "#1a2b3c", marginBottom: 8 }}>HUBZone certification requires your principal office to be located in a Historically Underutilized Business Zone and at least 35% of your employees to reside in a HUBZone. GovCert checks your ZIP code eligibility instantly and guides you through the SBA application process.</p>
+      <p style={{ fontSize: 13, color: "#8B7A3E", marginBottom: 32 }}><em>Last updated: April 2, 2026</em></p>
+
       <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, marginBottom: 16 }}>What Is HUBZone Certification?</h2>
       <p>The Historically Underutilized Business Zones (HUBZone) program is an SBA certification designed to stimulate economic development in distressed communities by directing federal contracts to small businesses located in and hiring from those areas. The federal government has a statutory goal of awarding at least 3% of all federal contracting dollars to HUBZone-certified businesses.</p>
       <p>HUBZone certification provides access to competitive and sole-source set-aside contracts, a 10% price evaluation preference in full and open competitions, and eligibility for joint ventures with other HUBZone firms. For businesses already located in qualifying areas, it can be one of the most valuable certifications available — opening doors to billions of dollars in annual contract opportunities without requiring the social or economic disadvantage demonstrations that programs like 8(a) demand.</p>
@@ -86,6 +89,23 @@ export default function HUBZoneCertification() {
       </div>
 
       <p>GovCert was built by <strong>House Strategies Group LLC</strong> — a government contracting firm that understands federal certification requirements from firsthand experience. We built the tool we wished existed.</p>
+
+      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Frequently Asked Questions</h2>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>How do I check if my address is in a HUBZone?</h3>
+      <p style={{ marginBottom: 24 }}>Use the SBA&apos;s official HUBZone Map at maps.certify.sba.gov to enter your principal office address and check whether it falls within a designated HUBZone. The map covers Qualified Census Tracts, Non-Metropolitan Counties, Indian Reservations, Base Closure Areas, and Disaster Areas. Note that HUBZone designations change periodically based on updated Census data. GovCert also verifies your address automatically when you run the free eligibility check.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>What is the 35% employee requirement?</h3>
+      <p style={{ marginBottom: 24 }}>At least 35% of your employees must reside in a HUBZone — but it does not have to be the same HUBZone as your principal office. Residency is based on each employee&apos;s primary residence, meaning the address where they live most of the year. GovCert cross-references your employee roster against the HUBZone map and calculates your exact percentage, identifying which employees qualify and how many more you may need.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>How long does HUBZone certification take?</h3>
+      <p style={{ marginBottom: 24 }}>SBA typically processes HUBZone applications within 60 to 90 days of receiving a complete package. Incomplete applications or requests for additional documentation can extend the timeline significantly. GovCert helps you submit a complete, compliant application the first time by validating all location, residency, ownership, and size requirements before you apply.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>Can I lose HUBZone status?</h3>
+      <p style={{ marginBottom: 24 }}>Yes. SBA conducts recertification reviews, and your HUBZone status can be revoked if your principal office moves out of a HUBZone, your employee residency percentage drops below 35% without documented good-faith efforts to maintain it, or your business no longer meets size standards. Additionally, HUBZone designations themselves can change — an area that was a HUBZone when you certified may lose that status in future Census updates.</p>
+
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>What is the &quot;attempt to maintain&quot; rule?</h3>
+      <p style={{ marginBottom: 24 }}>The &quot;attempt to maintain&quot; provision applies after initial certification. If your HUBZone employee residency percentage drops below 35%, you are not immediately decertified — but you must demonstrate good-faith efforts to restore compliance. This includes documenting your hiring practices, job postings targeting HUBZone residents, and outreach to local workforce development organizations. GovCert helps you build a compliance plan and maintain the documentation SBA expects during recertification reviews.</p>
     </SEOPageLayout>
   );
 }

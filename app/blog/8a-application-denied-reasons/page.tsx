@@ -19,6 +19,9 @@ export default function EightADeniedReasons() {
       title="5 Reasons Your 8(a) Application Got Denied (And How to Fix Them)"
       subtitle="An 8(a) denial is not the end. Understanding exactly why applications get rejected — and how to fix each issue — is the first step toward a successful reapplication."
     >
+      <p style={{ fontSize: 18, lineHeight: 1.7, color: "#1a1a1a", marginBottom: 8 }}>The most common reasons for 8(a) application denial are: an incomplete or vague social disadvantage narrative, financial threshold violations (net worth over $850,000 or AGI over $400,000), ownership percentage below 51%, missing required documents, and insufficient past performance evidence.</p>
+      <p style={{ fontSize: 13, color: "#8B7A3E", marginBottom: 32 }}><em>Last updated: April 2, 2026</em></p>
+
       <p>Receiving a denial letter from the SBA after months of work on your 8(a) application is discouraging. But it is also more common than most applicants realize. The SBA does not publish official denial rates, but industry estimates suggest that a significant percentage of first-time applications are either denied outright or returned with Requests for Further Evidence that the applicant cannot adequately address.</p>
       <p>The good news is that the SBA tells you why your application was denied. And in most cases, the issues are fixable. This guide covers the five most common reasons for 8(a) denial, explains exactly what the SBA is looking for, and walks you through how to fix each problem before reapplying.</p>
 
@@ -158,6 +161,20 @@ export default function EightADeniedReasons() {
       <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Prevention Is Better Than Correction</h2>
       <p>Every denial costs you time — typically 90 days for the initial review, plus the weeks or months needed to correct issues and reapply. That is time you could be winning sole-source contracts and building your federal portfolio. The most cost-effective approach is getting it right the first time.</p>
       <p>GovCert&apos;s pre-submission validation catches the five issues described above — and dozens of smaller ones — before your application reaches the SBA. Start with a free eligibility check to see where you stand, identify potential problems early, and build the strongest possible application from the beginning.</p>
+
+      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Frequently Asked Questions</h2>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Can I reapply after an 8(a) denial?</h3>
+      <p>Yes. There is no limit on the number of times you can reapply for 8(a) certification. The SBA provides a denial letter specifying the exact reasons for rejection. Address each issue thoroughly before resubmitting. You may also request reconsideration through the SBA Office of Hearings and Appeals if you believe the denial was based on a factual error.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>How long do I have to wait to reapply after denial?</h3>
+      <p>There is no mandatory waiting period after an 8(a) denial. However, you should not resubmit until you have fully addressed every issue identified in the denial letter. Rushing to reapply without fixing the problems will result in another denial. Most applicants take 30 to 90 days to correct issues and strengthen their application before resubmitting.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Does GovCert prevent denials?</h3>
+      <p>GovCert significantly reduces denial risk through automated pre-submission validation. The platform checks your financials against CFR thresholds, scores your social disadvantage narrative against the SBA&apos;s review criteria, flags missing documents, and identifies ownership issues before you submit. While no tool can guarantee approval, GovCert catches the most common denial triggers described in this article.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>What is an RFE?</h3>
+      <p>An RFE (Request for Further Evidence) is a notice from the SBA asking for additional information or clarification during the review of your 8(a) application. RFEs are issued on roughly 40 to 60 percent of applications and are not a denial — they are an opportunity to strengthen your submission. Respond promptly and completely, as failure to address an RFE adequately can result in denial.</p>
     </SEOPageLayout>
   );
 }

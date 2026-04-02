@@ -19,6 +19,9 @@ export default function WosbCertificationGuide() {
       title="WOSB Certification: Step-by-Step Guide for 2026"
       subtitle="A complete walkthrough of the Women-Owned Small Business certification process, from eligibility to SAM.gov submission."
     >
+      <p style={{ fontSize: 18, lineHeight: 1.7, color: "#1a1a1a", marginBottom: 8 }}>WOSB certification is a free self-certification through SAM.gov that requires the business to be at least 51% owned and controlled by one or more women who are U.S. citizens. EDWOSB adds an economic disadvantage requirement. The process takes 2-4 weeks.</p>
+      <p style={{ fontSize: 13, color: "#8B7A3E", marginBottom: 32 }}><em>Last updated: April 2, 2026</em></p>
+
       <p>The Women-Owned Small Business (WOSB) Federal Contracting Program was created to increase the participation of women-owned businesses in federal procurement. The program authorizes federal agencies to set aside contracts specifically for WOSBs and Economically Disadvantaged Women-Owned Small Businesses (EDWOSBs) in industries where women are underrepresented. In fiscal year 2025, the federal government awarded over $30 billion in contracts to women-owned businesses, and the WOSB program was a significant driver of that spending.</p>
       <p>Getting certified is more straightforward than the 8(a) program, but it still requires careful preparation and accurate documentation. This guide walks you through every step of the process as it works in 2026.</p>
 
@@ -133,6 +136,20 @@ export default function WosbCertificationGuide() {
       <p>GovCert&apos;s platform includes a WOSB eligibility screener that checks your business against every requirement — ownership structure, control documentation, citizenship, and (for EDWOSB) economic disadvantage thresholds. Upload your operating agreement, tax returns, and financial documents, and GovCert will flag issues that could cause delays or denials before you submit.</p>
       <p>For businesses pursuing both WOSB and 8(a) certification, GovCert can prepare both applications simultaneously, since many of the same documents and eligibility criteria overlap. The platform identifies where your documentation already satisfies multiple certification requirements and where additional information is needed.</p>
       <p>Start with a free eligibility check to confirm your WOSB qualification status. It takes about 10 minutes and requires no credit card.</p>
+
+      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Frequently Asked Questions</h2>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Is WOSB certification the same as SBA certification?</h3>
+      <p>WOSB certification is administered by the SBA but it is a separate program from 8(a) certification. WOSB is a self-certification processed through certify.sba.gov, while 8(a) is a more comprehensive business development program with stricter eligibility requirements. You can hold both certifications simultaneously if you qualify for each.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Do I need to renew WOSB certification?</h3>
+      <p>Yes. WOSB certification must be recertified annually through certify.sba.gov. You will need to confirm that your business still meets all eligibility requirements, including ownership percentage, management control, citizenship, and (for EDWOSB) economic disadvantage thresholds. Failure to recertify on time can result in loss of your WOSB status.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>What federal contracts are set aside for WOSB?</h3>
+      <p>Federal agencies can set aside contracts for WOSBs in industries where women are substantially underrepresented, and for EDWOSBs in industries where women are underrepresented. Sole-source awards up to $4.5 million for services and $7 million for manufacturing are available. The specific NAICS codes eligible for WOSB set-asides are listed in the SBA&apos;s regulations.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Can an LLC qualify for WOSB certification?</h3>
+      <p>Yes. LLCs, corporations, partnerships, and sole proprietorships can all qualify for WOSB certification. The key requirement is that the qualifying woman or women must own at least 51% of the entity unconditionally and directly, and must control management and daily operations. Your operating agreement must clearly reflect this ownership and control structure.</p>
     </SEOPageLayout>
   );
 }

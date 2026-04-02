@@ -19,6 +19,9 @@ export default function EightACertificationCost() {
       title="How Much Does 8(a) Certification Cost in 2026?"
       subtitle="A transparent look at every dollar you will spend getting 8(a) certified — whether you hire a consultant, do it yourself, or use GovCert."
     >
+      <p style={{ fontSize: 18, lineHeight: 1.7, color: "#1a1a1a", marginBottom: 8 }}>8(a) certification costs range from $0 (DIY through certify.sba.gov) to $15,000 (full-service consultant). GovCert offers AI-powered application preparation for $1,000 with human support included — covering the social disadvantage narrative, economic disadvantage documentation, business plan, and submission guide.</p>
+      <p style={{ fontSize: 13, color: "#8B7A3E", marginBottom: 32 }}><em>Last updated: April 2, 2026</em></p>
+
       <p>The SBA 8(a) Business Development Program opens the door to sole-source federal contracts worth up to $4 million for goods and services and $7 million for manufacturing. But before you can access those opportunities, you need to get through one of the most demanding certification processes in federal contracting. The question every applicant asks first is simple: how much is this going to cost me?</p>
       <p>The answer depends entirely on which path you choose. In 2026, there are three realistic options: hiring a traditional consultant, doing it yourself, or using an AI-powered platform like GovCert. Each comes with different price tags, timelines, and trade-offs. This guide breaks down every cost so you can make an informed decision.</p>
 
@@ -154,6 +157,20 @@ export default function EightACertificationCost() {
 
       <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Start With a Free Eligibility Check</h2>
       <p>Before spending anything, find out if you actually qualify. GovCert&apos;s eligibility screener is free, takes about 10 minutes, and checks you against every 8(a) criterion — net worth limits, AGI thresholds, ownership requirements, and more. No credit card required. If you pass the screener, you will know exactly where you stand and can make an informed decision about which path to take.</p>
+
+      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Frequently Asked Questions</h2>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Is there an SBA filing fee for 8(a)?</h3>
+      <p>No. The SBA does not charge any fee to apply for 8(a) certification. The certify.sba.gov portal is free to use. Your only costs are for professional help (if you choose to hire a consultant or use a platform like GovCert) and for preparing required documents like tax returns and financial statements.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Are there hidden costs in the 8(a) certification process?</h3>
+      <p>Yes. Common hidden costs include accountant fees for accrual-basis financial statements ($500 to $3,000), business valuations if requested by the SBA ($2,000 to $5,000), legal fees for operating agreement amendments, and consultant surcharges for RFE (Request for Further Evidence) responses. Factor these into your budget regardless of which preparation path you choose.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Can I deduct 8(a) certification costs on my taxes?</h3>
+      <p>Consulting fees, platform costs, and professional service fees related to obtaining 8(a) certification are generally deductible as ordinary business expenses. Consult your CPA or tax advisor for guidance specific to your situation.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>What does GovCert&apos;s $1,000 include?</h3>
+      <p>GovCert&apos;s $1,000 flat fee includes AI-powered eligibility screening, social disadvantage narrative generation, economic disadvantage documentation with auto-populated SBA Form 413, a complete 8-section business plan, financial validation against CFR thresholds, a certify.sba.gov submission guide, unlimited revisions, and human support for complex questions — all with no additional charges for RFE assistance.</p>
     </SEOPageLayout>
   );
 }

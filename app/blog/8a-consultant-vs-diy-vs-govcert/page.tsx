@@ -19,6 +19,9 @@ export default function ConsultantVsDiyVsGovcert() {
       title="8(a) Certification: Consultant vs. DIY vs. GovCert"
       subtitle="Three paths to the same destination. Here is an honest comparison so you can choose the one that fits your budget, timeline, and comfort level."
     >
+      <p style={{ fontSize: 18, lineHeight: 1.7, color: "#1a1a1a", marginBottom: 8 }}>There are three paths to 8(a) certification: hiring a consultant ($3,000-$15,000, 1-4 months), doing it yourself (free but 80-200 hours), or using GovCert ($1,000, 1-2 weeks). The best choice depends on your budget, timeline, and comfort with the application process.</p>
+      <p style={{ fontSize: 13, color: "#8B7A3E", marginBottom: 32 }}><em>Last updated: April 2, 2026</em></p>
+
       <p>Getting 8(a) certified is one of the highest-leverage moves a small business can make in federal contracting. The program provides access to sole-source contracts, set-aside competitions, mentorship, and management assistance for nine years. But the application itself is notoriously complex — requiring a social disadvantage narrative, economic disadvantage documentation, a full business plan, financial statements, and dozens of supporting documents uploaded through the certify.sba.gov portal.</p>
       <p>In 2026, there are three realistic ways to get through the process. Each has genuine advantages and real drawbacks. This guide lays them out honestly so you can pick the approach that makes sense for your situation.</p>
 
@@ -172,6 +175,20 @@ export default function ConsultantVsDiyVsGovcert() {
         <li style={{ marginBottom: 12 }}><strong>If you want the best balance of cost, speed, and quality</strong>, GovCert delivers professional-grade application preparation at a price point accessible to most small businesses. It handles 90 percent of what a $10,000 consultant does, with human support available for the remaining 10 percent.</li>
       </ul>
       <p>Whichever path you choose, the most important step is starting. Every month you delay is a month of sole-source contract opportunities you cannot access. Check your eligibility for free, understand your options, and begin the process.</p>
+
+      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, margin: "40px 0 16px" }}>Frequently Asked Questions</h2>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Can I switch approaches mid-application?</h3>
+      <p>Yes. You can start the application yourself and bring in a consultant or use GovCert at any point. Your certify.sba.gov account and any uploaded documents remain intact. Many applicants begin DIY, realize the social disadvantage narrative requires more expertise, and then engage professional help for that specific section.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>What if my application gets denied?</h3>
+      <p>You can reapply after a denial with no mandatory waiting period. The SBA provides a denial letter explaining the specific reasons. Address each issue before resubmitting. You may also request reconsideration through the SBA Office of Hearings and Appeals if you believe the denial was based on incorrect information.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Do consultants guarantee approval?</h3>
+      <p>No legitimate consultant can guarantee 8(a) approval. The SBA makes all certification decisions independently. Be wary of any consultant who promises a guaranteed outcome — this is a red flag. Reputable consultants will discuss their historical approval rates and explain the factors that influence your specific likelihood of success.</p>
+
+      <h3 style={{ fontSize: 20, color: "#0B1929", fontWeight: 600, margin: "28px 0 12px" }}>Is GovCert fully automated?</h3>
+      <p>No. GovCert uses AI for document analysis, narrative generation, financial validation, and eligibility scoring, but it includes human support for complex questions, edge-case eligibility issues, and narrative guidance. You also retain full control over every section of your application and can edit or regenerate any output before submitting.</p>
     </SEOPageLayout>
   );
 }

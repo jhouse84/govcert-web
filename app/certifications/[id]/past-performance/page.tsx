@@ -669,8 +669,9 @@ Scope of Work: ${contract.sowDescription}`,
               ) : (
                 <div>
                   <div style={{ fontSize: 24, marginBottom: 8 }}>&#x1F4E4;</div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Upload a PPQ, CPARS report, or past performance document</div>
-                  <div style={{ fontSize: 12, color: "var(--ink4)", marginBottom: 10 }}>Drag and drop or click to browse. Supports PDF, DOCX, XLSX, CSV, TXT</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Upload a completed PPQ or CPARS report</div>
+                  <div style={{ fontSize: 12, color: "var(--ink4)", marginBottom: 4 }}>For GSA MAS, each PPQ/CPARS is a standalone deliverable uploaded directly to eOffer Tab 4.</div>
+                  <div style={{ fontSize: 11, color: "var(--ink4)", marginBottom: 10, fontStyle: "italic" }}>Your uploaded file will be saved to your document library and marked as ready for eOffer submission. AI also extracts contract data for your records.</div>
                   <button onClick={(e) => { e.stopPropagation(); ppFileRef.current?.click(); }}
                     style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
                     Choose File

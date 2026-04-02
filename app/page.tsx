@@ -114,7 +114,7 @@ export default function LandingPage() {
         </div>
         {/* Stats glass panel */}
         <div style={{ position: "absolute", bottom: 60, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 48, zIndex: 2, background: "rgba(255,255,255,.06)", backdropFilter: "blur(16px)", borderRadius: 16, padding: "24px 48px", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 4px 24px rgba(0,0,0,.15)" }}>
-          {[["$700B+", "Federal Contracts Annually"], ["170K+", "Certified Small Businesses"], ["80%", "Faster with GovCert"]].map(([v, l]) => (
+          {[["$700B+", "Federal Contracts Annually"], ["170K+", "Certified Small Businesses"], ["60+ Pages", "Automated Per Application"]].map(([v, l]) => (
             <div key={l} style={{ textAlign: "center" }}>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: "#fff", fontWeight: 400, lineHeight: 1, letterSpacing: "-.03em" }}>{v}</div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,.45)", textTransform: "uppercase", letterSpacing: ".08em", marginTop: 4 }}>{l}</div>
@@ -183,6 +183,51 @@ export default function LandingPage() {
           <p style={{ fontSize: 12, color: "var(--ink4)", marginTop: 14, fontWeight: 300 }}>
             Free to start. No credit card required.
           </p>
+        </div>
+      </div>
+
+      {/* SOCIAL PROOF / CREDIBILITY */}
+      <div style={{ background: "linear-gradient(180deg, var(--cream) 0%, #F0EBE0 100%)", padding: "64px 0" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 48px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 12 }}>Why Trust GovCert</div>
+              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, lineHeight: 1.2, marginBottom: 16 }}>Built by government contractors, for government contractors</h3>
+              <p style={{ fontSize: 14, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 20 }}>
+                GovCert was created by House Strategies Group LLC — a government contracting firm that spent months assembling certification applications by hand. We built the tool we wished existed because we lived the problem firsthand.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  "D&B verified — D-U-N-S: 105595626",
+                  "AES-256 encryption on every document",
+                  "Human support included with every application",
+                  "AI trained on actual SBA and GSA regulatory standards",
+                ].map(item => (
+                  <div key={item} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ color: "var(--gold)", fontSize: 14, flexShrink: 0 }}>{"✓"}</span>
+                    <span style={{ fontSize: 13, color: "var(--ink2)" }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ background: "#fff", borderRadius: 16, padding: "32px 28px", border: "1px solid rgba(200,155,60,.15)", boxShadow: "0 4px 24px rgba(0,0,0,.06)" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 16 }}>You're Not On Your Own</div>
+              <h4 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, lineHeight: 1.3, marginBottom: 12 }}>Human help where it matters most</h4>
+              <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.7, marginBottom: 20 }}>
+                An 8(a) application is one of the most consequential submissions a small business can make. AI handles the heavy lifting — document analysis, narrative drafting, regulatory validation — but when you need a human perspective, it's included in your cost. No upsells. No surprise consulting fees.
+              </p>
+              <div style={{ padding: "16px 20px", background: "rgba(200,155,60,.06)", borderRadius: 10, border: "1px solid rgba(200,155,60,.15)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 20 }}>{"📞"}</span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Talk to a real person</span>
+                </div>
+                <p style={{ fontSize: 12, color: "var(--ink3)", margin: "0 0 10px", lineHeight: 1.6 }}>
+                  Questions about your specific situation? Call us directly. We're government contractors who understand the process.
+                </p>
+                <a href="tel:+14349815295" style={{ fontSize: 15, fontWeight: 600, color: "var(--gold)", textDecoration: "none" }}>(434) 981-5295</a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -290,11 +335,17 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
+            {/* Same price explanation */}
+            <div style={{ padding: "14px 20px", background: "rgba(255,255,255,.04)", borderRadius: "var(--r)", border: "1px solid rgba(255,255,255,.08)", marginTop: 16, marginBottom: 8 }}>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,.55)", margin: 0, lineHeight: 1.6, textAlign: "center" }}>
+                Same price across certifications because the AI does the heavy lifting. Every application gets the same depth of AI analysis, narrative drafting, and regulatory validation — plus human support where you need it.
+              </p>
+            </div>
             {/* Callouts */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginTop: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginTop: 16 }}>
               {[
+                { icon: "👤", text: "Human help included" },
                 { icon: "⚡", text: "Days, not months" },
-                { icon: "🤖", text: "AI-powered, 24/7" },
                 { icon: "🔄", text: "Unlimited revisions" },
                 { icon: "🔍", text: "GovCert Review included" },
               ].map(c => (

@@ -275,8 +275,8 @@ export default function UsagePage() {
                 {[
                   { label: "This Month's Cost", value: summary ? formatCurrency(summary.thisMonthCost) : "$0.00", sub: "Current billing period" },
                   { label: "Last Month's Cost", value: summary ? formatCurrency(summary.lastMonthCost) : "$0.00", sub: "Previous billing period" },
+                  { label: "All-Time Spend", value: history ? formatCurrency(history.months.reduce((sum, m) => sum + m.cost, 0)) : "$0.00", sub: "Total since launch" },
                   { label: "AI Calls This Month", value: summary ? summary.aiCallsThisMonth.toLocaleString() : "0", sub: "Anthropic API requests" },
-                  { label: "Active Integrations", value: summary ? String(summary.activeIntegrations) : "0", sub: "Connected OAuth tokens" },
                 ].map((stat) => (
                   <div key={stat.label} style={{ background: "#fff", borderRadius: "var(--rl)", padding: "24px 20px", boxShadow: "var(--shadow)", border: "1px solid var(--border)" }}>
                     <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: "var(--navy)", fontWeight: 400, lineHeight: 1 }}>{stat.value}</div>
@@ -379,25 +379,35 @@ export default function UsagePage() {
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 4 }}>Trends</div>
                 <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 24 }}>Monthly History</h2>
                 {history && history.months.length > 0 ? (
-                  <div style={{ display: "flex", alignItems: "flex-end", gap: 12, height: 200, padding: "0 8px" }}>
-                    {history.months.map((month) => {
-                      const barHeight = Math.max((month.cost / maxHistoryCost) * 160, 4);
-                      return (
-                        <div key={month.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--navy)" }}>{formatCurrency(month.cost)}</span>
-                          <div style={{
-                            width: "100%",
-                            maxWidth: 64,
-                            height: barHeight,
-                            background: "linear-gradient(180deg, #C89B3C 0%, #E8B84B 100%)",
-                            borderRadius: "6px 6px 2px 2px",
-                            transition: "height .4s ease",
-                          }} />
-                          <span style={{ fontSize: 11, color: "var(--ink3)", fontWeight: 500 }}>{month.month}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, padding: "12px 16px", background: "var(--cream)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                      <span style={{ fontSize: 13, color: "var(--ink3)" }}>Cumulative all-time AI spend</span>
+                      <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400 }}>{formatCurrency(history.months.reduce((sum, m) => sum + m.cost, 0))}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 12, height: 220, padding: "0 8px" }}>
+                      {[...history.months].reverse().map((month, i, arr) => {
+                        const barHeight = Math.max((month.cost / maxHistoryCost) * 160, 4);
+                        const cumulative = arr.slice(0, i + 1).reduce((sum, m) => sum + m.cost, 0);
+                        return (
+                          <div key={month.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--navy)" }}>{formatCurrency(month.cost)}</span>
+                            <div style={{
+                              width: "100%",
+                              maxWidth: 64,
+                              height: barHeight,
+                              background: "linear-gradient(180deg, #C89B3C 0%, #E8B84B 100%)",
+                              borderRadius: "6px 6px 2px 2px",
+                              transition: "height .4s ease",
+                              cursor: "help",
+                            }} title={`Cumulative: ${formatCurrency(cumulative)}`} />
+                            <span style={{ fontSize: 10, color: "var(--ink4)" }}>{formatCurrency(cumulative)}</span>
+                            <span style={{ fontSize: 11, color: "var(--ink3)", fontWeight: 500 }}>{month.month}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+
                 ) : (
                   <EmptyState message="No monthly history available" />
                 )}

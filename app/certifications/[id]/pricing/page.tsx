@@ -84,6 +84,7 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
   const [invoiceGroups, setInvoiceGroups] = useState<any[]>([]);
   const [invoicesProcessed, setInvoicesProcessed] = useState(false);
   const [existingDocs, setExistingDocs] = useState<Record<string, any[]>>({});
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
 
   // Library state
   const [librarySearch, setLibrarySearch] = useState("");
@@ -311,7 +312,7 @@ Return ONLY valid JSON.`,
 Selected SINs: ${selectedSINs}
 Company: ${cert?.client?.businessName}
 Return ONLY the JSON array.`,
-          context: { businessName: cert?.client?.businessName, otherSections: combined.substring(0, 8000) },
+          context: { businessName: cert?.client?.businessName, otherSections: combined.substring(0, 50000) },
         }),
       });
       const clean = data.text.replace(/```json|```/g, "").trim();
@@ -337,19 +338,23 @@ Return ONLY the JSON array.`,
     try {
       const clientId = cert?.clientId || cert?.client?.id;
       const docs = await apiRequest(`/api/upload/documents?clientId=${clientId}`);
-      const relevantIds = new Set(relevantDocs.map((d: any) => d.id));
+      // Filter to only selected docs if user made selections, otherwise use all
+      const useIds = selectedDocIds.size > 0
+        ? selectedDocIds
+        : new Set(relevantDocs.map((d: any) => d.id));
       const withText = (Array.isArray(docs) ? docs : []).filter(
-        (d: any) => relevantIds.has(d.id) && d.extractedText?.trim()
+        (d: any) => useIds.has(d.id) && d.extractedText?.trim()
       );
       if (withText.length === 0) {
-        setError("Your uploaded invoices don't have extractable text. Try re-uploading them as PDF files.");
+        setError("The selected documents don't have extractable text. Try re-uploading them as PDF files.");
         setProcessingInvoices(false);
         return;
       }
+      // Use larger limits — proposals can be very long
       let combined = "";
       for (const doc of withText) {
-        const snippet = `--- ${doc.originalName} ---\n${doc.extractedText.substring(0, 3000)}\n\n`;
-        if (combined.length + snippet.length > 8000) break;
+        const snippet = `--- ${doc.originalName} ---\n${doc.extractedText.substring(0, 15000)}\n\n`;
+        if (combined.length + snippet.length > 50000) break;
         combined += snippet;
       }
       const selectedSINs = cert?.application?.selectedSINs || "";
@@ -735,19 +740,41 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                           You already have {uploadedInvoiceDocs.length} document{uploadedInvoiceDocs.length !== 1 ? "s" : ""} uploaded
                         </h3>
                         <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 12, lineHeight: 1.6 }}>
-                          GovCert found invoices, rate cards, and proposals in your document library. Pull LCATs directly from these instead of re-uploading.
+                          Select which documents to include in the analysis. Proposals, invoices, rate cards, and contracts all work. Uncheck any files you want to exclude.
                         </p>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 14 }}>
-                          {uploadedInvoiceDocs.slice(0, 5).map((d: any, i: number) => (
-                            <span key={i} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 4, background: "rgba(180,155,80,.1)", color: "#8B7A3E", border: "1px solid rgba(180,155,80,.2)" }}>
-                              {d.originalName?.substring(0, 35)}{d.originalName?.length > 35 ? "..." : ""}
-                            </span>
-                          ))}
-                          {uploadedInvoiceDocs.length > 5 && <span style={{ fontSize: 11, color: "var(--ink4)", alignSelf: "center" }}>+{uploadedInvoiceDocs.length - 5} more</span>}
+                        <div style={{ display: "flex", flexDirection: "column" as const, gap: 6, marginBottom: 14 }}>
+                          {uploadedInvoiceDocs.map((d: any) => {
+                            const isSelected = selectedDocIds.size === 0 || selectedDocIds.has(d.id);
+                            return (
+                              <label key={d.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "6px 10px", borderRadius: 6, background: isSelected ? "rgba(180,155,80,.08)" : "transparent", border: `1px solid ${isSelected ? "rgba(180,155,80,.2)" : "transparent"}`, transition: "all .15s" }}>
+                                <input type="checkbox" checked={isSelected}
+                                  onChange={() => {
+                                    setSelectedDocIds(prev => {
+                                      const next = new Set(prev);
+                                      // If nothing was selected yet, initialize with all, then toggle this one off
+                                      if (prev.size === 0) {
+                                        uploadedInvoiceDocs.forEach((doc: any) => next.add(doc.id));
+                                        next.delete(d.id);
+                                      } else if (next.has(d.id)) {
+                                        next.delete(d.id);
+                                      } else {
+                                        next.add(d.id);
+                                      }
+                                      return next;
+                                    });
+                                  }}
+                                  style={{ accentColor: "#C89B3C" }} />
+                                <span style={{ fontSize: 12, color: "var(--navy)", fontWeight: 500 }}>
+                                  {d.originalName?.substring(0, 50)}{d.originalName?.length > 50 ? "..." : ""}
+                                </span>
+                                <span style={{ fontSize: 10, color: "var(--ink4)", marginLeft: "auto" }}>{d.category?.replace(/_/g, " ")}</span>
+                              </label>
+                            );
+                          })}
                         </div>
                         <button onClick={processExistingDocs} disabled={processingInvoices}
                           style={{ padding: "11px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: processingInvoices ? "not-allowed" : "pointer", opacity: processingInvoices ? 0.7 : 1, boxShadow: "0 4px 16px rgba(200,155,60,.3)" }}>
-                          {processingInvoices ? "✦ Analyzing your documents..." : "✦ Pull LCATs from uploaded documents →"}
+                          {processingInvoices ? "✦ Analyzing selected documents..." : `✦ Pull LCATs from ${selectedDocIds.size > 0 ? selectedDocIds.size : uploadedInvoiceDocs.length} document${(selectedDocIds.size > 0 ? selectedDocIds.size : uploadedInvoiceDocs.length) !== 1 ? "s" : ""} →`}
                         </button>
                       </div>
                     </div>

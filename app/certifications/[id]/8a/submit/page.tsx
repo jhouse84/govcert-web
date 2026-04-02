@@ -48,11 +48,11 @@ const SBA_FORM_1010_CHECKLIST = [
     docCategory: "CAPABILITY_STATEMENT",
   },
   { id: "pastPerformance", label: "Past Performance References", section: "past-performance", field: null,
-    what: "Details on your completed and active government/commercial contracts — agency name, contract number, value, period of performance, and a reference contact (Contracting Officer).",
-    where: "GovCert pre-populated these from your uploaded documents. Review and add reference contacts in Section 5.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Past Performance → enter each contract individually in the provided fields.",
-    format: "Entered directly in the portal. Have contract numbers, values, and CO contact info ready.",
-    docCategory: "CONTRACT",
+    what: "Details on your completed and active government/commercial contracts — agency name, contract number, value, period of performance, and a reference contact (Contracting Officer). Completed PPQ forms and CPARS reports also satisfy this requirement.",
+    where: "GovCert pre-populated these from your uploaded documents. Review and add reference contacts in Section 5. If you have completed PPQ forms or CPARS reports, upload them — they will be matched here automatically.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Past Performance → enter each contract individually in the provided fields. Upload any completed PPQ forms or CPARS reports as supporting documents.",
+    format: "Entered directly in the portal + supporting PDFs. Have contract numbers, values, and CO contact info ready.",
+    docCategory: ["CONTRACT", "PPQ_RESPONSE", "PPQ_COMPLETED", "CPARS_REPORT"],
   },
   { id: "financials", label: "2 Years Business Financial Statements", section: "financials", field: "financialData8a",
     what: "Profit & Loss statement and Balance Sheet for the 2 most recent complete fiscal years. Must be prepared by your accountant — SBA may cross-reference with your tax returns.",
@@ -552,11 +552,18 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                         })()}
 
                         {/* Show matching uploaded documents */}
-                        {(item as any).docCategory && (clientDocs[(item as any).docCategory] || []).length > 0 && (
+                        {(item as any).docCategory && (() => {
+                          const cats = Array.isArray((item as any).docCategory) ? (item as any).docCategory : [(item as any).docCategory];
+                          const matchedDocs = cats.flatMap((c: string) => clientDocs[c] || []);
+                          return matchedDocs.length > 0 ? true : false;
+                        })() && (
                           <div style={{ marginTop: 12, padding: "12px", background: "var(--green-bg)", borderRadius: 8, border: "1px solid var(--green-b)" }}>
                             <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--green)", marginBottom: 8 }}>📁 Your uploaded files — ready to submit</div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                              {(clientDocs[(item as any).docCategory] || []).map((doc: any) => (
+                              {(() => {
+                                const cats = Array.isArray((item as any).docCategory) ? (item as any).docCategory : [(item as any).docCategory];
+                                return cats.flatMap((c: string) => clientDocs[c] || []);
+                              })().map((doc: any) => (
                                 <div key={doc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: "#fff", borderRadius: 6, border: "1px solid var(--border)" }}>
                                   <div>
                                     <div style={{ fontSize: 12, fontWeight: 500, color: "var(--navy)" }}>{doc.originalName}</div>

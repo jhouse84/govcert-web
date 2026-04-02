@@ -85,7 +85,7 @@ const GSA_MAS_CHECKLIST = [
     where: "GovCert pre-populated past performance from your uploaded documents. Check Section 4 (Past Performance tab) in eOffer. For federal contracts, download CPARS reports from cpars.gov. For commercial contracts, prepare a reference sheet with company name, contact, contract value, and period of performance.",
     sbaPortal: "In eoffer.gsa.gov → Tab 4 (Past Performance) → upload each CPARS report or completed Past Performance Questionnaire (PPQ) as a separate PDF attachment.",
     format: "PDF. Each reference as a separate file. Include contract number, value, period of performance, and a reference contact name/phone/email.",
-    docCategory: "CONTRACT",
+    docCategory: ["CONTRACT", "PPQ_RESPONSE", "PPQ_COMPLETED", "CPARS_REPORT"],
   },
   { id: "csp1", label: "CSP-1 Commercial Supplier Pricelist", section: null, field: null,
     what: "Your proposed pricing in GSA's required CSP-1 format. Lists every labor category or product with your Most Favored Customer (MFC) pricing, proposed GSA pricing, and the basis for that pricing.",
@@ -634,7 +634,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                   <div key={item.id}
                     onDragOver={(e) => { e.preventDefault(); setDragOverItem(item.id); }}
                     onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
-                    onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.[0]) handleChecklistDrop(item.id, e.dataTransfer.files[0], item.docCategory || null); }}
+                    onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.[0]) handleChecklistDrop(item.id, e.dataTransfer.files[0], Array.isArray(item.docCategory) ? item.docCategory[0] : item.docCategory || null); }}
                     style={{
                     border: `1px solid ${isDragTarget ? "var(--gold)" : complete ? "var(--green-b)" : isExpanded ? "rgba(200,155,60,.25)" : "var(--border)"}`,
                     borderRadius: "var(--r)", overflow: "hidden",
@@ -693,11 +693,17 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                           </div>
                         </div>
                         {/* Show matching uploaded documents */}
-                        {item.docCategory && (clientDocs[item.docCategory] || []).length > 0 && (
+                        {item.docCategory && (() => {
+                          const cats = Array.isArray(item.docCategory) ? item.docCategory : [item.docCategory];
+                          return cats.flatMap((c: string) => clientDocs[c] || []).length > 0;
+                        })() && (
                           <div style={{ marginTop: 12, padding: "12px", background: "var(--green-bg)", borderRadius: 8, border: "1px solid var(--green-b)" }}>
                             <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--green)", marginBottom: 8 }}>Your uploaded files — ready to submit</div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                              {(clientDocs[item.docCategory] || []).map((doc: any) => (
+                              {(() => {
+                                const cats = Array.isArray(item.docCategory) ? item.docCategory : [item.docCategory];
+                                return cats.flatMap((c: string) => clientDocs[c] || []);
+                              })().map((doc: any) => (
                                 <div key={doc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: "#fff", borderRadius: 6, border: "1px solid var(--border)" }}>
                                   <div>
                                     <div style={{ fontSize: 12, fontWeight: 500, color: "var(--navy)" }}>{doc.originalName}</div>
@@ -728,7 +734,10 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                             </div>
                           </div>
                         )}
-                        {item.docCategory && (!clientDocs[item.docCategory] || clientDocs[item.docCategory].length === 0) && (
+                        {item.docCategory && (() => {
+                          const cats = Array.isArray(item.docCategory) ? item.docCategory : [item.docCategory];
+                          return cats.flatMap((c: string) => clientDocs[c] || []).length === 0;
+                        })() && (
                           <div style={{ marginTop: 12, padding: "10px 12px", background: "rgba(200,60,60,.03)", borderRadius: 8, border: "1px solid rgba(200,60,60,.1)", fontSize: 12, color: "var(--red)" }}>
                             No matching file uploaded yet. Upload this document in <a href={`/portal/documents`} style={{ color: "var(--gold)", fontWeight: 600 }}>My Documents</a> or gather it from the source described above.
                           </div>

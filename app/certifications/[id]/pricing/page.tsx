@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import CureBanner from "@/components/CureBanner";
 
 const EDUCATION_LEVELS = [
   "High School Diploma / GED",
@@ -753,6 +754,8 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
           <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
             ← Back to Application Dashboard
           </a>
+          <CureBanner />
+
           <div style={{ marginTop: 20, marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Section 6 of 6</div>
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Pricing (CSP-1)</h1>

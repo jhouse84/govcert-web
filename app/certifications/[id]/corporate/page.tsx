@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { SecurityBanner, ProvenanceBadge } from "@/components/SecurityBadge";
+import CureBanner, { useCure } from "@/components/CureBanner";
 import RedraftWizard from "@/components/RedraftWizard";
 
 // ── STRUCTURED QUESTIONS ──
@@ -44,6 +45,7 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
   const { id } = React.use(params);
   const certId = String(id);
 
+  const cureText = useCure();
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -352,7 +354,7 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
         method: "POST",
         body: JSON.stringify({
           section: section?.label,
-          prompt: `Write the "${section?.label}" section of a GSA Multiple Award Schedule Corporate Experience narrative for this company. Max ${section?.maxChars} characters. Be specific and credible. Use real data from the context provided.${guidanceStr}`,
+          prompt: `Write the "${section?.label}" section of a GSA Multiple Award Schedule Corporate Experience narrative for this company. Max ${section?.maxChars} characters. Be specific and credible. Use real data from the context provided.${guidanceStr}${cureText ? `\n\nGOVCERT ANALYSIS FEEDBACK (address this specifically):\n${cureText}` : ""}`,
           context: {
             businessName: cert?.client?.businessName,
             entityType: cert?.client?.entityType,
@@ -593,6 +595,8 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
               <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>✕</button>
             </div>
           )}
+
+          <CureBanner />
 
           <SecurityBanner
             message="Your corporate data and AI-drafted narratives are encrypted and protected."

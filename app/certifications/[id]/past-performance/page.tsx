@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { SecurityBanner } from "@/components/SecurityBadge";
+import CureBanner, { useCure } from "@/components/CureBanner";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
 
@@ -80,6 +81,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   const { id } = React.use(params);
   const certId = String(id);
 
+  const cureText = useCure();
   /* ── Core state ── */
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
@@ -558,7 +560,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
     setSinPromptOpen(null);
     try {
       const clientId = cert?.clientId || cert?.client?.id;
-      const userGuidance = sinPrompts[sin]?.trim() || "";
+      const userGuidance = sinPrompts[sin]?.trim() || cureText || "";
       const data = await apiRequest("/api/applications/ai/draft-sin-narrative", {
         method: "POST",
         body: JSON.stringify({
@@ -768,6 +770,8 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
               Upload references and draft project narratives for your GSA MAS application.
             </p>
           </div>
+
+          <CureBanner />
 
           <SecurityBanner
             message="Contract details and reference contact information are encrypted and only shared via secure PPQ questionnaires."

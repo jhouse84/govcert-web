@@ -381,7 +381,7 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
                           <span style={{ color: "var(--gold)", flexShrink: 0 }}>→</span> {imp}
                         </div>
                         {sectionLink && (
-                          <a href={`/certifications/${certId}/${sectionLink}`}
+                          <a href={`/certifications/${certId}/${sectionLink}?cure=${encodeURIComponent(imp)}`}
                             onClick={() => setCuredSections(prev => new Set([...prev, section.id]))}
                             style={{ padding: "4px 12px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 10, fontWeight: 600, color: "var(--gold2)", textDecoration: "none", flexShrink: 0, whiteSpace: "nowrap" as const }}>
                             Fix This →

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import RedraftWizard from "@/components/RedraftWizard";
+import CureBanner, { useCure } from "@/components/CureBanner";
 
 const PROMPTS = [
   { id: "overview", label: "Quality Control Overview", hint: "Overall QC approach and philosophy", maxChars: 2000 },
@@ -65,6 +66,7 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
   const { id } = React.use(params);
   const certId = String(id);
 
+  const cureText = useCure();
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -237,7 +239,7 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
         method: "POST",
         body: JSON.stringify({
           section: prompt?.label,
-          prompt: `Write the ${prompt?.label} section of a GSA MAS Quality Control Plan. ${prompt?.hint}${guidanceStr}`,
+          prompt: `Write the ${prompt?.label} section of a GSA MAS Quality Control Plan. ${prompt?.hint}${guidanceStr}${cureText ? `\n\nGOVCERT ANALYSIS FEEDBACK (address this specifically):\n${cureText}` : ""}`,
           context: {
             businessName: cert?.client?.businessName,
             entityType: cert?.client?.entityType,
@@ -370,6 +372,8 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
           <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
             ← Back to Application Dashboard
           </a>
+
+          <CureBanner />
 
           <div style={{ marginTop: 20, marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Section 2 of 6</div>

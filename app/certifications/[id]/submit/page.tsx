@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { usePaywall } from "@/lib/usePaywall";
 import PaywallModal from "@/components/PaywallModal";
-import { generatePDF } from "@/lib/generatePDF";
+import { generatePDF, generateDOCX } from "@/lib/generatePDF";
 
 /* ═══════════════════════════════════════════════════════════════════
    GSA MAS eOffer Submission Package
@@ -303,6 +303,12 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           category: "PRICE_PROPOSAL_GENERATED",
           apiUrl: API_URL,
         }) : null,
+        docxDownload: app?.priceProposal ? () => generateDOCX({
+          title: "Price Proposal / Commercial Sales Practices",
+          companyName: client?.businessName || "",
+          content: app.priceProposal,
+          fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Price_Proposal.docx`,
+        }) : null,
         docs: clientDocs.PRICE_PROPOSAL_GENERATED || [],
       } },
 
@@ -322,6 +328,12 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           category: "NEGOTIATOR_LETTER_GENERATED",
           apiUrl: API_URL,
         }) : null,
+        docxDownload: eofferData.negotiatorLetter ? () => generateDOCX({
+          title: "Authorized Negotiator Designation Letter",
+          companyName: client?.businessName || "",
+          content: eofferData.negotiatorLetter,
+          fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Authorized_Negotiator_Letter.docx`,
+        }) : null,
         docs: clientDocs.NEGOTIATOR_LETTER_GENERATED || [],
       } },
 
@@ -339,6 +351,12 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           clientId: cert?.clientId || client?.id,
           category: "SUBCONTRACTING_PLAN_GENERATED",
           apiUrl: API_URL,
+        }) : null,
+        docxDownload: eofferData.subcontractingPlan ? () => generateDOCX({
+          title: "Subcontracting Plan (FAR 52.219-9)",
+          companyName: client?.businessName || "",
+          content: eofferData.subcontractingPlan,
+          fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Subcontracting_Plan.docx`,
         }) : null,
         docs: clientDocs.SUBCONTRACTING_PLAN_GENERATED || [],
       } },
@@ -565,12 +583,20 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                               </div>
                             );
                           })}
-                          {/* PDF Download button */}
+                          {/* Download buttons — PDF for upload, DOCX for editing */}
                           {step.content.pdfDownload && (
-                            <button onClick={step.content.pdfDownload}
-                              style={{ width: "100%", padding: "12px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 6 }}>
-                              {"\u2B07"} Download as PDF for eOffer Upload
-                            </button>
+                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                              <button onClick={step.content.pdfDownload}
+                                style={{ flex: 1, padding: "12px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                                {"\u2B07"} Download PDF (for eOffer upload)
+                              </button>
+                              {step.content.docxDownload && (
+                                <button onClick={step.content.docxDownload}
+                                  style={{ flex: 1, padding: "12px 20px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", color: "var(--navy)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+                                  {"\u2B07"} Download Word (to review &amp; edit)
+                                </button>
+                              )}
+                            </div>
                           )}
                           {/* Previously generated PDF files */}
                           {(step.content.docs || []).length > 0 && (

@@ -151,3 +151,79 @@ export async function generatePDF(opts: {
     }
   }
 }
+
+/**
+ * Generate a Word document (.docx) from text content.
+ * User can edit the content in Word before uploading to the government portal.
+ */
+export async function generateDOCX(opts: {
+  title: string;
+  companyName: string;
+  content: string;
+  fileName: string;
+}): Promise<void> {
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = await import("docx");
+
+  const paragraphs = opts.content.split("\n");
+  const children: any[] = [];
+
+  // Title
+  children.push(new Paragraph({
+    children: [new TextRun({ text: opts.companyName, size: 20, color: "808080" })],
+    spacing: { after: 100 },
+  }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: opts.title, size: 36, bold: true, color: "1A2332" })],
+    heading: HeadingLevel.HEADING_1,
+    spacing: { after: 200 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 3, color: "C89B3C" } },
+  }));
+  children.push(new Paragraph({ spacing: { after: 200 } }));
+
+  // Body
+  for (const para of paragraphs) {
+    if (para.trim() === "") {
+      children.push(new Paragraph({ spacing: { after: 100 } }));
+      continue;
+    }
+
+    const isHeader = /^[0-9]+\.?\s+[A-Z]/.test(para) || (/^[A-Z][A-Z\s/&(),.:]+$/.test(para.trim()) && para.trim().length > 3 && para.trim().length < 80);
+
+    if (isHeader) {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: para.trim(), bold: true, size: 24, color: "1A2332" })],
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200, after: 100 },
+      }));
+    } else {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: para, size: 22, color: "333333" })],
+        spacing: { after: 80, line: 360 },
+      }));
+    }
+  }
+
+  // Footer
+  children.push(new Paragraph({ spacing: { before: 400 } }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: "Prepared with GovCert.ai", size: 16, color: "AAAAAA", italics: true })],
+    alignment: AlignmentType.RIGHT,
+  }));
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } },
+      },
+      children,
+    }],
+  });
+
+  const buffer = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(buffer);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = opts.fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}

@@ -273,23 +273,40 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         if (!uploadRes.ok) throw new Error(`Upload failed (${uploadRes.status})`);
         const uploadData = await uploadRes.json();
 
-        // 2. Extract text
-        const extractForm = new FormData();
-        extractForm.append("file", file);
-        const extractRes = await fetch(`${API}/api/upload/extract-text`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: extractForm,
-        });
+        // 2. Wait briefly for backend text extraction, then read extracted text from the Document record
+        //    (the upload endpoint already extracts text via classifyDocumentWithAI — don't re-upload)
+        const docId = uploadData.document?.id || uploadData.id || null;
         let text = "";
-        if (extractRes.ok) {
-          const extractData = await extractRes.json();
-          text = extractData.text || "";
+        if (docId) {
+          // Give the backend 3 seconds to extract text asynchronously
+          await new Promise(r => setTimeout(r, 3000));
+          try {
+            const docData = await apiRequest(`/api/upload/documents/${docId}`);
+            text = docData.extractedText || "";
+          } catch {}
         }
 
-        // 3. AI extract contract details (skip if no text)
+        // If the document record doesn't have text yet, fall back to direct extraction
+        if (!text.trim()) {
+          const extractForm = new FormData();
+          extractForm.append("file", file);
+          const extractRes = await fetch(`${API}/api/upload/extract-text`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: extractForm,
+          });
+          if (extractRes.ok) {
+            const extractData = await extractRes.json();
+            text = extractData.text || "";
+            if (extractData.warning) {
+              console.warn("Text extraction warning:", extractData.warning);
+            }
+          }
+        }
+
+        // 3. AI extract contract details
         let first: any = {};
-        if (text.trim()) {
+        if (text.trim() && text.trim().length > 20) {
           try {
             const aiRes = await apiRequest("/api/applications/ai/extract-past-performance", {
               method: "POST",
@@ -297,7 +314,12 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
             });
             const contracts = aiRes.contracts || aiRes || [];
             first = contracts[0] || {};
-          } catch { /* AI extraction is optional — file is still saved */ }
+          } catch (aiErr: any) {
+            console.error("AI extraction failed:", aiErr.message || aiErr);
+            // File is still saved — we just won't have auto-populated fields
+          }
+        } else if (!text.trim()) {
+          console.warn(`No text extracted from "${file.name}" — file was saved but contract details could not be auto-populated. Try uploading a text-based PDF.`);
         }
 
         // 4. Save past performance record to DB (with file tracking)

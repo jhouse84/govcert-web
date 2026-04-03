@@ -456,8 +456,8 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
       // Fetch all client documents grouped by category
       if (data.clientId) {
         try {
-          const allCats = "FINANCIAL_STATEMENT,CONTRACT,CAPABILITY_STATEMENT,CERTIFICATION_DOCUMENT,INVOICE,TAX_RETURN,RESUME,BANK_STATEMENT,BUSINESS_LICENSE,OTHER";
-          const docs = await apiRequest(`/api/uploads/by-category/${data.clientId}/${allCats}`);
+          const allCats = "FINANCIAL_STATEMENT,CONTRACT,CAPABILITY_STATEMENT,CERTIFICATION_DOCUMENT,INVOICE,TAX_RETURN,RESUME,BANK_STATEMENT,BUSINESS_LICENSE,PPQ_RESPONSE,PPQ_COMPLETED,CPARS_REPORT,OTHER";
+          const docs = await apiRequest(`/api/upload/documents/by-category/${data.clientId}/${allCats}`);
           const grouped: Record<string, any[]> = {};
           for (const doc of docs) {
             if (!grouped[doc.category]) grouped[doc.category] = [];
@@ -607,6 +607,13 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
 
   function isChecklistItemComplete(item: typeof GSA_MAS_CHECKLIST[0]): boolean {
     if (manualChecks[item.id]) return true;
+    if (uploadedFiles[item.id]) return true;
+    // Auto-complete if matching documents are uploaded
+    if (item.docCategory) {
+      const cats = Array.isArray(item.docCategory) ? item.docCategory : [item.docCategory];
+      const hasFiles = cats.some((c: string) => (clientDocs[c] || []).length > 0);
+      if (hasFiles) return true;
+    }
     return false;
   }
 

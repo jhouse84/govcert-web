@@ -187,7 +187,7 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
       if (data.clientId) {
         try {
           const allCats = "FINANCIAL_STATEMENT,TAX_RETURN,CAPABILITY_STATEMENT,CONTRACT,CERTIFICATION_DOCUMENT,RESUME,BANK_STATEMENT,BUSINESS_LICENSE,INVOICE,OTHER";
-          const docs = await apiRequest(`/api/uploads/by-category/${data.clientId}/${allCats}`);
+          const docs = await apiRequest(`/api/upload/documents/by-category/${data.clientId}/${allCats}`);
           const grouped: Record<string, any[]> = {};
           for (const doc of docs) {
             if (!grouped[doc.category]) grouped[doc.category] = [];
@@ -202,6 +202,13 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
 
   function isItemComplete(item: typeof SBA_FORM_1010_CHECKLIST[0]): boolean {
     if (manualChecks[item.id]) return true;
+    if (uploadedFiles[item.id]) return true;
+    // Auto-complete if matching documents are uploaded
+    if ((item as any).docCategory) {
+      const cats = Array.isArray((item as any).docCategory) ? (item as any).docCategory : [(item as any).docCategory];
+      const hasFiles = cats.some((c: string) => (clientDocs[c] || []).length > 0);
+      if (hasFiles) return true;
+    }
     if (!cert?.application) return false;
 
     if (item.field === "socialDisadvantageNarrative") return !!cert.application.socialDisadvantageNarrative?.trim();

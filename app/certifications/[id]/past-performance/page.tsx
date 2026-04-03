@@ -186,16 +186,20 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
       const API = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
 
       // 1. Upload the actual file to document storage (so it's available for eOffer Tab 4)
+      if (!clientId) throw new Error("No client ID found — please reload the page and try again");
       const uploadForm = new FormData();
       uploadForm.append("file", file);
-      if (clientId) uploadForm.append("clientId", clientId);
+      uploadForm.append("clientId", clientId);
       uploadForm.append("category", "PPQ_RESPONSE");
       const uploadRes = await fetch(`${API}/api/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: uploadForm,
       });
-      if (!uploadRes.ok) throw new Error("Failed to upload file");
+      if (!uploadRes.ok) {
+        const errBody = await uploadRes.text().catch(() => "");
+        throw new Error(`Upload failed (${uploadRes.status}): ${errBody.substring(0, 200)}`);
+      }
       const uploadData = await uploadRes.json();
 
       // 2. Extract text for AI analysis
@@ -206,7 +210,10 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         headers: { Authorization: `Bearer ${token}` },
         body: extractForm,
       });
-      if (!extractRes.ok) throw new Error("Failed to extract text from file");
+      if (!extractRes.ok) {
+        const errBody = await extractRes.text().catch(() => "");
+        throw new Error(`Text extraction failed (${extractRes.status}): ${errBody.substring(0, 200)}`);
+      }
       const { text } = await extractRes.json();
 
       // 3. AI extracts contract details from the PPQ

@@ -312,6 +312,10 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   const [uploadingItem, setUploadingItem] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // SAM.gov validation
+  const [samValidation, setSamValidation] = useState<any>(null);
+  const [samValidating, setSamValidating] = useState(false);
+
   const pw = usePaywall("GSA_MAS");
 
   // Editable company info
@@ -465,6 +469,21 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           }
           setClientDocs(grouped);
         } catch {}
+      }
+
+      // Auto-validate SAM.gov registration
+      if (data.clientId) {
+        setSamValidating(true);
+        apiRequest(`/api/sam/validate/${data.clientId}`)
+          .then(result => {
+            setSamValidation(result);
+            // Auto-check the SAM prerequisite if validation passes
+            if (result.status === 'pass' || result.status === 'warn') {
+              setManualChecks(prev => ({ ...prev, samRegistration: true }));
+            }
+          })
+          .catch(() => {}) // Non-fatal
+          .finally(() => setSamValidating(false));
       }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -976,6 +995,58 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                             <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{item.format}</div>
                           </div>
                         </div>
+                        {/* SAM.gov Validation Results */}
+                        {item.id === "samRegistration" && (
+                          <div style={{ marginTop: 12 }}>
+                            {samValidating && (
+                              <div style={{ padding: "12px", background: "var(--cream)", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, color: "var(--ink3)" }}>
+                                Checking SAM.gov registration...
+                              </div>
+                            )}
+                            {samValidation && !samValidating && (
+                              <div style={{ padding: "14px", background: samValidation.status === "pass" ? "var(--green-bg)" : samValidation.status === "warn" ? "var(--amber-bg)" : "var(--red-bg)", borderRadius: 8, border: `1px solid ${samValidation.status === "pass" ? "var(--green-b)" : samValidation.status === "warn" ? "var(--amber-b)" : "var(--red-b)"}` }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: samValidation.status === "pass" ? "var(--green)" : samValidation.status === "warn" ? "var(--amber)" : "var(--red)", marginBottom: 8 }}>
+                                  {samValidation.status === "pass" ? "\u2713 SAM.gov Validated" : samValidation.status === "warn" ? "\u26A0 SAM.gov Warnings" : "\u2717 SAM.gov Issues Found"}
+                                </div>
+
+                                {/* SAM Entity Data */}
+                                {samValidation.samEntity && (
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                                    <div style={{ fontSize: 12 }}><strong>Legal Name:</strong> {samValidation.samEntity.legalBusinessName}</div>
+                                    <div style={{ fontSize: 12 }}><strong>UEI:</strong> {samValidation.samEntity.uei}</div>
+                                    <div style={{ fontSize: 12 }}><strong>CAGE:</strong> {samValidation.samEntity.cageCode}</div>
+                                    <div style={{ fontSize: 12 }}><strong>Status:</strong> {samValidation.samEntity.status}</div>
+                                    <div style={{ fontSize: 12 }}><strong>Expires:</strong> {samValidation.samEntity.expirationDate}</div>
+                                    <div style={{ fontSize: 12 }}><strong>Address:</strong> {[samValidation.samEntity.address?.line1, samValidation.samEntity.address?.city, samValidation.samEntity.address?.state, samValidation.samEntity.address?.zip].filter(Boolean).join(", ")}</div>
+                                    {samValidation.samEntity.naicsCodes?.length > 0 && (
+                                      <div style={{ fontSize: 12, gridColumn: "1 / -1" }}>
+                                        <strong>NAICS Codes:</strong> {samValidation.samEntity.naicsCodes.join(", ")}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Check Results */}
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                  {(samValidation.checks || []).map((check: any) => (
+                                    <div key={check.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "4px 8px", borderRadius: 4, background: check.status === "pass" ? "rgba(46,125,50,.06)" : check.status === "warn" ? "rgba(200,155,60,.06)" : "rgba(200,60,60,.06)" }}>
+                                      <span style={{ color: check.status === "pass" ? "var(--green)" : check.status === "warn" ? "var(--amber)" : "var(--red)", fontWeight: 700, fontSize: 14 }}>
+                                        {check.status === "pass" ? "\u2713" : check.status === "warn" ? "\u26A0" : "\u2717"}
+                                      </span>
+                                      <span style={{ color: "var(--ink2)" }}>{check.message}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {samValidation?.status === "missing" && (
+                              <div style={{ padding: "12px", background: "var(--amber-bg)", borderRadius: 8, border: "1px solid var(--amber-b)", fontSize: 12, color: "var(--amber)" }}>
+                                {samValidation.message}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Show matching uploaded documents */}
                         {item.docCategory && (() => {
                           const cats = Array.isArray(item.docCategory) ? item.docCategory : [item.docCategory];

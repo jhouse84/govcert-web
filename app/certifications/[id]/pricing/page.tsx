@@ -117,6 +117,11 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
           const parsed = JSON.parse(data.application.pricingData);
           setLcats(parsed.lcats || []);
           setNotes(parsed.notes || "");
+          // Restore previously extracted LCAT suggestions
+          if (parsed.extractedGroups?.length > 0) {
+            setInvoiceGroups(parsed.extractedGroups);
+            setInvoicesProcessed(true);
+          }
           if ((parsed.lcats || []).length > 0) setActiveTab("csp1");
         } catch {}
       }
@@ -212,8 +217,7 @@ Return ONLY the JSON array.`,
         }),
       });
       const clean = data.text.replace(/```json|```/g, "").trim();
-      setInvoiceGroups(JSON.parse(clean));
-      setInvoicesProcessed(true);
+      saveExtractedGroups(JSON.parse(clean));
     } catch (err) {
       console.error("Auto-process failed:", err);
       setError("Failed to analyze uploaded documents. Click 'Pull LCATs' to retry.");
@@ -391,8 +395,7 @@ Return ONLY the JSON array.`,
         }),
       });
       const clean = data.text.replace(/```json|```/g, "").trim();
-      setInvoiceGroups(JSON.parse(clean));
-      setInvoicesProcessed(true);
+      saveExtractedGroups(JSON.parse(clean));
     } catch (err) {
       setError("Failed to process invoices. Please try again.");
     } finally {
@@ -459,13 +462,29 @@ Return ONLY the JSON array.`,
         }),
       });
       const clean = data.text.replace(/```json|```/g, "").trim();
-      setInvoiceGroups(JSON.parse(clean));
-      setInvoicesProcessed(true);
+      saveExtractedGroups(JSON.parse(clean));
     } catch (err) {
       setError("Failed to analyze uploaded documents. Please try again.");
     } finally {
       setProcessingInvoices(false);
     }
+  }
+
+  // Auto-save extracted LCAT suggestions to DB so they persist across sessions
+  function saveExtractedGroups(groups: any[]) {
+    setInvoiceGroups(groups);
+    setInvoicesProcessed(true);
+    // Save to pricingData alongside lcats
+    apiRequest("/api/applications", {
+      method: "POST",
+      body: JSON.stringify({
+        certificationId: certId,
+        clientId: cert?.clientId || cert?.client?.id,
+        certType: cert?.type,
+        currentStep: cert?.application?.currentStep || 1,
+        pricingData: JSON.stringify({ lcats, notes, extractedGroups: groups }),
+      }),
+    }).catch(e => console.error("Auto-save extracted LCATs failed:", e));
   }
 
   function addGroupAsLcat(group: any) {
@@ -530,7 +549,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
           clientId: cert.clientId,
           certType: cert.type,
           currentStep: cert.application?.currentStep || 1,
-          pricingData: JSON.stringify({ lcats, notes }),
+          pricingData: JSON.stringify({ lcats, notes, extractedGroups: invoiceGroups }),
         }),
       });
       setSaved(true);

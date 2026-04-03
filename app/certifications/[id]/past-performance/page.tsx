@@ -113,6 +113,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   /* ── Area 2: SIN Narratives ── */
   const [sinNarratives, setSinNarratives] = useState<Record<string, string>>({});
   const [generatingSin, setGeneratingSin] = useState<string | null>(null);
+  const [condensingSin, setCondensingSin] = useState<string | null>(null);
   const [sinPromptOpen, setSinPromptOpen] = useState<string | null>(null);
   const [sinPrompts, setSinPrompts] = useState<Record<string, string>>({});
 
@@ -237,98 +238,116 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
     return appId;
   }
 
-  /* ── Upload & extract PPQ / CPARS ── */
-  async function handleRefUpload(file: File, category: "PPQ_RESPONSE" | "CPARS_REPORT") {
+  /* ── Upload & extract PPQ / CPARS (supports multiple files) ── */
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string } | null>(null);
+
+  async function handleRefUploads(files: FileList | File[], category: "PPQ_RESPONSE" | "CPARS_REPORT") {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
     setUploadingRef(true);
     setError(null);
-    try {
-      const token = localStorage.getItem("token");
-      const clientId = cert?.clientId || cert?.client?.id;
-      if (!clientId) throw new Error("No client ID found. Please reload the page.");
+    const appId = await ensureApplication();
 
-      // 1. Upload file
-      const uploadForm = new FormData();
-      uploadForm.append("file", file);
-      uploadForm.append("clientId", clientId);
-      uploadForm.append("category", category);
-      const uploadRes = await fetch(`${API}/api/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: uploadForm,
-      });
-      if (!uploadRes.ok) {
-        const errBody = await uploadRes.text().catch(() => "");
-        throw new Error(`Upload failed (${uploadRes.status}): ${errBody.substring(0, 200)}`);
+    let successCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < fileArr.length; i++) {
+      const file = fileArr[i];
+      setUploadProgress({ current: i + 1, total: fileArr.length, fileName: file.name });
+      try {
+        const token = localStorage.getItem("token");
+        const clientId = cert?.clientId || cert?.client?.id;
+        if (!clientId) throw new Error("No client ID found.");
+
+        // 1. Upload file
+        const uploadForm = new FormData();
+        uploadForm.append("file", file);
+        uploadForm.append("clientId", clientId);
+        uploadForm.append("category", category);
+        const uploadRes = await fetch(`${API}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: uploadForm,
+        });
+        if (!uploadRes.ok) throw new Error(`Upload failed (${uploadRes.status})`);
+        const uploadData = await uploadRes.json();
+
+        // 2. Extract text
+        const extractForm = new FormData();
+        extractForm.append("file", file);
+        const extractRes = await fetch(`${API}/api/upload/extract-text`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: extractForm,
+        });
+        let text = "";
+        if (extractRes.ok) {
+          const extractData = await extractRes.json();
+          text = extractData.text || "";
+        }
+
+        // 3. AI extract contract details (skip if no text)
+        let first: any = {};
+        if (text.trim()) {
+          try {
+            const aiRes = await apiRequest("/api/applications/ai/extract-past-performance", {
+              method: "POST",
+              body: JSON.stringify({ text, clientId, certType: "GSA_MAS" }),
+            });
+            const contracts = aiRes.contracts || aiRes || [];
+            first = contracts[0] || {};
+          } catch { /* AI extraction is optional — file is still saved */ }
+        }
+
+        // 4. Save past performance record to DB
+        const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
+          method: "POST",
+          body: JSON.stringify({
+            agencyName: first.agencyName || "",
+            contractNumber: first.contractNumber || "",
+            contractType: first.contractType || "Federal Government",
+            contractValue: first.contractValue || "",
+            periodStart: first.periodStart || "",
+            periodEnd: first.periodEnd || "",
+            description: first.sowDescription || first.description || "",
+            cparsUploaded: category === "CPARS_REPORT",
+            referenceFirstName: first.referenceFirstName || "",
+            referenceLastName: first.referenceLastName || "",
+            referenceEmail: first.referenceEmail || "",
+            referencePhone: first.referencePhone || "",
+            referenceTitle: first.referenceTitle || "",
+          }),
+        });
+
+        // 5. Add to references (persisted via API above)
+        const newRef: PastPerfReference = {
+          id: result.id,
+          name: [first.referenceFirstName, first.referenceLastName].filter(Boolean).join(" ") || first.agencyName || file.name,
+          agency: first.agencyName || "",
+          status: "COMPLETE",
+          fileName: file.name,
+          documentId: uploadData.document?.id || uploadData.id || null,
+          ppqId: null,
+          contractDetails: {
+            agencyName: first.agencyName || "",
+            contractNumber: first.contractNumber || "",
+            contractValue: first.contractValue || "",
+            periodStart: first.periodStart || "",
+            periodEnd: first.periodEnd || "",
+            description: first.sowDescription || first.description || "",
+          },
+        };
+        setReferences(prev => [...prev, newRef]);
+        successCount++;
+      } catch (err: any) {
+        errors.push(`${file.name}: ${err.message || "Unknown error"}`);
       }
-      const uploadData = await uploadRes.json();
+    }
 
-      // 2. Extract text
-      const extractForm = new FormData();
-      extractForm.append("file", file);
-      const extractRes = await fetch(`${API}/api/upload/extract-text`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: extractForm,
-      });
-      if (!extractRes.ok) {
-        const errBody = await extractRes.text().catch(() => "");
-        throw new Error(`Text extraction failed (${extractRes.status}): ${errBody.substring(0, 200)}`);
-      }
-      const { text } = await extractRes.json();
-
-      // 3. AI extract contract details
-      const aiRes = await apiRequest("/api/applications/ai/extract-past-performance", {
-        method: "POST",
-        body: JSON.stringify({ text, clientId, certType: "GSA_MAS" }),
-      });
-
-      const contracts = aiRes.contracts || aiRes || [];
-      const first = contracts[0] || {};
-
-      // 4. Save to backend
-      const appId = await ensureApplication();
-      const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
-        method: "POST",
-        body: JSON.stringify({
-          agencyName: first.agencyName || "",
-          contractNumber: first.contractNumber || "",
-          contractType: first.contractType || "Federal Government",
-          contractValue: first.contractValue || "",
-          periodStart: first.periodStart || "",
-          periodEnd: first.periodEnd || "",
-          description: first.sowDescription || first.description || "",
-          cparsUploaded: category === "CPARS_REPORT",
-          referenceFirstName: first.referenceFirstName || "",
-          referenceLastName: first.referenceLastName || "",
-          referenceEmail: first.referenceEmail || "",
-          referencePhone: first.referencePhone || "",
-          referenceTitle: first.referenceTitle || "",
-        }),
-      });
-
-      // 5. Add to references
-      const newRef: PastPerfReference = {
-        id: result.id,
-        name: [first.referenceFirstName, first.referenceLastName].filter(Boolean).join(" ") || first.agencyName || file.name,
-        agency: first.agencyName || "",
-        status: "COMPLETE",
-        fileName: file.name,
-        documentId: uploadData.document?.id || uploadData.id || null,
-        ppqId: null,
-        contractDetails: {
-          agencyName: first.agencyName || "",
-          contractNumber: first.contractNumber || "",
-          contractValue: first.contractValue || "",
-          periodStart: first.periodStart || "",
-          periodEnd: first.periodEnd || "",
-          description: first.sowDescription || first.description || "",
-        },
-      };
-      setReferences(prev => [...prev, newRef]);
-    } catch (err: any) {
-      setError("Failed to process upload: " + (err.message || "Unknown error"));
-    } finally {
-      setUploadingRef(false);
+    setUploadProgress(null);
+    setUploadingRef(false);
+    if (errors.length > 0) {
+      setError(`Uploaded ${successCount}/${fileArr.length} files. Errors:\n${errors.join("\n")}`);
     }
   }
 
@@ -490,12 +509,33 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
           userGuidance,
         }),
       });
-      setSinNarratives(prev => ({ ...prev, [sin]: data.text || data.narrative || "" }));
+      const narrative = data.text || data.narrative || "";
+      setSinNarratives(prev => ({ ...prev, [sin]: narrative }));
     } catch (err) {
       console.error(err);
       setError("Failed to generate narrative for SIN " + sin);
     } finally {
       setGeneratingSin(null);
+    }
+  }
+
+  async function condenseSinNarrative(sin: string) {
+    const narrative = sinNarratives[sin];
+    if (!narrative || narrative.length <= 10000) return;
+    setCondensingSin(sin);
+    try {
+      const data = await apiRequest("/api/applications/ai/condense-narrative", {
+        method: "POST",
+        body: JSON.stringify({ narrative, charLimit: 10000 }),
+      });
+      if (data.narrative) {
+        setSinNarratives(prev => ({ ...prev, [sin]: data.narrative }));
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Failed to condense narrative for SIN " + sin);
+    } finally {
+      setCondensingSin(null);
     }
   }
 
@@ -719,10 +759,10 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
               </div>
 
               {/* Hidden file inputs */}
-              <input ref={ppqFileRef} type="file" accept=".pdf,.docx" style={{ display: "none" }}
-                onChange={(e) => { if (e.target.files?.[0]) handleRefUpload(e.target.files[0], "PPQ_RESPONSE"); e.target.value = ""; }} />
-              <input ref={cparsFileRef} type="file" accept=".pdf,.docx" style={{ display: "none" }}
-                onChange={(e) => { if (e.target.files?.[0]) handleRefUpload(e.target.files[0], "CPARS_REPORT"); e.target.value = ""; }} />
+              <input ref={ppqFileRef} type="file" accept=".pdf,.docx" multiple style={{ display: "none" }}
+                onChange={(e) => { if (e.target.files?.length) handleRefUploads(e.target.files, "PPQ_RESPONSE"); e.target.value = ""; }} />
+              <input ref={cparsFileRef} type="file" accept=".pdf,.docx" multiple style={{ display: "none" }}
+                onChange={(e) => { if (e.target.files?.length) handleRefUploads(e.target.files, "CPARS_REPORT"); e.target.value = ""; }} />
 
               {/* Drag and drop area */}
               <div
@@ -730,7 +770,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                 onDragLeave={() => setDragOverArea(null)}
                 onDrop={(e) => {
                   e.preventDefault(); setDragOverArea(null);
-                  if (e.dataTransfer.files?.[0]) handleRefUpload(e.dataTransfer.files[0], "PPQ_RESPONSE");
+                  if (e.dataTransfer.files?.length) handleRefUploads(e.dataTransfer.files, "PPQ_RESPONSE");
                 }}
                 style={{
                   border: `2px dashed ${dragOverArea === "ref-upload" ? "var(--gold)" : "var(--border2)"}`,
@@ -743,22 +783,32 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
               >
                 {uploadingRef ? (
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Processing document...</div>
-                    <div style={{ fontSize: 12, color: "var(--ink4)" }}>Uploading file, extracting text, and identifying contract details</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>
+                      {uploadProgress ? `Processing file ${uploadProgress.current} of ${uploadProgress.total}...` : "Processing document..."}
+                    </div>
+                    {uploadProgress && (
+                      <div style={{ fontSize: 12, color: "var(--gold)", fontWeight: 500, marginBottom: 4 }}>{uploadProgress.fileName}</div>
+                    )}
+                    <div style={{ fontSize: 12, color: "var(--ink4)" }}>Uploading, extracting text, and identifying contract details</div>
+                    {uploadProgress && uploadProgress.total > 1 && (
+                      <div style={{ marginTop: 8, height: 4, background: "var(--cream2)", borderRadius: 100, overflow: "hidden", maxWidth: 200, margin: "8px auto 0" }}>
+                        <div style={{ height: "100%", width: `${(uploadProgress.current / uploadProgress.total) * 100}%`, background: "var(--gold)", borderRadius: 100, transition: "width .3s" }} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>&#128228;</div>
                     <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>
-                      Drop a completed PPQ or CPARS report here
+                      Drop completed PPQs or CPARS reports here
                     </div>
                     <div style={{ fontSize: 12, color: "var(--ink4)", marginBottom: 12 }}>
-                      PDF or DOCX &middot; Each file counts as one reference for eOffer Tab 4
+                      PDF or DOCX &middot; Select multiple files at once &middot; Each file counts as one reference for eOffer Tab 4
                     </div>
                     <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
                       <button onClick={(e) => { e.stopPropagation(); ppqFileRef.current?.click(); }}
                         style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
-                        Upload PPQ
+                        Upload PPQs
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); cparsFileRef.current?.click(); }}
                         style={{ padding: "8px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "var(--gold2)", cursor: "pointer" }}>
@@ -967,14 +1017,14 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                             marginBottom: 10,
                           }}
                         />
-                        <div style={{ display: "flex", gap: 8 }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                           <button onClick={() => generateSinNarrative(sin)}
                             style={{ padding: "9px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 10px rgba(200,155,60,.3)" }}>
-                            {"✨"} Generate Narrative
+                            {"✨"} Generate with Guidance
                           </button>
-                          <button onClick={() => setSinPromptOpen(null)}
+                          <button onClick={() => { setSinPrompts(prev => ({ ...prev, [sin]: "" })); generateSinNarrative(sin); }}
                             style={{ padding: "9px 16px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", color: "var(--ink3)", fontSize: 13, cursor: "pointer" }}>
-                            Cancel
+                            Skip — just use my documents
                           </button>
                         </div>
                       </div>
@@ -984,7 +1034,6 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                       value={narrative}
                       onChange={e => setSinNarratives(prev => ({ ...prev, [sin]: e.target.value }))}
                       onBlur={() => saveSinNarratives()}
-                      maxLength={10000}
                       placeholder={`Describe your relevant project experience for ${desc}. Include work performed, methodology, results achieved, and how this experience aligns with the services you propose under this SIN...`}
                       style={{
                         width: "100%", minHeight: 140, padding: "12px 14px",
@@ -1001,12 +1050,27 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                         style={{ background: "none", border: "none", fontSize: 12, color: "var(--ink4)", cursor: narrative ? "pointer" : "default", padding: 0, textDecoration: narrative ? "underline" : "none" }}>
                         {narrative ? "Copy to clipboard" : ""}
                       </button>
-                      <span style={{
-                        fontSize: 11, fontFamily: "monospace",
-                        color: charCount > 9500 ? "var(--red)" : charCount > 8000 ? "var(--amber)" : "var(--ink4)",
-                      }}>
-                        {charCount.toLocaleString()} / 10,000 characters
-                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {charCount > 10000 && (
+                          <button
+                            onClick={() => condenseSinNarrative(sin)}
+                            disabled={condensingSin === sin}
+                            style={{
+                              padding: "4px 14px", background: "var(--red)", border: "none",
+                              borderRadius: "var(--r)", fontSize: 11, fontWeight: 600,
+                              color: "#fff", cursor: condensingSin === sin ? "not-allowed" : "pointer",
+                            }}>
+                            {condensingSin === sin ? "Shortening..." : "Shorten to fit"}
+                          </button>
+                        )}
+                        <span style={{
+                          fontSize: 11, fontFamily: "monospace",
+                          color: charCount > 10000 ? "var(--red)" : charCount > 9500 ? "var(--amber)" : charCount > 8000 ? "var(--amber)" : "var(--ink4)",
+                        }}>
+                          {charCount.toLocaleString()} / 10,000 characters
+                          {charCount > 10000 && " — over limit!"}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );

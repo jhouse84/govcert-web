@@ -6,142 +6,267 @@ import { usePaywall } from "@/lib/usePaywall";
 import PaywallModal from "@/components/PaywallModal";
 import FinancialReadiness from "@/components/FinancialReadiness";
 
-// GSA eOffer field mapping — which section feeds which eOffer tab
+// GSA eOffer field mapping — mirrors the EXACT eOffer submission flow
 const EOFFER_FIELDS = [
+  /* ─── PREREQUISITES ─── */
   {
-    tab: "Tab 1 — Company Information",
+    tab: "Step 0 — Prerequisites",
+    tabColor: "var(--ink3)",
+    tabBg: "var(--cream2)",
+    fields: [
+      { id: "prereq_pathways", label: "Pathways to Success Training", source: "static", staticValue: "You must complete GSA's free \"Pathways to Success\" training before submitting. This is a web-based seminar available on the Vendor Support Center (vsc.gsa.gov). Save your completion certificate — you'll upload it to eOffer.", charLimit: null, instructions: "Go to vsc.gsa.gov → Vendor Training → Pathways to Success. Complete the course and download the certificate PDF. This is a mandatory prerequisite — GSA will reject offers without it." },
+      { id: "prereq_digitalcert", label: "Digital Certificate", source: "static", staticValue: "eOffer requires a digital certificate (not a password) for login and signing. You must request one through the GSA Vendor Support Center. Processing takes 1-3 business days. Install the .p12 file in your browser's certificate store.", charLimit: null, instructions: "Request at vsc.gsa.gov → Digital Certificates. You get 2 free certificates per UEI. Once received, import the .p12 file: Chrome/Edge → Settings → Privacy → Manage Certificates → Import. You cannot access eOffer without this." },
+      { id: "prereq_sam", label: "SAM.gov Registration (Active)", source: "static", staticValue: "Your SAM.gov registration must be active with current NAICS codes matching your proposed SINs. Your UEI, CAGE code, and business information must match exactly what you enter in eOffer. Renew annually.", charLimit: null, instructions: "Log into sam.gov and verify your registration is active. eOffer pulls your data from SAM — if there's a mismatch, update SAM first and wait 24-48 hours for sync." },
+    ]
+  },
+
+  /* ─── EOFFER STEP 1 — CORPORATE INFO ─── */
+  {
+    tab: "Step 1 — Corporate Information",
     tabColor: "var(--blue)",
     tabBg: "var(--blue-bg)",
     fields: [
-      { id: "businessName", label: "Legal Business Name", source: "client", key: "businessName", charLimit: 100, instructions: "Enter your company's legal name exactly as it appears on your SAM.gov registration." },
+      { id: "businessName", label: "Legal Business Name", source: "client", key: "businessName", charLimit: 100, instructions: "Enter your company's legal name exactly as it appears on your SAM.gov registration. eOffer pre-fills this from SAM — verify it matches." },
       { id: "ein", label: "EIN / Tax ID", source: "client", key: "ein", charLimit: 20, instructions: "9-digit Employer Identification Number from the IRS. Format: XX-XXXXXXX." },
-      { id: "uei", label: "Unique Entity Identifier (UEI)", source: "client", key: "uei", charLimit: 12, instructions: "12-character UEI from your SAM.gov registration. Replaces DUNS as of April 2022." },
-      { id: "cageCode", label: "CAGE Code", source: "client", key: "cageCode", charLimit: 5, instructions: "5-character Commercial and Government Entity code from SAM.gov." },
+      { id: "uei", label: "Unique Entity Identifier (UEI)", source: "client", key: "uei", charLimit: 12, instructions: "12-character UEI from your SAM.gov registration. This replaced DUNS as of April 2022." },
+      { id: "cageCode", label: "CAGE Code", source: "client", key: "cageCode", charLimit: 5, instructions: "5-character Commercial and Government Entity code. Auto-assigned when you register in SAM.gov." },
     ]
   },
+
+  /* ─── EOFFER STEP 2 — AUTHORIZED NEGOTIATORS ─── */
   {
-    tab: "Tab 2 — Corporate Experience",
+    tab: "Step 2 — Authorized Negotiators",
+    tabColor: "var(--navy)",
+    tabBg: "rgba(26,35,50,.06)",
+    fields: [
+      { id: "neg_name", label: "Negotiator Full Name", source: "appField", appKey: "negotiatorName", charLimit: 100, instructions: "The person authorized to negotiate and bind the company to a GSA contract. This can be the owner, a VP, or an external consultant. eOffer requires at least one negotiator with signature authority." },
+      { id: "neg_title", label: "Title", source: "appField", appKey: "negotiatorTitle", charLimit: 50, instructions: "Job title of the authorized negotiator (e.g., President, CEO, Managing Director)." },
+      { id: "neg_email", label: "Email", source: "appField", appKey: "negotiatorEmail", charLimit: 100, instructions: "Email address for the negotiator. GSA will use this for all communications during offer review." },
+      { id: "neg_phone", label: "Phone", source: "appField", appKey: "negotiatorPhone", charLimit: 20, instructions: "Direct phone number for the negotiator. GSA contracting officers may call during review." },
+      { id: "neg_signature", label: "Has Signature Authority?", source: "appField", appKey: "negotiatorSignature", charLimit: 3, instructions: "Enter 'Yes' if this person can sign the contract on behalf of the company. At least one negotiator must have signature authority." },
+    ]
+  },
+
+  /* ─── EOFFER STEP 3 — SIN SELECTION ─── */
+  {
+    tab: "Step 3 — SINs & Offerings",
     tabColor: "var(--purple)",
     tabBg: "var(--purple-bg)",
     fields: [
-      { id: "corp_overview", label: "Company Overview", source: "narrativeCorp", narrativeKey: "overview", charLimit: 1500, instructions: "Paste into the 'Corporate Overview' field in eOffer Tab 2. Describe your company history, mission, and core business." },
-      { id: "corp_capabilities", label: "Core Capabilities & Services", source: "narrativeCorp", narrativeKey: "capabilities", charLimit: 1500, instructions: "Paste into the 'Capabilities' field. List specific services you will offer under your GSA Schedule." },
-      { id: "corp_employees", label: "Employee Experience & Qualifications", source: "narrativeCorp", narrativeKey: "employees", charLimit: 1500, instructions: "Paste into the 'Employee Experience' field. Describe your team's qualifications, certifications, and expertise." },
-      { id: "corp_org", label: "Organizational & Accounting Controls", source: "narrativeCorp", narrativeKey: "org_controls", charLimit: 1000, instructions: "Paste into the 'Organizational Controls' field. Describe your management structure and accounting system." },
-      { id: "corp_resources", label: "Resources & Capacity", source: "narrativeCorp", narrativeKey: "resources", charLimit: 800, instructions: "Paste into the 'Resources' field. Describe office locations, equipment, and ability to scale." },
-      { id: "corp_past", label: "Summary of Past Projects", source: "narrativeCorp", narrativeKey: "past_projects", charLimit: 1500, instructions: "Paste into the 'Past Projects' field. Briefly describe 2-3 most relevant past projects." },
-      { id: "corp_marketing", label: "Federal Marketing Plan", source: "narrativeCorp", narrativeKey: "marketing", charLimit: 800, instructions: "Paste into the 'Marketing Plan' field. Describe how you plan to market your GSA Schedule." },
-      { id: "corp_subs", label: "Subcontractor Management", source: "narrativeCorp", narrativeKey: "subcontractors", charLimit: 400, instructions: "Paste into the 'Subcontractor Management' field. State your subcontracting approach." },
+      { id: "sin_selection", label: "Selected SINs", source: "static", staticValue: "Your SIN selections are configured on the Application Dashboard. In eOffer, you'll select the same SINs under Goods/Services. You'll also need to designate a Preponderance of Work (your primary SIN) and a NAICS code for each SIN.", charLimit: null, instructions: "In eOffer → Goods/Services: Select your Large Category first, then Subcategory, then your SINs. Designate your primary SIN as Preponderance of Work. GovCert shows your selected SINs on the dashboard." },
     ]
   },
+
+  /* ─── EOFFER STEP 4 — STANDARD RESPONSES ─── */
   {
-    tab: "Tab 3 — Quality Control Plan",
+    tab: "Step 4 — Standard Responses",
     tabColor: "var(--teal)",
     tabBg: "var(--teal-bg)",
     fields: [
-      { id: "qcp_overview", label: "Quality Control Overview", source: "narrativeQCP", narrativeKey: "overview", charLimit: 2000, instructions: "Paste into the 'QCP Overview' field. Describe your overall quality management approach." },
-      { id: "qcp_supervision", label: "Direct Supervision of Projects", source: "narrativeQCP", narrativeKey: "supervision", charLimit: 2000, instructions: "Paste into the 'Supervision' field. Describe project oversight, review cadence, and checkpoints." },
-      { id: "qcp_personnel", label: "Quality Control Personnel", source: "narrativeQCP", narrativeKey: "personnel", charLimit: 1500, instructions: "Paste into the 'QC Personnel' field. Describe QC roles, qualifications, and responsibilities." },
-      { id: "qcp_subs", label: "Subcontractor Quality Management", source: "narrativeQCP", narrativeKey: "subcontractors", charLimit: 1500, instructions: "Paste into the 'Subcontractor QC' field. Describe how you monitor subcontractor quality." },
-      { id: "qcp_corrective", label: "Problem Areas & Corrective Action", source: "narrativeQCP", narrativeKey: "corrective", charLimit: 1500, instructions: "Paste into the 'Corrective Action' field. Describe issue identification, documentation, and resolution." },
-      { id: "qcp_urgent", label: "Urgent Requirements & Simultaneous Projects", source: "narrativeQCP", narrativeKey: "urgent", charLimit: 1000, instructions: "Paste into the 'Urgent Requirements' field. Describe surge capacity and managing simultaneous projects." },
+      { id: "std_disaster", label: "Disaster Purchasing (Recommended: Yes)", source: "appField", appKey: "stdDisasterPurchasing", charLimit: 5, instructions: "eOffer asks: 'Will you participate in Disaster Purchasing?' GovCert recommends YES — it expands your contract opportunities and costs nothing. Select Yes in the dropdown on eOffer." },
+      { id: "std_exceptions_tc", label: "Exceptions to Terms & Conditions (Recommended: No)", source: "appField", appKey: "stdExceptionsTC", charLimit: 5, instructions: "eOffer asks: 'Do you take any exceptions to the terms and conditions?' GovCert recommends NO — exceptions add complexity and can delay your offer by weeks or months. If you must take exceptions, consult with a contracts attorney first." },
+      { id: "std_exceptions_reps", label: "Exceptions to Certs & Reps (Recommended: No)", source: "appField", appKey: "stdExceptionsReps", charLimit: 5, instructions: "eOffer asks: 'Do you take any exceptions to the Certifications and Representations?' GovCert recommends NO. Exceptions here are unusual and may trigger additional review." },
+      { id: "std_min_order", label: "Minimum Order Value", source: "appField", appKey: "stdMinOrder", charLimit: 20, instructions: "The lowest dollar amount you'll accept for an individual order on your GSA Schedule. GovCert suggests a value based on your pricing — most services contractors set $100-$500. Setting it too high can limit orders." },
+      { id: "std_subcontract", label: "Subcontracting Plan Required?", source: "appField", appKey: "stdSubcontractPlan", charLimit: 5, instructions: "Only required if you are NOT a small business AND expect annual GSA sales over $750K. If you are a small business, select 'Small Business Exempt' in eOffer. If required, upload a subcontracting plan in FAR 52.219-9 format." },
+    ]
+  },
+
+  /* ─── EOFFER STEP 5 — SOLICITATION CLAUSES ─── */
+  {
+    tab: "Step 5 — Solicitation Clauses",
+    tabColor: "var(--ink3)",
+    tabBg: "rgba(26,35,50,.04)",
+    fields: [
+      { id: "clause_taa", label: "Trade Agreements Act (TAA) Compliance", source: "appField", appKey: "clauseTAA", charLimit: 5, instructions: "Confirm that your products/services comply with the TAA — meaning they are made or substantially transformed in the US or a designated country. Most professional services firms comply automatically. Enter 'Yes' to confirm." },
+      { id: "clause_pop", label: "Place of Performance", source: "appField", appKey: "clausePOP", charLimit: 200, instructions: "Where will work be performed? For professional services, this is typically your office address. Enter your primary business address or 'Various locations nationwide.'" },
+      { id: "clause_sca", label: "Service Contract Labor Standards", source: "appField", appKey: "clauseSCA", charLimit: 5, instructions: "Acknowledge compliance with Service Contract Act labor standards. For professional services (exempt from SCA), enter 'Professional Exemption Applies'. For non-exempt services, ensure your rates meet prevailing wage requirements." },
+      { id: "clause_smallbiz", label: "Small Business Representation", source: "appField", appKey: "clauseSmallBiz", charLimit: 50, instructions: "Confirm your small business status and any applicable certifications (8(a), WOSB, VOSB, HUBZone, SDVOSB). This must match your SAM.gov registration exactly. Enter your designation or 'Other than Small Business'." },
+    ]
+  },
+
+  /* ─── EOFFER STEP 6 — SOLICITATION PROVISIONS (NARRATIVES) ─── */
+  {
+    tab: "Step 6a — Corporate Experience",
+    tabColor: "var(--purple)",
+    tabBg: "var(--purple-bg)",
+    fields: [
+      { id: "corp_overview", label: "Company Overview", source: "narrativeCorp", narrativeKey: "overview", charLimit: 1500, instructions: "Paste into eOffer → Solicitation Provisions → Corporate Experience → Overview." },
+      { id: "corp_capabilities", label: "Core Capabilities & Services", source: "narrativeCorp", narrativeKey: "capabilities", charLimit: 1500, instructions: "Paste into the 'Capabilities' field." },
+      { id: "corp_employees", label: "Employee Experience & Qualifications", source: "narrativeCorp", narrativeKey: "employees", charLimit: 1500, instructions: "Paste into the 'Employee Experience' field." },
+      { id: "corp_org", label: "Organizational & Accounting Controls", source: "narrativeCorp", narrativeKey: "org_controls", charLimit: 1000, instructions: "Paste into the 'Organizational Controls' field." },
+      { id: "corp_resources", label: "Resources & Capacity", source: "narrativeCorp", narrativeKey: "resources", charLimit: 800, instructions: "Paste into the 'Resources' field." },
+      { id: "corp_past", label: "Summary of Past Projects", source: "narrativeCorp", narrativeKey: "past_projects", charLimit: 1500, instructions: "Paste into the 'Past Projects' field." },
+      { id: "corp_marketing", label: "Federal Marketing Plan", source: "narrativeCorp", narrativeKey: "marketing", charLimit: 800, instructions: "Paste into the 'Marketing Plan' field." },
+      { id: "corp_subs", label: "Subcontractor Management", source: "narrativeCorp", narrativeKey: "subcontractors", charLimit: 400, instructions: "Paste into the 'Subcontractor Management' field." },
     ]
   },
   {
-    tab: "Tab 4 — Past Performance",
+    tab: "Step 6b — Quality Control Plan",
+    tabColor: "var(--teal)",
+    tabBg: "var(--teal-bg)",
+    fields: [
+      { id: "qcp_overview", label: "Quality Control Overview", source: "narrativeQCP", narrativeKey: "overview", charLimit: 2000, instructions: "Paste into eOffer → Solicitation Provisions → Quality Control → Overview." },
+      { id: "qcp_supervision", label: "Direct Supervision of Projects", source: "narrativeQCP", narrativeKey: "supervision", charLimit: 2000, instructions: "Paste into the 'Supervision' field." },
+      { id: "qcp_personnel", label: "Quality Control Personnel", source: "narrativeQCP", narrativeKey: "personnel", charLimit: 1500, instructions: "Paste into the 'QC Personnel' field." },
+      { id: "qcp_subs", label: "Subcontractor Quality Management", source: "narrativeQCP", narrativeKey: "subcontractors", charLimit: 1500, instructions: "Paste into the 'Subcontractor QC' field." },
+      { id: "qcp_corrective", label: "Problem Areas & Corrective Action", source: "narrativeQCP", narrativeKey: "corrective", charLimit: 1500, instructions: "Paste into the 'Corrective Action' field." },
+      { id: "qcp_urgent", label: "Urgent Requirements & Simultaneous Projects", source: "narrativeQCP", narrativeKey: "urgent", charLimit: 1000, instructions: "Paste into the 'Urgent Requirements' field." },
+    ]
+  },
+  {
+    tab: "Step 6c — Relevant Project Experience",
+    tabColor: "var(--purple)",
+    tabBg: "var(--purple-bg)",
+    fields: [
+      { id: "rpe_instructions", label: "SIN-Specific Project Experience (10,000 chars per SIN)", source: "static", staticValue: "Each SIN requires its own Relevant Project Experience narrative. These are drafted on the Past Performance page and pasted into eOffer under each SIN. Your SIN narratives appear in the Copy Narratives section below.", charLimit: null, instructions: "In eOffer → Solicitation Provisions → Relevant Project Experience: Each SIN has a separate 10,000-character text field. Paste the corresponding narrative from the copy section below." },
+    ]
+  },
+
+  /* ─── EOFFER STEP 7 — UPLOADS ─── */
+  {
+    tab: "Step 7a — Past Performance Uploads",
     tabColor: "var(--amber)",
     tabBg: "var(--amber-bg)",
     fields: [
-      { id: "pp_instructions", label: "Past Performance Upload Instructions", source: "static", staticValue: "GSA eOffer does not accept pasted text for Past Performance. Each reference must be uploaded as a separate document. See instructions below.", charLimit: null, instructions: "In eOffer Tab 4: Upload each CPARS report or completed PPQ as a separate PDF attachment. GovCert has sent PPQ emails to your references — download the completed forms from your email and upload them here." },
+      { id: "pp_instructions", label: "Past Performance References (3+ CPARS or PPQs)", source: "static", staticValue: "Upload 3 past performance references as CPARS reports or completed PPQs. Each reference must be a separate PDF. Drag and drop files below or download them from your GovCert uploads.", charLimit: null, instructions: "In eOffer → Upload Documents: Upload each CPARS report or completed PPQ as a separate PDF. Minimum 3 references required." },
     ]
   },
   {
-    tab: "Tab 5 — Pricing (CSP-1)",
+    tab: "Step 7b — Financial Statements",
     tabColor: "var(--green)",
     tabBg: "var(--green-bg)",
     fields: [
-      { id: "pricing_instructions", label: "CSP-1 Upload Instructions", source: "static", staticValue: "Your CSP-1 pricing must be uploaded as an Excel file (.xlsx) in GSA's required format. Use the Export CSP-1 button on the Pricing page to download your formatted file, then upload it in eOffer Tab 5.", charLimit: null, instructions: "In eOffer Tab 5: Upload the CSP-1 Excel file you exported from GovCert. Do not paste pricing data manually — the formatted Excel file is required." },
+      { id: "fin_instructions", label: "2 Years P&L + Balance Sheet", source: "static", staticValue: "Upload your most recent 2 years of Profit & Loss statements and Balance Sheets as PDF files. Must show company name, period covered, and be signed or on CPA letterhead.", charLimit: null, instructions: "In eOffer → Upload Documents: Upload financial statements as PDF. One file per year or combined. Must include BOTH P&L AND Balance Sheet for each year." },
+    ]
+  },
+  {
+    tab: "Step 7c — CSP-1 Pricelist",
+    tabColor: "var(--green)",
+    tabBg: "var(--green-bg)",
+    fields: [
+      { id: "pricing_instructions", label: "CSP-1 Commercial Supplier Pricelist", source: "static", staticValue: "Export your CSP-1 from the Pricing page and upload the Excel/CSV file to eOffer. This contains your labor categories, MFC pricing, and proposed GSA rates.", charLimit: null, instructions: "In eOffer → Upload Documents: Upload the CSP-1 Excel file you exported from GovCert. Do not paste pricing data manually — the formatted file is required." },
+    ]
+  },
+  {
+    tab: "Step 7d — Additional Required Documents",
+    tabColor: "var(--ink3)",
+    tabBg: "rgba(26,35,50,.04)",
+    fields: [
+      { id: "doc_negotiator_letter", label: "Authorized Negotiator Letter", source: "static", staticValue: "A letter on company letterhead designating who is authorized to negotiate and bind the company. Must be signed by a corporate officer (CEO/President). Even if you are the owner AND negotiator, you still need this letter.", charLimit: null, instructions: "In eOffer → Upload Documents: Upload as PDF. Must include: company name, negotiator name and title, contact info, authorizing officer signature, and date." },
+      { id: "doc_pathways", label: "Pathways to Success Certificate", source: "static", staticValue: "Upload your completion certificate from GSA's Pathways to Success training. This is a mandatory prerequisite.", charLimit: null, instructions: "In eOffer → Upload Documents: Upload the certificate PDF you saved from vsc.gsa.gov training completion." },
+      { id: "doc_tech_proposal", label: "Technical Proposal / Capability Statement", source: "static", staticValue: "A formal document summarizing your technical approach and relevant experience for each SIN. Your capability statement can serve as a starting point — tailor it to your proposed SINs.", charLimit: null, instructions: "In eOffer → Upload Documents → Technical Proposal: Upload as a single PDF. Should directly address each SIN category you are proposing." },
+      { id: "doc_price_proposal", label: "Price Proposal / Commercial Sales Practices", source: "static", staticValue: "A document showing how you arrived at your GSA pricing. Includes your commercial price list, discount structure, and basis for your proposed GSA discount off MFC rates.", charLimit: null, instructions: "In eOffer → Upload Documents → Price Proposal: Upload as PDF alongside your CSP-1. Include commercial rate card, MFC identification, and discount rationale." },
+      { id: "doc_subcontract", label: "Subcontracting Plan (if applicable)", source: "static", staticValue: "Required only if you are NOT a small business and expect annual GSA sales over $750K. Must follow FAR 52.219-9 format with specific small business subcontracting goals.", charLimit: null, instructions: "In eOffer → Upload Documents: Upload as PDF if required. If you are a small business, you are exempt — select 'Small Business Exempt' in eOffer." },
+    ]
+  },
+
+  /* ─── EOFFER STEP 8 — SUBMIT ─── */
+  {
+    tab: "Step 8 — Review & Submit",
+    tabColor: "var(--gold)",
+    tabBg: "rgba(200,155,60,.08)",
+    fields: [
+      { id: "submit_instructions", label: "Final Submission", source: "static", staticValue: "Review all sections in eOffer. Click 'Submit Proposal' to send your offer to GSA. Your digital certificate will be used to sign the submission. After submission, respond promptly to any GSA requests for clarification or additional documentation.", charLimit: null, instructions: "Before clicking Submit: verify all fields are populated, all documents are uploaded, your digital certificate is installed, and all solicitation clauses are acknowledged. Save a copy of the submission confirmation." },
     ]
   },
 ];
 
 const GSA_MAS_CHECKLIST = [
-  { id: "digitalCert", label: "Digital Certificate (for eOffer access)", section: null, field: null,
-    what: "A PIV or digital certificate that lets you log into eoffer.gsa.gov. GSA requires certificate-based authentication — a standard username/password will not work.",
-    where: "Request a digital certificate through the GSA Vendor Support Center at vsc.gsa.gov. Processing takes 1-3 business days. You may also use a PIV card if your organization issues them.",
-    sbaPortal: "In eoffer.gsa.gov → you need the certificate installed in your browser before you can log in. Chrome/Edge: Settings → Privacy & Security → Manage certificates → import your .p12 file.",
-    format: "Digital file (.p12 or .pfx) installed in your browser's certificate store. No upload required — it authenticates automatically.",
+  /* ── PREREQUISITES ── */
+  { id: "pathwaysTraining", label: "1. Pathways to Success Training Certificate", section: "prerequisite", field: null,
+    what: "Mandatory free training from GSA. You must complete it and save the certificate BEFORE you can submit an offer.",
+    where: "Go to vsc.gsa.gov → Vendor Training → Pathways to Success. It's a web-based seminar. Download the completion certificate as PDF when done.",
+    sbaPortal: "Upload the certificate PDF in eOffer → Upload Documents. GSA will reject your offer without this.",
+    format: "PDF certificate. Download it immediately after completing the training.",
+    docCategory: "CERTIFICATION_DOCUMENT",
+  },
+  { id: "digitalCert", label: "2. Digital Certificate (for eOffer login & signing)", section: "prerequisite", field: null,
+    what: "A digital certificate that lets you log into eoffer.gsa.gov and digitally sign your submission. Standard username/password will NOT work.",
+    where: "Request at vsc.gsa.gov → Digital Certificates. Processing takes 1-3 business days. You get 2 free certificates per UEI.",
+    sbaPortal: "Install the .p12 file in your browser: Chrome/Edge → Settings → Privacy & Security → Manage Certificates → Import. You cannot access eOffer without this.",
+    format: "Digital file (.p12 or .pfx) installed in your browser. No upload to eOffer — it authenticates automatically when you log in.",
     docCategory: null,
   },
-  { id: "financialStatements", label: "Financial Statements (2 Years P&L + Balance Sheet)", section: null, field: null,
-    what: "Profit & Loss statements and Balance Sheets for the 2 most recent complete fiscal years. GSA uses these to verify your company is financially stable and capable of performing on a long-term contract.",
-    where: "Your accountant or bookkeeper has these. If you use QuickBooks, export P&L and Balance Sheet reports. They must show the company name, period covered, and be signed or on CPA letterhead.",
-    sbaPortal: "Upload as PDF in eOffer → Upload Documents section.",
+  { id: "samRegistration", label: "3. SAM.gov Registration (Active, Matching NAICS)", section: "prerequisite", field: null,
+    what: "Active SAM.gov registration with current NAICS codes matching your proposed SINs. Your UEI, CAGE code, and business info must be up to date.",
+    where: "Log into sam.gov and verify registration is active. Check NAICS codes, business size, and entity info. Renewals are required annually.",
+    sbaPortal: "eOffer pulls your data from SAM. If there's a mismatch, update SAM first and wait 24-48 hours for sync.",
+    format: "No upload. Print your SAM.gov entity registration summary as a backup.",
+    docCategory: null,
+  },
+
+  /* ── DOCUMENTS FOR UPLOAD ── */
+  { id: "financialStatements", label: "4. Financial Statements (2 Years P&L + Balance Sheet)", section: "upload", field: null,
+    what: "Profit & Loss statements and Balance Sheets for the 2 most recent fiscal years. GSA verifies your financial stability.",
+    where: "Your accountant or QuickBooks. Must show company name, period covered, and be signed or on CPA letterhead.",
+    sbaPortal: "eOffer → Upload Documents. Upload as PDF.",
     format: "PDF. One file per year or combined. Must include BOTH P&L AND Balance Sheet for each year.",
     docCategory: "FINANCIAL_STATEMENT",
   },
-  { id: "pastPerformance", label: "Past Performance (3+ Federal/Commercial Contracts)", section: null, field: null,
-    what: "Documentation of at least 3 completed or active contracts (federal or commercial) with references. GSA evaluators want to see relevant experience, contract values, and positive performance history.",
-    where: "GovCert pre-populated past performance from your uploaded documents. Check Section 4 (Past Performance tab) in eOffer. For federal contracts, download CPARS reports from cpars.gov. For commercial contracts, prepare a reference sheet with company name, contact, contract value, and period of performance.",
-    sbaPortal: "In eoffer.gsa.gov → Tab 4 (Past Performance) → upload each CPARS report or completed Past Performance Questionnaire (PPQ) as a separate PDF attachment.",
-    format: "PDF. Each reference as a separate file. Include contract number, value, period of performance, and a reference contact name/phone/email.",
-    docCategory: ["CONTRACT", "PPQ_RESPONSE", "PPQ_COMPLETED", "CPARS_REPORT"],
+  { id: "pastPerformance", label: "5. Past Performance References (3+ CPARS or PPQs)", section: "upload", field: null,
+    what: "Minimum 3 past performance references. Each must be a CPARS report or completed PPQ. These go in eOffer under Upload Documents.",
+    where: "Federal: download CPARS from cpars.gov. Commercial: use GovCert's PPQ email feature on the Past Performance page.",
+    sbaPortal: "eOffer → Upload Documents. Upload each as a separate PDF. Minimum 3 required.",
+    format: "PDF. Each reference as a separate file.",
+    docCategory: ["PPQ_RESPONSE", "PPQ_COMPLETED", "CPARS_REPORT"],
   },
-  { id: "csp1", label: "CSP-1 Commercial Supplier Pricelist", section: null, field: null,
-    what: "Your proposed pricing in GSA's required CSP-1 format. Lists every labor category or product with your Most Favored Customer (MFC) pricing, proposed GSA pricing, and the basis for that pricing.",
-    where: "GovCert has a pricing builder — go to the Pricing page to configure your labor categories and rates. Then use the 'Download CSP-1' button below to export the formatted file.",
-    sbaPortal: "Upload as CSV in eOffer → Upload Documents section.",
-    format: "Excel (.xlsx) or CSV in GSA's required CSP-1 template format. Must include labor category titles, descriptions, education/experience requirements, MFC rates, and proposed GSA rates.",
+  { id: "csp1", label: "6. CSP-1 Pricelist (Excel/CSV)", section: "upload", field: null,
+    what: "Your proposed pricing in GSA's CSP-1 format with labor categories, MFC pricing, and proposed GSA rates.",
+    where: "GovCert's Pricing page builds this. Use the 'Download CSP-1' button below.",
+    sbaPortal: "eOffer → Upload Documents. Upload the Excel/CSV file.",
+    format: "Excel (.xlsx) or CSV. Use the GovCert export — do not paste pricing manually.",
     docCategory: null,
   },
-  { id: "qcp", label: "Quality Control Plan / QMS Manual", section: null, field: null,
-    what: "A written plan describing how your company ensures quality in the services or products you deliver. Covers supervision, personnel qualifications, corrective actions, and subcontractor oversight.",
-    where: "GovCert drafted your Quality Control Plan in the QCP section. Review and refine it — Tab 3 in eOffer maps to these narratives.",
-    sbaPortal: "In eOffer → Technical Proposal → Quality Control (Factor 3). This is a 10,000-character text field — paste directly. GSA will NOT accept uploaded documents for this factor.",
-    format: "Text (pasted into eOffer fields) or PDF upload. Typically 5-15 pages covering all required QCP elements.",
-    docCategory: null,
-  },
-  { id: "corpExperience", label: "Corporate Experience Narrative", section: null, field: null,
-    what: "A comprehensive description of your company's history, capabilities, key personnel, organizational structure, and relevant experience that demonstrates your ability to perform under a GSA Schedule contract.",
-    where: "GovCert drafted this from your capability statement and company data. Review in Tab 2 (Corporate Experience) — each sub-section is ready to copy.",
-    sbaPortal: "In eOffer → Technical Proposal → Corporate Experience (Factor 1). This is a 10,000-character text field — paste directly. GSA will NOT accept uploaded documents for this factor.",
-    format: "Text narrative pasted into eOffer fields. Each field has character limits — check the field-level guidance below.",
-    docCategory: "CAPABILITY_STATEMENT",
-  },
-  { id: "technicalProposal", label: "Technical Proposal / Capability Statement", section: null, field: null,
-    what: "A formal document summarizing your company's technical approach, relevant experience, and ability to deliver the services or products offered under your GSA Schedule SIN categories.",
-    where: "Your existing capability statement can serve as a starting point. Tailor it to emphasize the specific SIN categories you are proposing. Include relevant certifications (ISO, CMMI, etc.).",
-    sbaPortal: "In eoffer.gsa.gov → Offer Documents → Technical Proposal → upload as a single PDF.",
-    format: "PDF. Typically 10-25 pages. Should directly address each SIN category you are proposing and demonstrate relevant experience.",
-    docCategory: "CAPABILITY_STATEMENT",
-  },
-  { id: "subconPlan", label: "Subcontracting Plan (if applicable, >$750K expected)", section: null, field: null,
-    what: "Required if your expected annual GSA sales exceed $750K and you are NOT a small business. Describes your plan to subcontract work to small, disadvantaged, women-owned, veteran-owned, and HUBZone businesses.",
-    where: "If required, use SBA's subcontracting plan template from sba.gov. Work with your contracts team to set realistic small business subcontracting goals.",
-    sbaPortal: "In eoffer.gsa.gov → Offer Documents → Subcontracting Plan → upload as PDF. If you are a small business, you may be exempt — select 'Small Business Exempt' in the portal.",
-    format: "PDF. Must follow FAR 52.219-9 format. Include specific dollar and percentage goals for each small business category.",
-    docCategory: "CERTIFICATION_DOCUMENT",
-  },
-  { id: "samRegistration", label: "SAM.gov Registration (Active, Matching NAICS)", section: null, field: null,
-    what: "An active registration in the System for Award Management (SAM.gov) with current NAICS codes that match the SIN categories you are proposing. Your UEI, CAGE code, and business information must be up to date.",
-    where: "Log into sam.gov and verify your registration is active and not expired. Check that your NAICS codes, business size, and entity information are current. Renewals are required annually.",
-    sbaPortal: "In eoffer.gsa.gov → Tab 1 (Company Information) → your SAM.gov data (UEI, CAGE, business name) must match exactly. eOffer pulls from SAM — if there's a mismatch, update SAM first and wait 24-48 hours.",
-    format: "No upload required. SAM.gov registration must be active. Print your SAM.gov entity registration summary as a backup PDF.",
-    docCategory: null,
-  },
-  { id: "priceProposal", label: "Price Proposal / Rate Card", section: null, field: null,
-    what: "A document showing how you arrived at your proposed GSA pricing. Includes your commercial price list, discount structure, Most Favored Customer pricing, and the basis for your proposed GSA discount off commercial rates.",
-    where: "Work with your pricing team or accountant. You need your commercial rate card plus documentation of any discounts given to your best commercial customers (MFC). GSA expects a discount off your MFC pricing.",
-    sbaPortal: "In eoffer.gsa.gov → Offer Documents → Price Proposal / Commercial Sales Practices (CSP) → upload as PDF alongside your CSP-1 spreadsheet.",
-    format: "PDF. Should include your commercial price list, MFC identification, discount rationale, and any supporting invoices or contracts showing commercial pricing.",
+  { id: "priceProposal", label: "7. Price Proposal / Commercial Sales Practices", section: "upload", field: null,
+    what: "Document showing how you arrived at your GSA pricing. Commercial price list, MFC identification, discount rationale.",
+    where: "Your commercial rate card plus documentation of MFC discounts. GSA expects a discount off your MFC pricing.",
+    sbaPortal: "eOffer → Upload Documents → Price Proposal. Upload alongside your CSP-1.",
+    format: "PDF. Include commercial price list, MFC identification, discount rationale, and supporting invoices.",
     docCategory: "INVOICE",
   },
-  { id: "authNegotiator", label: "Authorized Negotiator Letter", section: null, field: null,
-    what: "A letter on company letterhead designating who is authorized to negotiate and bind the company to a GSA Schedule contract. Must be signed by a corporate officer (CEO, President, or authorized partner).",
-    where: "Draft on your company letterhead. Include the negotiator's full name, title, phone, and email. Have your CEO or President sign it. If you are the owner AND negotiator, you still need this letter.",
-    sbaPortal: "In eoffer.gsa.gov → Offer Documents → Authorized Negotiator Letter → upload as PDF.",
-    format: "PDF on company letterhead. Must include: company name, negotiator name and title, contact information, authorizing officer signature, and date.",
+  { id: "authNegotiator", label: "8. Authorized Negotiator Letter", section: "upload", field: null,
+    what: "Letter on company letterhead designating who can negotiate and bind the company. Must be signed by a corporate officer.",
+    where: "Draft on your letterhead. Include negotiator's name, title, phone, email. Even if you are the owner AND negotiator, you still need this.",
+    sbaPortal: "eOffer → Upload Documents → Authorized Negotiator Letter.",
+    format: "PDF on company letterhead. Must include: company name, negotiator name/title, contact info, signature, date.",
     docCategory: "CERTIFICATION_DOCUMENT",
+  },
+  { id: "technicalProposal", label: "9. Technical Proposal / Capability Statement", section: "upload", field: null,
+    what: "Formal document summarizing your technical approach and relevant experience for each proposed SIN.",
+    where: "Your existing capability statement tailored to your proposed SINs. Include ISO, CMMI, or other certifications.",
+    sbaPortal: "eOffer → Upload Documents → Technical Proposal. Upload as single PDF.",
+    format: "PDF. 10-25 pages. Should directly address each SIN you are proposing.",
+    docCategory: "CAPABILITY_STATEMENT",
+  },
+  { id: "subconPlan", label: "10. Subcontracting Plan (if >$750K & not small biz)", section: "upload", field: null,
+    what: "Required ONLY if you are NOT a small business AND expect >$750K annual GSA sales. Describes subcontracting goals.",
+    where: "Use SBA's subcontracting plan template from sba.gov. Set realistic small business subcontracting goals.",
+    sbaPortal: "eOffer → Upload Documents. If small business, select 'Small Business Exempt'.",
+    format: "PDF in FAR 52.219-9 format. Include dollar and percentage goals for each small business category.",
+    docCategory: "CERTIFICATION_DOCUMENT",
+  },
+
+  /* ── NARRATIVES (copy/paste, not upload) ── */
+  { id: "corpExperience", label: "11. Corporate Experience Narrative (paste into eOffer)", section: "narrative", field: null,
+    what: "Your company's history, capabilities, key personnel, and relevant experience. Pasted directly into eOffer text fields.",
+    where: "GovCert drafted this in the Corporate Experience section. Review and copy from the section below.",
+    sbaPortal: "eOffer → Solicitation Provisions → Corporate Experience. Paste directly — 10,000 char limit.",
+    format: "Text (pasted into eOffer). Use the Copy buttons in the section below.",
+    docCategory: null,
+  },
+  { id: "qcp", label: "12. Quality Control Plan (paste into eOffer)", section: "narrative", field: null,
+    what: "Your QC approach, supervision, personnel qualifications, corrective actions, subcontractor oversight.",
+    where: "GovCert drafted this in the QCP section. Review and copy from the section below.",
+    sbaPortal: "eOffer → Solicitation Provisions → Quality Control. Paste directly — 10,000 char limit.",
+    format: "Text (pasted into eOffer). Use the Copy buttons in the section below.",
+    docCategory: null,
+  },
+  { id: "sinNarratives", label: "13. Relevant Project Experience (1 per SIN, paste into eOffer)", section: "narrative", field: null,
+    what: "A 10,000-char narrative per SIN describing relevant project experience. Separate from past performance references.",
+    where: "GovCert drafts these on the Past Performance page → Area 2. Copy from the section below.",
+    sbaPortal: "eOffer → Solicitation Provisions → Relevant Project Experience. Each SIN has its own text field.",
+    format: "Text (pasted into eOffer). 10,000 chars per SIN.",
+    docCategory: null,
   },
 ];
 
@@ -201,6 +326,9 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   const [savingField, setSavingField] = useState<string | null>(null);
   const [savedField, setSavedField] = useState<string | null>(null);
 
+  // SIN narratives (from past performance page)
+  const [sinNarratives, setSinNarratives] = useState<Record<string, string>>({});
+
   // CSP-1 / pricing LCATs
   const [lcats, setLcats] = useState<any[]>([]);
 
@@ -222,6 +350,91 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           const pd = JSON.parse(data.application.pricingData);
           if (Array.isArray(pd)) setLcats(pd);
           else if (pd.lcats && Array.isArray(pd.lcats)) setLcats(pd.lcats);
+        } catch {}
+      }
+      // Pre-populate recommended eOffer Standard Responses if not yet set
+      if (data.application) {
+        let eofferData: any = {};
+        try { eofferData = JSON.parse(data.application.eofferData || "{}"); } catch {}
+        let needsSave = false;
+
+        // Negotiator defaults from client/user data
+        if (!eofferData.negotiatorName && data.client) {
+          const owner = data.client.primaryContact || `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+          if (owner) { eofferData.negotiatorName = owner; needsSave = true; }
+        }
+        if (!eofferData.negotiatorEmail && (data.client?.email || user?.email)) {
+          eofferData.negotiatorEmail = data.client?.email || user?.email; needsSave = true;
+        }
+        if (!eofferData.negotiatorPhone && data.client?.phone) {
+          eofferData.negotiatorPhone = data.client.phone; needsSave = true;
+        }
+        if (!eofferData.negotiatorSignature) {
+          eofferData.negotiatorSignature = "Yes"; needsSave = true;
+        }
+
+        // Standard Responses — recommended defaults
+        if (!eofferData.stdDisasterPurchasing) {
+          eofferData.stdDisasterPurchasing = "Yes"; needsSave = true;
+        }
+        if (!eofferData.stdExceptionsTC) {
+          eofferData.stdExceptionsTC = "No"; needsSave = true;
+        }
+        if (!eofferData.stdExceptionsReps) {
+          eofferData.stdExceptionsReps = "No"; needsSave = true;
+        }
+        if (!eofferData.stdSubcontractPlan) {
+          eofferData.stdSubcontractPlan = "Small Business Exempt"; needsSave = true;
+        }
+        // Minimum order — suggest based on pricing data
+        if (!eofferData.stdMinOrder) {
+          let suggestedMin = "$250.00";
+          try {
+            const pd = JSON.parse(data.application.pricingData || "{}");
+            const lcatArr = pd.lcats || (Array.isArray(pd) ? pd : []);
+            if (lcatArr.length > 0) {
+              const rates = lcatArr.map((l: any) => parseFloat(l.gsaRate || l.mfcRate || l.baseRate || "0")).filter((r: number) => r > 0);
+              if (rates.length > 0) {
+                const avgRate = rates.reduce((a: number, b: number) => a + b, 0) / rates.length;
+                // Suggest minimum order = ~2 hours of average rate, rounded to nearest $50
+                const suggested = Math.round((avgRate * 2) / 50) * 50;
+                suggestedMin = `$${Math.max(100, Math.min(500, suggested)).toFixed(2)}`;
+              }
+            }
+          } catch {}
+          eofferData.stdMinOrder = suggestedMin;
+          needsSave = true;
+        }
+        // Solicitation Clauses — recommended defaults
+        if (!eofferData.clauseTAA) {
+          eofferData.clauseTAA = "Yes"; needsSave = true;
+        }
+        if (!eofferData.clausePOP) {
+          const addr = [data.client?.address, data.client?.city, data.client?.state].filter(Boolean).join(", ");
+          eofferData.clausePOP = addr || ""; needsSave = true;
+        }
+        if (!eofferData.clauseSCA) {
+          eofferData.clauseSCA = "Professional Exemption Applies"; needsSave = true;
+        }
+        if (!eofferData.clauseSmallBiz) {
+          eofferData.clauseSmallBiz = "Small Business"; needsSave = true;
+        }
+
+        if (needsSave) {
+          // Save defaults to DB (fire and forget)
+          apiRequest(`/api/certifications/${certId}`, {
+            method: "PUT",
+            body: JSON.stringify({ eofferData: JSON.stringify(eofferData) }),
+          }).catch(() => {});
+          data.application.eofferData = JSON.stringify(eofferData);
+        }
+      }
+
+      // Parse SIN narratives
+      if (data.application?.sinNarratives) {
+        try {
+          const sn = JSON.parse(data.application.sinNarratives);
+          if (typeof sn === "object") setSinNarratives(sn);
         } catch {}
       }
       // Init company edits
@@ -306,6 +519,19 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           body: JSON.stringify({ [field.key]: val }),
         });
         setCert((prev: any) => ({ ...prev, client: { ...prev.client, [field.key]: val } }));
+      } else if (field.source === "appField") {
+        // Save to eofferData JSON on the application
+        let existing: any = {};
+        try { existing = JSON.parse(cert?.application?.eofferData || "{}"); } catch {}
+        existing[field.appKey] = val;
+        await apiRequest(`/api/certifications/${certId}`, {
+          method: "PUT",
+          body: JSON.stringify({ eofferData: JSON.stringify(existing) }),
+        });
+        setCert((prev: any) => ({
+          ...prev,
+          application: { ...prev.application, eofferData: JSON.stringify(existing) }
+        }));
       } else if (field.source === "narrativeCorp" || field.source === "narrativeQCP") {
         // Save to certification narrative JSON
         const narrativeField = field.source === "narrativeCorp" ? "narrativeCorp" : "narrativeQCP";
@@ -344,6 +570,13 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   function getFieldValue(field: any): string {
     if (field.source === "static") return field.staticValue || "";
     if (field.source === "client") return cert?.client?.[field.key] || "";
+    if (field.source === "appField") {
+      // Read from eofferData JSON on the application
+      try {
+        const eofferData = JSON.parse(cert?.application?.eofferData || "{}");
+        return eofferData[field.appKey] || "";
+      } catch { return ""; }
+    }
     if (field.source === "narrativeCorp") return extractNarrativeField(cert?.application?.narrativeCorp, field.narrativeKey);
     if (field.source === "narrativeQCP") return extractNarrativeField(cert?.application?.narrativeQCP, field.narrativeKey);
     return "";
@@ -791,6 +1024,47 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                   </div>
                 );
               })}
+              {/* SIN Narratives */}
+              {Object.keys(sinNarratives).length > 0 && (
+                <div style={{ marginTop: 8, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--purple)", marginBottom: 8 }}>
+                    Relevant Project Experience — Per SIN (Tab 3, Factor Four)
+                  </div>
+                  {Object.entries(sinNarratives).map(([sin, text]) => {
+                    const hasText = (text as string).trim().length > 0;
+                    const charCount = (text as string).length;
+                    const label = `SIN ${sin}`;
+                    return (
+                      <div key={sin} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px",
+                        background: hasText ? "var(--cream)" : "var(--cream2)",
+                        border: `1px solid ${charCount > 10000 ? "var(--red-b)" : "var(--border)"}`,
+                        borderRadius: "var(--r)", marginBottom: 6,
+                      }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: hasText ? "var(--navy)" : "var(--ink4)" }}>
+                            SIN {sin}
+                          </div>
+                          <div style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: charCount > 10000 ? "var(--red)" : "var(--ink4)" }}>
+                            {hasText ? `${charCount.toLocaleString()} / 10,000 chars${charCount > 10000 ? " — over limit!" : ""}` : "Not drafted"}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => copyNarrative(text as string, label)}
+                          disabled={!hasText}
+                          style={{
+                            padding: "6px 14px",
+                            background: hasText ? (copySuccess === label ? "var(--green)" : "var(--purple)") : "var(--cream2)",
+                            border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600,
+                            color: hasText ? "#fff" : "var(--ink4)", cursor: hasText ? "pointer" : "not-allowed",
+                          }}>
+                          {copySuccess === label ? "\u2713 Copied!" : "Copy"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -801,10 +1075,10 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
               {[
-                { n: "1", title: "Log into eOffer", desc: "Go to eoffer.gsa.gov and sign in with your SAM.gov credentials." },
-                { n: "2", title: "Find your solicitation", desc: "Search for the GSA MAS solicitation number for your SIN category." },
-                { n: "3", title: "Copy & paste each field", desc: "Use the Copy buttons below. Paste each field into the corresponding tab in eOffer." },
-                { n: "4", title: "Upload documents", desc: "Upload your CPARS/PPQ files in Tab 4 and your CSP-1 Excel file in Tab 5." },
+                { n: "1", title: "Complete prerequisites", desc: "Pathways training, digital certificate, SAM.gov registration — all before you touch eOffer." },
+                { n: "2", title: "Fill in eOffer sections", desc: "Company info, negotiators, SINs, standard responses, clauses — GovCert pre-fills all of these. Just copy and confirm." },
+                { n: "3", title: "Paste narratives", desc: "Corporate Experience, QCP, and SIN Project Experience — use the Copy buttons below for each section." },
+                { n: "4", title: "Upload documents & submit", desc: "Download your files from GovCert, then upload them into eOffer. Review everything and click Submit Proposal." },
               ].map(step => (
                 <div key={step.n} style={{ display: "flex", gap: 10 }}>
                   <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: "var(--gold2)", fontWeight: 700 }}>{step.n}</div>

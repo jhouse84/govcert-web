@@ -190,7 +190,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
       uploadForm.append("file", file);
       if (clientId) uploadForm.append("clientId", clientId);
       uploadForm.append("category", "PPQ_RESPONSE");
-      const uploadRes = await fetch(`${API}/api/upload/document`, {
+      const uploadRes = await fetch(`${API}/api/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: uploadForm,

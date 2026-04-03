@@ -244,7 +244,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
       if (data.clientId) {
         try {
           const allCats = "FINANCIAL_STATEMENT,CONTRACT,CAPABILITY_STATEMENT,CERTIFICATION_DOCUMENT,INVOICE,TAX_RETURN,RESUME,BANK_STATEMENT,BUSINESS_LICENSE,OTHER";
-          const docs = await apiRequest(`/api/upload/documents/by-category/${data.clientId}/${allCats}`);
+          const docs = await apiRequest(`/api/uploads/by-category/${data.clientId}/${allCats}`);
           const grouped: Record<string, any[]> = {};
           for (const doc of docs) {
             if (!grouped[doc.category]) grouped[doc.category] = [];
@@ -386,7 +386,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
       formData.append("file", file);
       if (cert?.clientId) formData.append("clientId", cert.clientId);
       if (docCategory) formData.append("category", docCategory);
-      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload/document`, {
+      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

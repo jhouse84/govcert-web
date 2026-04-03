@@ -217,8 +217,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         } catch {}
       }
 
-      // Run smart scan
-      const clientId = data.clientId || data.client?.id;
+      // Run smart scan (clientId already declared above)
       if (clientId) {
         runSmartScan(clientId);
       }
@@ -350,7 +349,6 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         }
 
         // 4. Save past performance record to DB (with file tracking)
-        const docId = uploadData.document?.id || uploadData.id || null;
         const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
           method: "POST",
           body: JSON.stringify({
@@ -995,7 +993,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                       {ref.documentId && (
                         <button onClick={async () => {
                           try {
-                            const docIdClean = ref.documentId.startsWith("doc-") ? ref.documentId.slice(4) : ref.documentId;
+                            const docIdClean = (ref.documentId || "").startsWith("doc-") ? (ref.documentId || "").slice(4) : ref.documentId;
                             const resp = await fetch(
                               `${API}/api/documents/download/${docIdClean}`,
                               { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }

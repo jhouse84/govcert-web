@@ -113,6 +113,8 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   /* ── Area 2: SIN Narratives ── */
   const [sinNarratives, setSinNarratives] = useState<Record<string, string>>({});
   const [generatingSin, setGeneratingSin] = useState<string | null>(null);
+  const [sinPromptOpen, setSinPromptOpen] = useState<string | null>(null);
+  const [sinPrompts, setSinPrompts] = useState<Record<string, string>>({});
 
   /* ── Drag and drop ── */
   const [dragOverArea, setDragOverArea] = useState<string | null>(null);
@@ -475,14 +477,17 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
 
   async function generateSinNarrative(sin: string) {
     setGeneratingSin(sin);
+    setSinPromptOpen(null);
     try {
       const clientId = cert?.clientId || cert?.client?.id;
+      const userGuidance = sinPrompts[sin]?.trim() || "";
       const data = await apiRequest("/api/applications/ai/draft-sin-narrative", {
         method: "POST",
         body: JSON.stringify({
           sinNumber: sin,
           sinDescription: SIN_DESCRIPTIONS[sin] || sin,
           clientId,
+          userGuidance,
         }),
       });
       setSinNarratives(prev => ({ ...prev, [sin]: data.text || data.narrative || "" }));
@@ -928,16 +933,52 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                         </div>
                         <div style={{ fontSize: 13, color: "var(--ink3)" }}>{desc}</div>
                       </div>
-                      <button onClick={() => generateSinNarrative(sin)}
-                        disabled={generatingSin === sin}
-                        style={{
-                          padding: "8px 16px", background: "var(--navy)", border: "none",
-                          borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 500,
-                          cursor: generatingSin === sin ? "not-allowed" : "pointer", flexShrink: 0,
-                        }}>
-                        {generatingSin === sin ? "Generating..." : "\u2726 Generate from my documents"}
-                      </button>
+                      {generatingSin === sin ? (
+                        <span style={{ fontSize: 12, color: "var(--gold)", fontWeight: 500 }}>{"✦"} Generating narrative...</span>
+                      ) : (
+                        <button onClick={() => setSinPromptOpen(sinPromptOpen === sin ? null : sin)}
+                          style={{
+                            padding: "8px 16px", background: "var(--navy)", border: "none",
+                            borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 500,
+                            cursor: "pointer", flexShrink: 0,
+                          }}>
+                          {"\u2726"} Generate from my documents
+                        </button>
+                      )}
                     </div>
+
+                    {/* Guidance prompt */}
+                    {sinPromptOpen === sin && (
+                      <div style={{ background: "var(--cream)", border: "1px solid rgba(200,155,60,.2)", borderRadius: "var(--r)", padding: "16px 18px", marginBottom: 12 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--gold)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>
+                          What should this narrative focus on?
+                        </div>
+                        <p style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 10, lineHeight: 1.6 }}>
+                          Tell us which project or experience to highlight for this SIN. The AI will combine your guidance with your uploaded documents to draft a 10,000-character narrative.
+                        </p>
+                        <textarea
+                          value={sinPrompts[sin] || ""}
+                          onChange={e => setSinPrompts(prev => ({ ...prev, [sin]: e.target.value }))}
+                          placeholder={`e.g., "Production of the GovCert platform — a SaaS application for government certification automation" or "Our HUD Program Financial Advisor work spanning 2006-2025 across multiple contract vehicles"`}
+                          rows={3}
+                          style={{
+                            width: "100%", padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)",
+                            fontSize: 13, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box",
+                            marginBottom: 10,
+                          }}
+                        />
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => generateSinNarrative(sin)}
+                            style={{ padding: "9px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 10px rgba(200,155,60,.3)" }}>
+                            {"✨"} Generate Narrative
+                          </button>
+                          <button onClick={() => setSinPromptOpen(null)}
+                            style={{ padding: "9px 16px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", color: "var(--ink3)", fontSize: 13, cursor: "pointer" }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     <textarea
                       value={narrative}

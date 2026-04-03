@@ -97,6 +97,11 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
   const [runningGapAnalysis, setRunningGapAnalysis] = useState(false);
   const [benchmarkingId, setBenchmarkingId] = useState<string | null>(null);
 
+  // Price Proposal state
+  const [priceProposal, setPriceProposal] = useState<string>("");
+  const [generatingProposal, setGeneratingProposal] = useState(false);
+  const [proposalSaved, setProposalSaved] = useState(false);
+
   const invoiceInputRef = useRef<HTMLInputElement>(null);
   const MIN_LCATS = 5;
 
@@ -117,6 +122,11 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
           const parsed = JSON.parse(data.application.pricingData);
           setLcats(parsed.lcats || []);
           setNotes(parsed.notes || "");
+          // Restore saved price proposal
+          if (data.application?.priceProposal) {
+            setPriceProposal(data.application.priceProposal);
+            setProposalSaved(true);
+          }
           // Restore previously extracted LCAT suggestions
           if (parsed.extractedGroups?.length > 0) {
             setInvoiceGroups(parsed.extractedGroups);
@@ -1402,6 +1412,88 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                   <textarea value={notes} onChange={e => setNotes(e.target.value)}
                     placeholder="Any additional pricing context — seasonal rates, volume discounts, special terms, etc."
                     style={{ width: "100%", minHeight: 80, padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }} />
+                </div>
+              )}
+
+              {/* Price Proposal / Commercial Sales Practices */}
+              {lcats.length > 0 && (
+                <div style={{ background: "#fff", border: `1px solid ${priceProposal ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", padding: "24px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                    <div>
+                      <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400, margin: 0 }}>
+                        Price Proposal / Commercial Sales Practices
+                      </h3>
+                      <p style={{ fontSize: 12, color: "var(--ink3)", marginTop: 4, marginBottom: 0 }}>
+                        Required eOffer upload — explains your pricing rationale, MFC identification, and discount structure to the GSA Contracting Officer.
+                      </p>
+                    </div>
+                    {priceProposal && (
+                      <span style={{ padding: "4px 12px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: 100, fontSize: 11, fontWeight: 500, color: "var(--green)", flexShrink: 0 }}>{"\u2713"} Generated</span>
+                    )}
+                  </div>
+
+                  {!priceProposal ? (
+                    <button
+                      onClick={async () => {
+                        setGeneratingProposal(true);
+                        try {
+                          const clientId = cert?.clientId || cert?.client?.id;
+                          const data = await apiRequest("/api/applications/ai/generate-price-proposal", {
+                            method: "POST",
+                            body: JSON.stringify({ clientId, certType: cert?.type }),
+                          });
+                          setPriceProposal(data.document || "");
+                          setProposalSaved(true);
+                        } catch (err: any) {
+                          setError("Failed to generate price proposal: " + (err.message || ""));
+                        } finally {
+                          setGeneratingProposal(false);
+                        }
+                      }}
+                      disabled={generatingProposal}
+                      style={{ padding: "12px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: generatingProposal ? "not-allowed" : "pointer", width: "100%" }}>
+                      {generatingProposal ? "Generating Price Proposal..." : "Generate Price Proposal from Your Pricing Data"}
+                    </button>
+                  ) : (
+                    <div>
+                      <textarea
+                        value={priceProposal}
+                        onChange={e => { setPriceProposal(e.target.value); setProposalSaved(false); }}
+                        style={{ width: "100%", minHeight: 200, padding: "12px 14px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.7, resize: "vertical", outline: "none", boxSizing: "border-box" as const }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                        <span style={{ fontSize: 11, fontFamily: "monospace", color: "var(--ink4)" }}>{priceProposal.length.toLocaleString()} characters</span>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={async () => {
+                            setGeneratingProposal(true);
+                            try {
+                              const clientId = cert?.clientId || cert?.client?.id;
+                              const data = await apiRequest("/api/applications/ai/generate-price-proposal", {
+                                method: "POST",
+                                body: JSON.stringify({ clientId, certType: cert?.type }),
+                              });
+                              setPriceProposal(data.document || "");
+                              setProposalSaved(true);
+                            } catch (err: any) {
+                              setError("Failed to regenerate: " + (err.message || ""));
+                            } finally {
+                              setGeneratingProposal(false);
+                            }
+                          }}
+                            disabled={generatingProposal}
+                            style={{ padding: "7px 16px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, cursor: "pointer", color: "var(--ink3)" }}>
+                            {generatingProposal ? "Regenerating..." : "Regenerate"}
+                          </button>
+                          <button onClick={() => {
+                            if (priceProposal) navigator.clipboard.writeText(priceProposal);
+                          }}
+                            style={{ padding: "7px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 12, color: "var(--gold2)", cursor: "pointer" }}>
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

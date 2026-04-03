@@ -1,144 +1,16 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { usePaywall } from "@/lib/usePaywall";
 import PaywallModal from "@/components/PaywallModal";
-import CertSidebar from "@/components/CertSidebar";
-import FinancialReadiness from "@/components/FinancialReadiness";
+import { generatePDF } from "@/lib/generatePDF";
 
-const EIGHT_A_SECTIONS = [
-  { id: "social-disadvantage", label: "Social Disadvantage" },
-  { id: "economic-disadvantage", label: "Economic Disadvantage" },
-  { id: "business-plan", label: "Business Plan" },
-  { id: "corporate", label: "Corporate Experience" },
-  { id: "past-performance", label: "Past Performance" },
-  { id: "financials", label: "Financials" },
-  { id: "submit", label: "Submit" },
-];
-
-const SBA_FORM_1010_CHECKLIST = [
-  { id: "socialNarrative", label: "Social Disadvantage Narrative", section: "social-disadvantage", field: "socialDisadvantageNarrative",
-    what: "A personal statement explaining how you've been socially disadvantaged based on race, ethnicity, gender, or other qualifying factors. This is the heart of your 8(a) application.",
-    where: "GovCert drafted this for you in Section 1. Review and refine it — it should be personal and specific.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Social Disadvantage → you can either fill out the structured questionnaire (1,000 characters per incident box, 2 incidents required) OR upload a complete narrative as a PDF. GovCert prepares both formats for you.",
-    format: "Text narrative (1,000 characters per incident box on certifications.sba.gov) or PDF upload. Be concise and specific.",
-    docCategory: null,
-  },
-  { id: "economicData", label: "SBA Form 413 (Personal Financial Statement)", section: "economic-disadvantage", field: "economicDisadvantageData",
-    what: "A detailed breakdown of your personal net worth, assets, liabilities, and income. SBA uses this to verify economic disadvantage (net worth must be below $850K excluding primary residence and business equity).",
-    where: "GovCert can generate a pre-filled Form 413 from your Economic Disadvantage data. Download it, review with your CPA, sign it, and upload to the portal. You can also download the blank form from sba.gov/document/sba-form-413.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Financial Information → Personal Financial Statement → upload the signed PDF.",
-    format: "PDF. Must be the official SBA Form 413. Review all figures, sign, then upload. Handwritten or typed both accepted.",
-    docCategory: null,
-    generateForm413: true,
-  },
-  { id: "businessPlan", label: "Comprehensive Business Plan", section: "business-plan", field: "businessPlanData",
-    what: "A forward-looking plan covering your business goals, target markets, marketing strategy, management team, and financial projections. SBA wants to see you have a viable path to growth.",
-    where: "GovCert drafted key sections for you. Review in Section 3. For projections, work with your accountant.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Business Information → fill in structured fields for market analysis, competitive environment, goals, and projections. These are individual text fields, not a single document upload.",
-    format: "PDF, typically 15-30 pages. Include financial projections for at least 3 years.",
-    docCategory: null,
-  },
-  { id: "corporateNarrative", label: "Corporate Experience Narrative", section: "corporate", field: "narrativeCorp8a",
-    what: "A description of your company's history, capabilities, key contracts, and relevant experience that demonstrates you can perform government work.",
-    where: "GovCert drafted this from your capability statement and past performance data. Review in Section 4.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Entity Information → Business Description. This is a text field — paste your narrative directly.",
-    format: "Text narrative. Paste directly into the certifications.sba.gov text field.",
-    docCategory: "CAPABILITY_STATEMENT",
-  },
-  { id: "pastPerformance", label: "Past Performance References", section: "past-performance", field: null,
-    what: "Details on your completed and active government/commercial contracts — agency name, contract number, value, period of performance, and a reference contact (Contracting Officer). Completed PPQ forms and CPARS reports also satisfy this requirement.",
-    where: "GovCert pre-populated these from your uploaded documents. Review and add reference contacts in Section 5. If you have completed PPQ forms or CPARS reports, upload them — they will be matched here automatically.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Past Performance → enter each contract individually in the provided fields. Upload any completed PPQ forms or CPARS reports as supporting documents.",
-    format: "Entered directly in the portal + supporting PDFs. Have contract numbers, values, and CO contact info ready.",
-    docCategory: ["CONTRACT", "PPQ_RESPONSE", "PPQ_COMPLETED", "CPARS_REPORT"],
-  },
-  { id: "financials", label: "2 Years Business Financial Statements", section: "financials", field: "financialData8a",
-    what: "Profit & Loss statement and Balance Sheet for the 2 most recent complete fiscal years. Must be prepared by your accountant — SBA may cross-reference with your tax returns.",
-    where: "Your accountant or bookkeeper has these. If you use QuickBooks, export P&L and Balance Sheet reports. They must show the company name, period covered, and be signed or on letterhead.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
-    format: "PDF. One file per year or combined. Must include P&L AND Balance Sheet.",
-    docCategory: "FINANCIAL_STATEMENT",
-  },
-  { id: "personalFinancials", label: "Personal Financial Statements (each owner)", section: "financials", field: "financialData8a",
-    what: "SBA Form 413 for EACH owner with 20%+ ownership. Lists all personal assets (real estate, vehicles, investments, bank accounts) and liabilities (mortgages, loans, credit cards).",
-    where: "Download from sba.gov/document/sba-form-413. Each qualifying owner fills out their own form with their CPA.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Financial Information → Personal Financial Statement → upload the signed PDF.",
-    format: "PDF. Official SBA Form 413 required. One per qualifying owner.",
-    docCategory: "FINANCIAL_STATEMENT",
-  },
-  { id: "birthCert", label: "Birth Certificate or Naturalization Papers", section: null, field: null,
-    what: "Proof of U.S. citizenship for each disadvantaged owner. SBA requires this to verify eligibility — the 8(a) program is only available to U.S. citizens.",
-    where: "Your birth certificate is typically in your personal records. If lost, order a replacement from your state's vital records office (vitalchek.com). For naturalized citizens, use your Certificate of Naturalization (N-550 or N-570).",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
-    format: "PDF or image (JPG/PNG). Clear, legible scan of the full document.",
-    docCategory: "CERTIFICATION_DOCUMENT",
-  },
-  { id: "taxReturns", label: "3 Years Personal Tax Returns", section: null, field: null,
-    what: "Complete personal federal tax returns (Form 1040 with ALL schedules and attachments) for the 3 most recent tax years. SBA uses these to verify your personal income and net worth claims.",
-    where: "Your tax preparer/CPA has copies. You can also download from the IRS at irs.gov/individuals/get-transcript. Select 'Tax Return Transcript' for each year needed.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
-    format: "PDF. Complete returns including all schedules. One file per year is easiest for the reviewer.",
-    docCategory: "TAX_RETURN",
-  },
-  { id: "bizTaxReturns", label: "3 Years Business Tax Returns", section: null, field: null,
-    what: "Complete business federal tax returns for the 3 most recent years. For LLCs this is typically Form 1065, for S-Corps Form 1120-S, for C-Corps Form 1120.",
-    where: "Your business CPA/tax preparer has these. Also available from irs.gov/businesses/get-transcript for the business EIN.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
-    format: "PDF. Complete returns with all schedules and K-1s.",
-    docCategory: "TAX_RETURN",
-  },
-  { id: "articles", label: "Articles of Incorporation / Organization", section: null, field: null,
-    what: "The founding document filed with your state to create your business entity. Shows formation date, registered agent, initial members/shareholders.",
-    where: "Your state's Secretary of State website. Search your business name at the state website to find and download. In most states you can get a certified copy for $5-15.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
-    format: "PDF. State-certified copy preferred but filed copy is acceptable.",
-    docCategory: "BUSINESS_LICENSE",
-  },
-  { id: "bylaws", label: "Bylaws or Operating Agreement", section: null, field: null,
-    what: "The internal governance document for your company. For LLCs this is the Operating Agreement; for corporations it's the Bylaws. Shows ownership percentages, voting rights, management structure.",
-    where: "You should have a copy from when the business was formed. Your business attorney created this. If you don't have one, you need to create one — SBA requires it.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
-    format: "PDF. Must show current ownership percentages and be signed by all members/shareholders.",
-    docCategory: "CERTIFICATION_DOCUMENT",
-  },
-  { id: "stockCerts", label: "Stock Certificates / Membership Certificates", section: null, field: null,
-    what: "Proof of ownership in the company. For corporations, these are stock certificates showing who owns what shares. For LLCs, membership interest certificates or the relevant section of the Operating Agreement.",
-    where: "Your corporate records book or your attorney's files. If your LLC doesn't issue certificates, the Operating Agreement suffices.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
-    format: "PDF or image. Clear scan showing names, ownership percentages, and signatures.",
-    docCategory: "CERTIFICATION_DOCUMENT",
-  },
-  { id: "form1010", label: "SBA Form 1010 — Personal History Statement", section: null, field: null,
-    what: "Required for every owner with 20%+ ownership AND every officer/director/key employee. This form covers personal background, criminal history, financial obligations, and prior government contracting experience. One form per individual.",
-    where: "Download the blank Form 1010 from sba.gov/document/sba-form-1010. Print it, fill it out by hand or electronically, sign, and scan as PDF. Each person listed on the ownership section needs their own form.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload. Upload each signed Form 1010 as a separate PDF. Name: FIRM NAME_INDIVIDUAL NAME_FORM 1010.pdf",
-    format: "PDF. Must be signed by the individual. One form per person. Incomplete or unsigned forms will delay your application.",
-    docCategory: "CERTIFICATION_DOCUMENT",
-  },
-  { id: "resume", label: "Resumes — All Owners & Key Management Personnel", section: null, field: null,
-    what: "Professional resumes for the disadvantaged owner(s), all other owners with 20%+ interest, and key management personnel. SBA assesses whether the disadvantaged owner has the capability and experience to control the business.",
-    where: "Update resumes to emphasize management experience, industry knowledge, and technical skills relevant to your NAICS codes. Include federal contracting experience if any.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload each as PDF. Name: FIRM NAME_INDIVIDUAL NAME_RESUME.pdf",
-    format: "PDF. Standard professional resume format. 1-3 pages per person.",
-    docCategory: "RESUME",
-  },
-  { id: "bankStatements", label: "6 Months Business Bank Statements", section: null, field: null,
-    what: "The 6 most recent consecutive monthly bank statements for ALL business bank accounts. SBA uses these to verify cash flow, revenue claims, and current financial health.",
-    where: "Download from your business bank's online portal. Log into your bank → Statements → download each month as PDF.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
-    format: "PDF. Must show account holder name (your business), account number, and full transaction history for each month.",
-    docCategory: "BANK_STATEMENT",
-  },
-  { id: "leases", label: "Business Lease / Rental Agreement", section: null, field: null,
-    what: "Your current commercial lease or rental agreement for your business location. If you work from home, a home office declaration may suffice. SBA wants to verify your place of business.",
-    where: "Your landlord or property manager has a copy. Check your email for the signed lease. If home-based, write a simple declaration stating your home office address.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
-    format: "PDF. Current lease showing business name, address, term, and signatures. For home-based, a signed declaration.",
-    docCategory: "CERTIFICATION_DOCUMENT",
-  },
-];
+/* ═══════════════════════════════════════════════════════════════════
+   8(a) Business Development — SBA Certification Submission Package
+   ONE integrated flow mirroring certifications.sba.gov.
+   Each step: copy text, download file, or confirm a value.
+   ═══════════════════════════════════════════════════════════════════ */
 
 export default function Submit8aPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -149,16 +21,24 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [completedSections, setCompletedSections] = useState<Record<string, boolean>>({});
-  const [manualChecks, setManualChecks] = useState<Record<string, boolean>>({});
-  const [copySuccess, setCopySuccess] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
+  const [expandedStep, setExpandedStep] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [clientDocs, setClientDocs] = useState<Record<string, any[]>>({});
-  const [dragOverItem, setDragOverItem] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, string>>({});
-  const [uploadingItem, setUploadingItem] = useState<string | null>(null);
-
+  const [dragOverStep, setDragOverStep] = useState<string | null>(null);
+  const [uploadingStep, setUploadingStep] = useState<string | null>(null);
+  const [homeLink, setHomeLink] = useState("/portal");
   const pw = usePaywall("EIGHT_A");
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        if (payload.role === "ADMIN" || payload.role === "ADVISOR") setHomeLink("/dashboard");
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -172,674 +52,363 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
     try {
       const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
-      const completed: Record<string, boolean> = {};
-      const app = data.application;
-      if (app) {
-        if (app.socialDisadvantageNarrative?.trim()) completed["social-disadvantage"] = true;
-        if (app.economicDisadvantageData) completed["economic-disadvantage"] = true;
-        if (app.businessPlanData) completed["business-plan"] = true;
-        if (app.narrativeCorp8a) completed["corporate"] = true;
-        if (app.pastPerformance8a?.length > 0 || app.pastPerformance?.length > 0) completed["past-performance"] = true;
-        if (app.financialData8a) completed["financials"] = true;
-      }
-      setCompletedSections(completed);
-      // Fetch all client documents grouped by category
       if (data.clientId) {
         try {
-          const allCats = "FINANCIAL_STATEMENT,TAX_RETURN,CAPABILITY_STATEMENT,CONTRACT,CERTIFICATION_DOCUMENT,RESUME,BANK_STATEMENT,BUSINESS_LICENSE,INVOICE,OTHER";
-          const docs = await apiRequest(`/api/upload/documents/by-category/${data.clientId}/${allCats}`);
+          const rawDocs = await apiRequest(`/api/upload/documents?clientId=${data.clientId}`);
           const grouped: Record<string, any[]> = {};
-          for (const doc of docs) {
-            if (!grouped[doc.category]) grouped[doc.category] = [];
-            grouped[doc.category].push(doc);
+          for (const doc of (Array.isArray(rawDocs) ? rawDocs : [])) {
+            const light = { id: doc.id, originalName: doc.originalName, category: doc.category, documentYear: doc.documentYear };
+            if (!grouped[light.category]) grouped[light.category] = [];
+            grouped[light.category].push(light);
           }
           setClientDocs(grouped);
         } catch {}
       }
-    } catch (err) { console.error(err); setError("Failed to load."); }
+    } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }
 
-  function isItemComplete(item: typeof SBA_FORM_1010_CHECKLIST[0]): boolean {
-    if (manualChecks[item.id]) return true;
-    if (uploadedFiles[item.id]) return true;
-    // Auto-complete if matching documents are uploaded
-    if ((item as any).docCategory) {
-      const cats = Array.isArray((item as any).docCategory) ? (item as any).docCategory : [(item as any).docCategory];
-      const hasFiles = cats.some((c: string) => (clientDocs[c] || []).length > 0);
-      if (hasFiles) return true;
+  async function copyText(text: string, id: string) {
+    try { await navigator.clipboard.writeText(text); } catch {
+      const el = document.createElement("textarea"); el.value = text; document.body.appendChild(el); el.select(); document.execCommand("copy"); document.body.removeChild(el);
     }
-    if (!cert?.application) return false;
-
-    if (item.field === "socialDisadvantageNarrative") return !!cert.application.socialDisadvantageNarrative?.trim();
-    if (item.field === "economicDisadvantageData") return !!cert.application.economicDisadvantageData;
-    if (item.field === "businessPlanData") return !!cert.application.businessPlanData;
-    if (item.field === "narrativeCorp8a") return !!cert.application.narrativeCorp8a;
-    if (item.field === "financialData8a") return !!cert.application.financialData8a;
-    if (item.id === "pastPerformance") return (cert.application.pastPerformance8a?.length > 0 || cert.application.pastPerformance?.length > 0);
-
-    return false;
+    setCopiedId(id); setTimeout(() => setCopiedId(null), 2000);
   }
 
-  async function copyToClipboard(text: string, label: string) {
+  async function downloadDoc(doc: any) {
     try {
-      await navigator.clipboard.writeText(text);
-      setCopySuccess(label);
-      setTimeout(() => setCopySuccess(null), 2000);
-    } catch {
-      setError("Failed to copy to clipboard.");
-    }
+      const resp = await fetch(`${API_URL}/api/documents/download/${doc.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+      if (!resp.ok) { setError("Download failed"); return; }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = doc.originalName || "document"; a.click(); URL.revokeObjectURL(url);
+    } catch { setError("Download failed"); }
   }
 
-  function getNarrativeText(field: string): string {
-    if (!cert?.application) return "";
-    const val = cert.application[field];
-    if (!val) return "";
-    try {
-      const parsed = JSON.parse(val);
-      if (typeof parsed === "object" && parsed.narratives) {
-        return Object.entries(parsed.narratives).map(([k, v]) => `## ${k}\n${v}`).join("\n\n");
-      }
-      if (typeof parsed === "object") {
-        return Object.entries(parsed).map(([k, v]) => `## ${k}\n${v}`).join("\n\n");
-      }
-      return String(val);
-    } catch {
-      return String(val);
-    }
-  }
-
-  async function downloadPackage() {
-    setDownloading(true);
-    try {
-      const data = await apiRequest(`/api/applications/${cert.application.id}/export`, { method: "POST" });
-      if (data.downloadUrl) {
-        window.open(data.downloadUrl, "_blank");
-      }
-    } catch {
-      setError("Download not yet available. Please copy individual sections.");
-    } finally {
-      setDownloading(false);
-    }
-  }
-
-  async function handleChecklistDrop(itemId: string, files: FileList | File[], docCategory: string | null) {
+  async function handleFileDrop(stepId: string, files: FileList, category: string) {
     const fileArr = Array.from(files);
     if (fileArr.length === 0) return;
-    setDragOverItem(null);
-    setUploadingItem(itemId);
-    const names: string[] = [];
+    setUploadingStep(stepId); setDragOverStep(null);
     try {
       const token = localStorage.getItem("token");
-      const cat = Array.isArray(docCategory) ? docCategory[0] : docCategory;
+      const clientId = cert?.clientId || cert?.client?.id;
       for (const file of fileArr) {
         const formData = new FormData();
         formData.append("file", file);
-        if (cert?.clientId) formData.append("clientId", cert.clientId);
-        if (cat) formData.append("category", cat);
-        const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        });
-        if (!resp.ok) throw new Error(`Upload failed for ${file.name}`);
-        names.push(file.name);
+        if (clientId) formData.append("clientId", clientId);
+        formData.append("category", category);
+        await fetch(`${API_URL}/api/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
       }
-      setUploadedFiles(prev => ({ ...prev, [itemId]: names.length === 1 ? names[0] : `${names.length} files uploaded` }));
-      setManualChecks(prev => ({ ...prev, [itemId]: true }));
-    } catch (err: any) {
-      setError("Failed to upload: " + (err.message || "Unknown error"));
-    } finally {
-      setUploadingItem(null);
-    }
+      // Refresh
+      if (clientId) {
+        const rawDocs = await apiRequest(`/api/upload/documents?clientId=${clientId}`);
+        const grouped: Record<string, any[]> = {};
+        for (const doc of (Array.isArray(rawDocs) ? rawDocs : [])) {
+          const light = { id: doc.id, originalName: doc.originalName, category: doc.category, documentYear: doc.documentYear };
+          if (!grouped[light.category]) grouped[light.category] = [];
+          grouped[light.category].push(light);
+        }
+        setClientDocs(grouped);
+      }
+    } catch (err: any) { setError("Upload failed: " + (err.message || "")); }
+    finally { setUploadingStep(null); }
   }
 
-  const completedCount = SBA_FORM_1010_CHECKLIST.filter(item => isItemComplete(item)).length;
-  const totalCount = SBA_FORM_1010_CHECKLIST.length;
-  const appSectionsDone = Object.values(completedSections).filter(Boolean).length;
+  const app = cert?.application;
+  const client = cert?.client;
 
-  const narrativeSections = [
-    { label: "Social Disadvantage Narrative", field: "socialDisadvantageNarrative" },
-    { label: "Corporate Experience (8a)", field: "narrativeCorp8a" },
-    { label: "Business Plan", field: "businessPlanData" },
+  // Parse narratives
+  const socialNarrative = app?.socialDisadvantageNarrative || "";
+  let businessPlanSections: Record<string, string> = {};
+  try { businessPlanSections = JSON.parse(app?.businessPlanData || "{}"); } catch {}
+  let corpNarratives: Record<string, string> = {};
+  try {
+    const parsed = JSON.parse(app?.narrativeCorp || "{}");
+    corpNarratives = parsed.narratives || parsed;
+  } catch {}
+
+  type Step = { id: string; label: string; portalLocation: string; type: "info" | "text" | "files"; status: "ready" | "partial" | "missing"; content?: any };
+
+  const steps: Step[] = [
+    // ── NARRATIVES (paste into portal) ──
+    { id: "social", label: "Social Disadvantage Narrative", portalLocation: "certifications.sba.gov → Social Disadvantage", type: "text",
+      status: socialNarrative ? "ready" : "missing",
+      content: { narratives: socialNarrative ? [{ label: "Social Disadvantage Narrative", value: socialNarrative, id: "soc-narr", charLimit: null }] : [],
+        emptyMessage: "Generate on the Social Disadvantage page." } },
+
+    { id: "economic", label: "Economic Disadvantage / Form 413", portalLocation: "certifications.sba.gov → Financial Information", type: "text",
+      status: app?.economicDisadvantageData ? "ready" : "missing",
+      content: { narratives: [], emptyMessage: app?.economicDisadvantageData ? "Economic data collected. Generate Form 413 on the Economic Disadvantage page." : "Complete the Economic Disadvantage page first." } },
+
+    { id: "business-plan", label: "Business Plan", portalLocation: "certifications.sba.gov → Business Information", type: "text",
+      status: Object.values(businessPlanSections).some(v => v) ? "ready" : "missing",
+      content: { narratives: Object.entries(businessPlanSections).filter(([, v]) => v).map(([k, v]) => ({
+        label: k.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase()), value: v, id: `bp-${k}`, charLimit: null,
+      })), emptyMessage: "Generate on the Business Plan page." } },
+
+    { id: "corporate", label: "Corporate Experience", portalLocation: "certifications.sba.gov → Entity Information → Business Description", type: "text",
+      status: Object.values(corpNarratives).some(v => v) ? "ready" : "missing",
+      content: { narratives: Object.entries(corpNarratives).filter(([, v]) => v).map(([k, v]) => ({
+        label: k.replace(/([A-Z_])/g, " $1").replace(/^./, s => s.toUpperCase()), value: v, id: `corp-${k}`, charLimit: null,
+      })), emptyMessage: "Generate on the Corporate Experience page." } },
+
+    // ── FILES (upload to portal) ──
+    { id: "financials", label: "Financial Statements (2 Years P&L + BS)", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: (clientDocs.FINANCIAL_STATEMENT || []).length > 0 ? "ready" : "missing",
+      content: { docs: clientDocs.FINANCIAL_STATEMENT || [], dropCategory: "FINANCIAL_STATEMENT", note: "2 years of P&L + Balance Sheet. Drag and drop files here." } },
+
+    { id: "tax-personal", label: "3 Years Personal Tax Returns", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: (clientDocs.TAX_RETURN || []).length > 0 ? "ready" : "missing",
+      content: { docs: clientDocs.TAX_RETURN || [], dropCategory: "TAX_RETURN", note: "Complete Form 1040 with all schedules for 3 most recent years." } },
+
+    { id: "tax-business", label: "3 Years Business Tax Returns", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: (clientDocs.TAX_RETURN || []).length >= 3 ? "ready" : "missing",
+      content: { docs: clientDocs.TAX_RETURN || [], dropCategory: "TAX_RETURN", note: "Complete business returns (1065/1120-S/1120) with K-1s for 3 years." } },
+
+    { id: "past-perf", label: "Past Performance References", portalLocation: "certifications.sba.gov → Past Performance", type: "files",
+      status: (clientDocs.PPQ_RESPONSE || []).length + (clientDocs.CPARS_REPORT || []).length + (clientDocs.CONTRACT || []).length > 0 ? "ready" : "missing",
+      content: { docs: [...(clientDocs.PPQ_RESPONSE || []), ...(clientDocs.PPQ_COMPLETED || []), ...(clientDocs.CPARS_REPORT || []), ...(clientDocs.CONTRACT || [])], dropCategory: "CONTRACT", note: "Contracts, CPARS, PPQs showing relevant experience." } },
+
+    { id: "birth-cert", label: "Birth Certificate / Citizenship Proof", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: "missing",
+      content: { docs: [], dropCategory: "CERTIFICATION_DOCUMENT", note: "Birth certificate or Certificate of Naturalization for each disadvantaged owner." } },
+
+    { id: "articles", label: "Articles of Incorporation / Organization", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: (clientDocs.BUSINESS_LICENSE || []).length > 0 ? "ready" : "missing",
+      content: { docs: clientDocs.BUSINESS_LICENSE || [], dropCategory: "BUSINESS_LICENSE", note: "State-filed formation document. Download from your Secretary of State." } },
+
+    { id: "operating-agreement", label: "Bylaws or Operating Agreement", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: "missing",
+      content: { docs: [], dropCategory: "CERTIFICATION_DOCUMENT", note: "Must show current ownership percentages and management structure." } },
+
+    { id: "stock-certs", label: "Stock / Membership Certificates", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: "missing",
+      content: { docs: [], dropCategory: "CERTIFICATION_DOCUMENT", note: "Proof of ownership. For LLCs, the Operating Agreement section showing ownership suffices." } },
+
+    { id: "form-1010", label: "SBA Form 1010 — Personal History Statement", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: "missing",
+      content: { docs: [], dropCategory: "CERTIFICATION_DOCUMENT", note: "One per owner (20%+) and each officer/director. Download blank from sba.gov." } },
+
+    { id: "resumes", label: "Resumes — All Owners & Key Personnel", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: (clientDocs.RESUME || []).length > 0 ? "ready" : "missing",
+      content: { docs: clientDocs.RESUME || [], dropCategory: "RESUME", note: "Professional resumes emphasizing management experience and NAICS relevance." } },
+
+    { id: "bank-statements", label: "6 Months Business Bank Statements", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: (clientDocs.BANK_STATEMENT || []).length > 0 ? "ready" : "missing",
+      content: { docs: clientDocs.BANK_STATEMENT || [], dropCategory: "BANK_STATEMENT", note: "Most recent 6 consecutive months for all business accounts." } },
+
+    { id: "lease", label: "Business Lease / Rental Agreement", portalLocation: "certifications.sba.gov → Document Upload", type: "files",
+      status: "missing",
+      content: { docs: [], dropCategory: "CERTIFICATION_DOCUMENT", note: "Current lease or home office declaration if home-based." } },
+
+    // ── SUBMIT ──
+    { id: "submit-final", label: "Review & Submit", portalLocation: "certifications.sba.gov → Submit Application", type: "info",
+      status: "missing",
+      content: { text: "Review all sections in the SBA portal. Ensure all narratives are pasted and all documents uploaded. Click Submit. SBA review typically takes 60-90 days. Respond promptly to any requests for additional information." } },
   ];
 
-  if (loading) return (
-    <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>Loading...</div>
-  );
+  const readyCount = steps.filter(s => s.status === "ready").length;
+  const totalSteps = steps.length;
 
-  const sidebarContent = (
-    <div>
-      <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 8, fontWeight: 600 }}>8(a) Sections</div>
-      {EIGHT_A_SECTIONS.map((s, i) => {
-        const isActive = s.id === "submit";
-        const isCompleted = completedSections[s.id];
-        return (
-          <a key={s.id} href={`/certifications/${certId}/8a/${s.id}`} style={{
-            display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", borderRadius: "var(--r)",
-            marginBottom: 2, textDecoration: "none",
-            background: isActive ? "rgba(200,155,60,.15)" : "transparent",
-            border: isActive ? "1px solid rgba(200,155,60,.25)" : "1px solid transparent",
-            color: isActive ? "var(--gold2)" : isCompleted ? "rgba(255,255,255,.7)" : "rgba(255,255,255,.35)",
-            fontSize: 12,
-          }}>
-            <div style={{
-              width: 18, height: 18, borderRadius: "50%",
-              background: isCompleted ? "var(--green)" : isActive ? "rgba(200,155,60,.3)" : "rgba(255,255,255,.1)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 9, color: "#fff", fontWeight: 700, flexShrink: 0,
-            }}>
-              {isCompleted ? "\u2713" : i + 1}
-            </div>
-            {s.label}
-          </a>
-        );
-      })}
-      <a href={`/certifications/${certId}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", borderRadius: "var(--r)", textDecoration: "none", color: "rgba(255,255,255,.4)", fontSize: 12, marginTop: 16 }}>&larr; Back to Dashboard</a>
-    </div>
-  );
+  if (loading) return <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>Loading...</div>;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
-      <CertSidebar user={user} certId={certId} activePage="certifications" sidebarContent={sidebarContent} />
-
-      <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
-        {pw.loading && (
-          <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)", fontSize: 14 }}>
-            Checking access...
+      {/* Sidebar */}
+      <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
+        <div style={{ padding: "24px 20px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
+          <a href={homeLink} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+            <div style={{ width: 32, height: 32, background: "var(--gold)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+            </div>
+            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "#fff", fontWeight: 500 }}>Gov<em style={{ color: "var(--gold2)", fontStyle: "normal" }}>Cert</em></span>
+          </a>
+        </div>
+        <nav style={{ padding: "16px 12px", flex: 1, overflowY: "auto" }}>
+          <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 6, fontWeight: 600 }}>SBA Portal Flow</div>
+          {steps.map(step => (
+            <div key={step.id} onClick={() => setExpandedStep(expandedStep === step.id ? null : step.id)}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 9px", borderRadius: "var(--r)", marginBottom: 1, cursor: "pointer",
+                background: expandedStep === step.id ? "rgba(200,155,60,.15)" : "transparent",
+                color: expandedStep === step.id ? "var(--gold2)" : "rgba(255,255,255,.45)", fontSize: 11 }}>
+              <div style={{ width: 14, height: 14, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, color: "#fff",
+                background: step.status === "ready" ? "var(--green)" : step.status === "partial" ? "rgba(200,155,60,.5)" : "rgba(255,255,255,.12)" }}>
+                {step.status === "ready" ? "\u2713" : ""}
+              </div>
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{step.label}</span>
+            </div>
+          ))}
+        </nav>
+        <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
+          <div style={{ padding: "10px 12px" }}>
+            <div style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>{user?.firstName} {user?.lastName}</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 2 }}>{user?.email}</div>
           </div>
-        )}
-        {!pw.loading && !pw.generationAccess && (
-          <PaywallModal
-            certType="EIGHT_A"
-            price={pw.price}
-            betaMode={pw.betaMode}
-            onUnlock={pw.onUnlock}
-            onClose={pw.closePaywall}
-          />
-        )}
-        <div style={!pw.loading && !pw.generationAccess ? { filter: "blur(8px)", pointerEvents: "none" as const, userSelect: "none" as const } : {}}>
-        <div style={{ padding: "40px 48px", maxWidth: 900 }}>
-          <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>&larr; Back to Application Dashboard</a>
+        </div>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, overflow: "auto" }}>
+        {pw.loading && <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>Checking access...</div>}
+        {!pw.loading && !pw.generationAccess && <PaywallModal certType="EIGHT_A" price={pw.price} betaMode={pw.betaMode} onUnlock={pw.onUnlock} onClose={pw.closePaywall} />}
+        <div style={!pw.loading && !pw.generationAccess ? { filter: "blur(8px)", pointerEvents: "none" as const } : {}}>
+        <div style={{ padding: "40px 48px", maxWidth: 920 }}>
+          <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>← Back to Application Dashboard</a>
 
           <div style={{ marginTop: 20, marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Section 7 of 7</div>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Submit 8(a) Application</h1>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Final Step</div>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>8(a) Certification Submission</h1>
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300, lineHeight: 1.6 }}>
-              Review your submission checklist, copy narrative sections, and submit through the SBA Certify portal.
+              Everything you need for <a href="https://certifications.sba.gov" target="_blank" rel="noopener noreferrer" style={{ color: "var(--gold)", fontWeight: 500 }}>certifications.sba.gov</a>. Open the SBA portal side by side and work through each step.
             </p>
           </div>
 
-          {error && (
-            <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "var(--red)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>{error}</span>
-              <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>&times;</button>
-            </div>
-          )}
-
-          {/* Readiness Summary */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }}>
-            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px", boxShadow: "var(--shadow)" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>Application Sections</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: appSectionsDone === 6 ? "var(--green)" : "var(--navy)", fontWeight: 400 }}>
-                {appSectionsDone}<span style={{ fontSize: 18, color: "var(--ink3)" }}> / 6 complete</span>
+          {/* Progress */}
+          <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold2)", marginBottom: 4 }}>
+                {readyCount === totalSteps ? "\u2713 Ready to submit" : `${readyCount} of ${totalSteps} steps ready`}
               </div>
-              <div style={{ height: 6, background: "var(--cream2)", borderRadius: 100, overflow: "hidden", marginTop: 10 }}>
-                <div style={{ height: "100%", width: `${(appSectionsDone / 6) * 100}%`, background: appSectionsDone === 6 ? "var(--green)" : "var(--gold)", borderRadius: 100, transition: "width .5s" }} />
+              <div style={{ height: 4, width: 200, background: "rgba(255,255,255,.1)", borderRadius: 100, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${(readyCount / totalSteps) * 100}%`, background: readyCount === totalSteps ? "var(--green)" : "var(--gold)", borderRadius: 100 }} />
               </div>
             </div>
-            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px", boxShadow: "var(--shadow)" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>SBA Checklist Items</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: completedCount === totalCount ? "var(--green)" : "var(--navy)", fontWeight: 400 }}>
-                {completedCount}<span style={{ fontSize: 18, color: "var(--ink3)" }}> / {totalCount} ready</span>
-              </div>
-              <div style={{ height: 6, background: "var(--cream2)", borderRadius: 100, overflow: "hidden", marginTop: 10 }}>
-                <div style={{ height: "100%", width: `${(completedCount / totalCount) * 100}%`, background: completedCount === totalCount ? "var(--green)" : "var(--gold)", borderRadius: 100, transition: "width .5s" }} />
-              </div>
-            </div>
+            <a href="https://certifications.sba.gov" target="_blank" rel="noopener noreferrer"
+              style={{ padding: "10px 20px", background: "var(--gold)", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none" }}>
+              Open SBA Portal →
+            </a>
           </div>
 
-          {/* Gap Analysis */}
-          {appSectionsDone < 6 && (
-            <div style={{ background: "#FFF8E1", border: "2px solid #FFB300", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "#F57F17", marginBottom: 8 }}>Missing Sections</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {EIGHT_A_SECTIONS.filter(s => s.id !== "submit" && !completedSections[s.id]).map(s => (
-                  <a key={s.id} href={`/certifications/${certId}/8a/${s.id}`}
-                    style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#F57F17", textDecoration: "none" }}>
-                    <span style={{ color: "#F57F17" }}>{"\u2717"}</span>
-                    {s.label} — <span style={{ textDecoration: "underline" }}>Complete now</span>
-                  </a>
-                ))}
+          {/* GovCert Analysis */}
+          <a href={`/certifications/${certId}/8a/review`}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", marginBottom: 20,
+              background: "linear-gradient(135deg, #1A2332 0%, #2D3748 100%)", borderRadius: "var(--rl)", textDecoration: "none",
+              border: "1px solid rgba(99,102,241,.3)", boxShadow: "0 4px 20px rgba(99,102,241,.15)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg, #6366F1, #8B5CF6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{"\uD83D\uDD0D"}</div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#fff" }}>Run GovCert Analysis</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 2 }}>AI review of your 8(a) application — scores each section and identifies gaps.</div>
               </div>
+            </div>
+            <div style={{ padding: "10px 20px", background: "rgba(99,102,241,.2)", border: "1px solid rgba(99,102,241,.4)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>Analyze →</div>
+          </a>
+
+          {error && (
+            <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "var(--red)", display: "flex", justifyContent: "space-between" }}>
+              <span>{error}</span>
+              <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer" }}>&times;</button>
             </div>
           )}
 
-          {/* Financial Readiness Check */}
-          {cert?.clientId && <FinancialReadiness clientId={cert.clientId} certType="EIGHT_A" />}
+          {/* Steps */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {steps.map(step => {
+              const isOpen = expandedStep === step.id;
+              const statusColor = step.status === "ready" ? "var(--green)" : step.status === "partial" ? "var(--amber)" : "var(--ink4)";
+              const statusBg = step.status === "ready" ? "var(--green-bg)" : step.status === "partial" ? "var(--amber-bg)" : "var(--cream2)";
 
-          {/* SBA Form 1010 Submission Wizard */}
-          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400 }}>SBA Form 1010 Submission Guide</h3>
-              <a href="https://certifications.sba.gov" target="_blank" rel="noopener noreferrer"
-                style={{ padding: "8px 16px", background: "var(--navy)", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "var(--gold2)", textDecoration: "none", whiteSpace: "nowrap" }}>
-                Open certifications.sba.gov ↗
-              </a>
-            </div>
-            <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 6 }}>Every document required for your 8(a) application. Click any item for detailed guidance on what it is, where to find it, and exactly where to upload it on certifications.sba.gov.</p>
-            <div style={{ padding: "10px 14px", background: "rgba(200,155,60,.05)", borderRadius: "var(--r)", border: "1px solid rgba(200,155,60,.12)", marginBottom: 16, fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
-              <strong style={{ color: "var(--gold)" }}>💡 Tip:</strong> Work through this list top to bottom. GovCert has already prepared several items for you (marked green). For remaining items, click to expand and follow the guidance.
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {SBA_FORM_1010_CHECKLIST.map(item => {
-                const complete = isItemComplete(item);
-                const isExpanded = manualChecks[`expanded_${item.id}`];
-                const isDragTarget = dragOverItem === item.id;
-                return (
-                  <div key={item.id}
-                    onDragOver={(e) => { e.preventDefault(); setDragOverItem(item.id); }}
-                    onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
-                    onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleChecklistDrop(item.id, e.dataTransfer.files, (item as any).docCategory || null); }}
-                    style={{
-                    border: `1px solid ${isDragTarget ? "var(--gold)" : complete ? "var(--green-b)" : isExpanded ? "rgba(200,155,60,.25)" : "var(--border)"}`,
-                    borderRadius: "var(--r)", overflow: "hidden",
-                    background: isDragTarget ? "rgba(200,155,60,.08)" : complete ? "var(--green-bg)" : isExpanded ? "rgba(200,155,60,.02)" : "#fff",
-                    borderStyle: isDragTarget ? "dashed" : "solid",
-                    transition: "all .15s",
-                  }}>
-                    <div style={{
-                      display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                      cursor: "pointer",
-                    }}
-                      onClick={() => setManualChecks(prev => ({ ...prev, [`expanded_${item.id}`]: !prev[`expanded_${item.id}`] }))}>
-                      <div onClick={(e) => { e.stopPropagation(); if (!item.field) setManualChecks(prev => ({ ...prev, [item.id]: !prev[item.id] })); }} style={{
-                        width: 22, height: 22, borderRadius: 4,
-                        border: `2px solid ${complete ? "var(--green)" : "var(--border2)"}`,
-                        background: complete ? "var(--green)" : "#fff",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 12, color: "#fff", fontWeight: 700, flexShrink: 0,
-                      }}>
-                        {complete ? "\u2713" : ""}
-                      </div>
-                      <span style={{ fontSize: 14, color: complete ? "var(--green)" : "var(--navy)", fontWeight: complete ? 500 : 400, flex: 1 }}>{item.label}</span>
-                      {uploadingItem === item.id && (
-                        <span style={{ fontSize: 11, color: "var(--gold)", fontWeight: 500, marginRight: 8 }}>Uploading...</span>
-                      )}
-                      {uploadedFiles[item.id] && (
-                        <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 500, marginRight: 8, display: "flex", alignItems: "center", gap: 4 }}>
-                          &#x2713; {uploadedFiles[item.id]}
-                        </span>
-                      )}
-                      {item.section && !complete && !uploadedFiles[item.id] && (
-                        <a href={`/certifications/${certId}/8a/${item.section}`}
-                          onClick={e => e.stopPropagation()}
-                          style={{ fontSize: 12, color: "var(--gold)", textDecoration: "none", fontWeight: 500, marginRight: 8 }}>
-                          Complete →
-                        </a>
-                      )}
-                      {complete && item.field && !uploadedFiles[item.id] && (
-                        <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 500, marginRight: 8 }}>Auto-detected</span>
-                      )}
-                      <span style={{ fontSize: 10, color: "var(--ink4)", fontWeight: 600 }}>{isExpanded ? "▲" : "▼"}</span>
+              return (
+                <div key={step.id} style={{ background: "#fff", border: `1px solid ${step.status === "ready" ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
+                  <div onClick={() => setExpandedStep(isOpen ? null : step.id)}
+                    style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: isOpen ? "var(--cream)" : "#fff" }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: step.status === "ready" ? "var(--green)" : "var(--cream2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff", fontWeight: 700, flexShrink: 0 }}>
+                      {step.status === "ready" ? "\u2713" : ""}
                     </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{step.label}</div>
+                      <div style={{ fontSize: 11, color: "var(--ink4)" }}>{step.portalLocation}</div>
+                    </div>
+                    <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 10, fontWeight: 600, background: statusBg, color: statusColor, textTransform: "uppercase", letterSpacing: ".06em" }}>
+                      {step.status === "ready" ? "Ready" : "Missing"}
+                    </span>
+                    <span style={{ fontSize: 14, color: "var(--gold)" }}>{isOpen ? "\u25B2" : "\u25BC"}</span>
+                  </div>
 
-                    {isExpanded && (
-                      <div style={{ padding: "0 14px 14px", borderTop: "1px solid var(--border)" }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-                          <div style={{ padding: "12px", background: "rgba(26,35,50,.02)", borderRadius: 8, border: "1px solid rgba(0,0,0,.04)" }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 6 }}>📄 What is this?</div>
-                            <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{(item as any).what}</div>
-                          </div>
-                          <div style={{ padding: "12px", background: "rgba(26,35,50,.02)", borderRadius: 8, border: "1px solid rgba(0,0,0,.04)" }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 6 }}>📍 Where to find it</div>
-                            <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{(item as any).where}</div>
-                          </div>
-                          <div style={{ padding: "12px", background: "rgba(11,25,41,.03)", borderRadius: 8, border: "1px solid rgba(11,25,41,.06)" }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--navy)", marginBottom: 6 }}>🏛️ On certifications.sba.gov</div>
-                            <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{(item as any).sbaPortal}</div>
-                          </div>
-                          <div style={{ padding: "12px", background: "rgba(26,35,50,.02)", borderRadius: 8, border: "1px solid rgba(0,0,0,.04)" }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 6 }}>📋 Format requirements</div>
-                            <div style={{ fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.6 }}>{(item as any).format}</div>
-                          </div>
-                        </div>
-                        {/* Generate Form 413 button */}
-                        {(item as any).generateForm413 && cert?.clientId && (() => {
-                          // Check if economic data has enough for Form 413
-                          let econData: any = {};
-                          try { if (cert?.application?.economicDisadvantageData) econData = JSON.parse(cert.application.economicDisadvantageData); } catch {}
-                          const hasAssets = !!(econData.cashOnHand || econData.cash || econData.savings || econData.realEstate || econData.retirement);
-                          const hasLiabilities = !!(econData.mortgage || econData.mortgageBalance || econData.notesPayable || econData.installmentDebt);
-                          const hasIncome = !!(econData.salary || econData.adjustedGrossIncome);
-                          const fieldsPresent = [hasAssets, hasLiabilities, hasIncome].filter(Boolean).length;
-                          const isReady = fieldsPresent >= 2;
+                  {isOpen && (
+                    <div style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }}>
+                      {/* INFO */}
+                      {step.type === "info" && step.content?.text && (
+                        <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.7 }}>{step.content.text}</div>
+                      )}
 
-                          return (
-                          <div style={{ marginTop: 12, padding: "14px", background: isReady ? "rgba(200,155,60,.06)" : "rgba(200,60,60,.04)", borderRadius: 8, border: `1px solid ${isReady ? "rgba(200,155,60,.2)" : "rgba(200,60,60,.15)"}` }}>
-                            {!isReady && (
-                              <div style={{ marginBottom: 10, padding: "8px 10px", background: "var(--red-bg)", borderRadius: 6, border: "1px solid var(--red-b)", fontSize: 12, color: "var(--red)", lineHeight: 1.6 }}>
-                                <strong>⚠️ Not enough data to generate Form 413.</strong> The Economic Disadvantage section needs more detail:
-                                {!hasAssets && <div style={{ marginLeft: 12 }}>• Assets: cash on hand, savings, real estate values, retirement accounts</div>}
-                                {!hasLiabilities && <div style={{ marginLeft: 12 }}>• Liabilities: mortgages, loans, installment debt</div>}
-                                {!hasIncome && <div style={{ marginLeft: 12 }}>• Income: salary, investment income</div>}
-                                <div style={{ marginTop: 6 }}><a href={`/certifications/${certId}/8a/economic-disadvantage`} style={{ color: "var(--gold)", fontWeight: 600 }}>Complete Economic Disadvantage section →</a></div>
-                              </div>
-                            )}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <div>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>📄 {isReady ? "Pre-Filled SBA Form 413" : "SBA Form 413 — Data Incomplete"}</div>
-                                <div style={{ fontSize: 11, color: "var(--ink3)", marginTop: 2 }}>
-                                  {isReady
-                                    ? "Generated from your Economic Disadvantage data. Review with your CPA, sign, and upload to the portal."
-                                    : "Complete the Economic Disadvantage section before generating. The Form 413 requires complete asset, liability, and income data to be valid."}
+                      {/* TEXT — narratives with copy */}
+                      {step.type === "text" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                          {(step.content?.narratives || []).length === 0 && step.content?.emptyMessage && (
+                            <div style={{ fontSize: 13, color: "var(--ink4)", fontStyle: "italic" }}>{step.content.emptyMessage}</div>
+                          )}
+                          {(step.content?.narratives || []).map((n: any) => (
+                            <div key={n.id} style={{ border: `1px solid ${n.value ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--r)", overflow: "hidden" }}>
+                              <div style={{ padding: "10px 14px", background: n.value ? "var(--green-bg)" : "var(--cream)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: n.value ? "var(--navy)" : "var(--ink4)" }}>
+                                  {n.value ? "\u2713 " : ""}{n.label}
                                 </div>
+                                {n.value && (
+                                  <button onClick={() => copyText(n.value, n.id)}
+                                    style={{ padding: "5px 14px", background: copiedId === n.id ? "var(--green)" : "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 600, color: copiedId === n.id ? "#fff" : "var(--gold2)", cursor: "pointer" }}>
+                                    {copiedId === n.id ? "\u2713 Copied" : "Copy →"}
+                                  </button>
+                                )}
                               </div>
-                              <div style={{ display: "flex", gap: 8 }}>
-                                <button onClick={async () => {
-                                  try {
-                                    const resp = await fetch(
-                                      `${process.env.NEXT_PUBLIC_API_URL || ''}/api/applications/generate-form-413/${cert.clientId}`,
-                                      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-                                    );
-                                    if (!resp.ok) { alert('Failed to generate Form 413'); return; }
-                                    const blob = await resp.blob();
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url; a.download = `SBA_Form_413_${cert.client?.businessName?.replace(/\s+/g, '_') || 'Company'}.pdf`; a.click();
-                                    URL.revokeObjectURL(url);
-                                  } catch { alert('Failed to generate Form 413'); }
-                                }} disabled={!isReady} style={{
-                                  padding: "8px 16px", fontSize: 12, fontWeight: 600,
-                                  background: isReady ? "var(--gold)" : "var(--cream2)", color: isReady ? "#fff" : "var(--ink4)",
-                                  border: "none", borderRadius: "var(--r)", cursor: isReady ? "pointer" : "not-allowed",
-                                  opacity: isReady ? 1 : 0.6,
-                                }}>
-                                  {isReady ? "⬇ Download Pre-Filled 413" : "🔒 Complete Data First"}
-                                </button>
-                                <a href="https://www.sba.gov/document/sba-form-413" target="_blank" rel="noopener noreferrer" style={{
-                                  padding: "8px 16px", fontSize: 12, fontWeight: 500,
-                                  color: "var(--gold)", border: "1px solid rgba(200,155,60,.3)",
-                                  borderRadius: "var(--r)", textDecoration: "none",
-                                  display: "inline-flex", alignItems: "center",
-                                }}>
-                                  Blank Form ↗
-                                </a>
-                              </div>
+                              {n.value && (
+                                <div style={{ padding: "12px 14px", fontSize: 12.5, color: "var(--ink)", lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 400, overflowY: "auto" }}>
+                                  {n.value}
+                                </div>
+                              )}
                             </div>
-                          </div>
-                          );
-                        })()}
+                          ))}
+                        </div>
+                      )}
 
-                        {/* Show matching uploaded documents */}
-                        {(item as any).docCategory && (() => {
-                          const cats = Array.isArray((item as any).docCategory) ? (item as any).docCategory : [(item as any).docCategory];
-                          const matchedDocs = cats.flatMap((c: string) => clientDocs[c] || []);
-                          return matchedDocs.length > 0 ? true : false;
-                        })() && (
-                          <div style={{ marginTop: 12, padding: "12px", background: "var(--green-bg)", borderRadius: 8, border: "1px solid var(--green-b)" }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--green)", marginBottom: 8 }}>📁 Your uploaded files — ready to submit</div>
+                      {/* FILES — with drag-and-drop */}
+                      {step.type === "files" && (
+                        <div
+                          onDragOver={step.content?.dropCategory ? (e) => { e.preventDefault(); setDragOverStep(step.id); } : undefined}
+                          onDragLeave={step.content?.dropCategory ? () => setDragOverStep(null) : undefined}
+                          onDrop={step.content?.dropCategory ? (e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleFileDrop(step.id, e.dataTransfer.files, step.content.dropCategory); } : undefined}
+                          style={dragOverStep === step.id ? { border: "2px dashed var(--gold)", borderRadius: "var(--r)", padding: 8, background: "rgba(200,155,60,.04)" } : {}}>
+                          {uploadingStep === step.id && <div style={{ fontSize: 12, color: "var(--gold)", fontWeight: 500, marginBottom: 8 }}>Uploading...</div>}
+                          {step.content?.note && <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 10, lineHeight: 1.6 }}>{step.content.note}</div>}
+                          {(step.content?.docs || []).length > 0 ? (
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                              {(() => {
-                                const cats = Array.isArray((item as any).docCategory) ? (item as any).docCategory : [(item as any).docCategory];
-                                return cats.flatMap((c: string) => clientDocs[c] || []);
-                              })().map((doc: any) => (
-                                <div key={doc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: "#fff", borderRadius: 6, border: "1px solid var(--border)" }}>
+                              {step.content.docs.map((doc: any) => (
+                                <div key={doc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "var(--green-bg)", borderRadius: "var(--r)", border: "1px solid var(--green-b)" }}>
                                   <div>
-                                    <div style={{ fontSize: 12, fontWeight: 500, color: "var(--navy)" }}>{doc.originalName}</div>
-                                    {doc.documentYear && <span style={{ fontSize: 10, color: "var(--ink4)" }}>{doc.documentYear}</span>}
+                                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{doc.originalName}</div>
+                                    <div style={{ fontSize: 10, color: "var(--ink4)" }}>{doc.category?.replace(/_/g, " ")}{doc.documentYear ? ` \u00B7 ${doc.documentYear}` : ""}</div>
                                   </div>
-                                  <button onClick={async () => {
-                                    try {
-                                      const resp = await fetch(
-                                        `${process.env.NEXT_PUBLIC_API_URL || ''}/api/documents/download/${doc.id}`,
-                                        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-                                      );
-                                      if (!resp.ok) { alert('Download failed'); return; }
-                                      const blob = await resp.blob();
-                                      const url = URL.createObjectURL(blob);
-                                      const a = document.createElement('a');
-                                      a.href = url; a.download = doc.originalName || 'document'; a.click();
-                                      URL.revokeObjectURL(url);
-                                    } catch { alert('Download failed'); }
-                                  }} style={{
-                                    padding: "4px 12px", fontSize: 11, fontWeight: 600,
-                                    color: "var(--green)", border: "1px solid var(--green-b)",
-                                    borderRadius: 5, background: "transparent", cursor: "pointer",
-                                  }}>
-                                    ⬇ Download
+                                  <button onClick={() => downloadDoc(doc)}
+                                    style={{ padding: "5px 14px", fontSize: 11, fontWeight: 600, color: "var(--green)", border: "1px solid var(--green-b)", borderRadius: 5, background: "transparent", cursor: "pointer" }}>
+                                    Download
                                   </button>
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
-                        {(item as any).docCategory && (!clientDocs[(item as any).docCategory] || clientDocs[(item as any).docCategory].length === 0) && (
-                          <div style={{ marginTop: 12, padding: "10px 12px", background: "rgba(200,60,60,.03)", borderRadius: 8, border: "1px solid rgba(200,60,60,.1)", fontSize: 12, color: "var(--red)" }}>
-                            ⚠️ No matching file uploaded yet. Upload this document in <a href={`/portal/documents`} style={{ color: "var(--gold)", fontWeight: 600 }}>My Documents</a> or gather it from the source described above.
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Copy Narratives */}
-          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
-            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>Copy Narratives for SBA Certify</h3>
-            <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 16 }}>Click to copy each section for pasting into the SBA Certify portal.</p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {narrativeSections.map(ns => {
-                const text = getNarrativeText(ns.field);
-                const hasText = text.trim().length > 0;
-                return (
-                  <div key={ns.field} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px",
-                    background: hasText ? "var(--cream)" : "var(--cream2)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--r)",
-                  }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: hasText ? "var(--navy)" : "var(--ink4)" }}>{ns.label}</div>
-                      <div style={{ fontSize: 12, color: "var(--ink4)" }}>
-                        {hasText ? `${text.length.toLocaleString()} characters` : "Not yet drafted"}
-                      </div>
+                          ) : (
+                            <div style={{ padding: "14px", background: "rgba(200,60,60,.03)", borderRadius: "var(--r)", border: "1px solid rgba(200,60,60,.08)", fontSize: 12, color: "var(--red)" }}>
+                              No files uploaded yet. Drag and drop files here or upload on the relevant wizard page.
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <button
-                      onClick={() => copyToClipboard(text, ns.label)}
-                      disabled={!hasText}
-                      style={{
-                        padding: "8px 16px",
-                        background: hasText ? (copySuccess === ns.label ? "var(--green)" : "var(--gold)") : "var(--cream2)",
-                        border: "none",
-                        borderRadius: "var(--r)",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: hasText ? "#fff" : "var(--ink4)",
-                        cursor: hasText ? "pointer" : "not-allowed",
-                      }}
-                    >
-                      {copySuccess === ns.label ? "\u2713 Copied!" : "\uD83D\uDCCB Copy to Clipboard"}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Past Performance — Ready to Enter in Portal */}
-          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
-            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>Past Performance for certifications.sba.gov</h3>
-            <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 8, lineHeight: 1.6 }}>
-              On certifications.sba.gov, you enter each contract separately into structured fields. Below is each of your contracts formatted and ready to copy into the portal fields.
-            </p>
-            <div style={{ padding: "8px 12px", background: "rgba(200,155,60,.05)", borderRadius: "var(--r)", border: "1px solid rgba(200,155,60,.12)", marginBottom: 16, fontSize: 12, color: "var(--ink3)" }}>
-              <strong style={{ color: "var(--gold)" }}>Portal navigation:</strong> certifications.sba.gov → 8(a) Application → Business Activity → Government & Commercial Contracts → Add Contract
-            </div>
-
-            {(() => {
-              let contracts: any[] = [];
-              try {
-                const pp = cert?.application?.pastPerformance8a || cert?.application?.pastPerformance;
-                if (pp) contracts = typeof pp === "string" ? JSON.parse(pp) : pp;
-              } catch {}
-
-              if (contracts.length === 0) return (
-                <div style={{ padding: "20px", background: "var(--cream2)", borderRadius: "var(--r)", textAlign: "center", color: "var(--ink4)", fontSize: 13 }}>
-                  No past performance contracts entered yet. <a href={`/certifications/${certId}/8a/past-performance`} style={{ color: "var(--gold)", fontWeight: 600 }}>Add contracts →</a>
+                  )}
                 </div>
               );
-
-              return (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {contracts.map((c: any, i: number) => {
-                    const fields = [
-                      { label: "Agency / Client Name", value: c.agencyName },
-                      { label: "Contract Number", value: c.contractNumber },
-                      { label: "Contract Type", value: c.contractType },
-                      { label: "Contract Value", value: c.contractValue },
-                      { label: "Period of Performance", value: `${c.periodStart || ''} to ${c.periodEnd || ''}` },
-                      { label: "Description / Scope", value: c.sowDescription || c.description },
-                      { label: "Reference Name", value: `${c.referenceFirstName || ''} ${c.referenceLastName || ''}`.trim() },
-                      { label: "Reference Title", value: c.referenceTitle },
-                      { label: "Reference Email", value: c.referenceEmail },
-                      { label: "Reference Phone", value: c.referencePhone },
-                    ].filter(f => f.value && f.value.trim());
-
-                    const copyText = fields.map(f => `${f.label}: ${f.value}`).join('\n');
-
-                    return (
-                      <div key={i} style={{ border: "1px solid var(--border)", borderRadius: "var(--r)", overflow: "hidden" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "var(--cream)", borderBottom: "1px solid var(--border)" }}>
-                          <div>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>{c.agencyName || `Contract ${i + 1}`}</span>
-                            {c.contractValue && <span style={{ fontSize: 12, color: "var(--ink4)", marginLeft: 8 }}>{c.contractValue}</span>}
-                          </div>
-                          <button onClick={() => copyToClipboard(copyText, `contract-${i}`)} style={{
-                            padding: "6px 14px", fontSize: 12, fontWeight: 600,
-                            background: copySuccess === `contract-${i}` ? "var(--green)" : "var(--gold)",
-                            color: "#fff", border: "none", borderRadius: "var(--r)", cursor: "pointer",
-                          }}>
-                            {copySuccess === `contract-${i}` ? "✓ Copied!" : "📋 Copy All Fields"}
-                          </button>
-                        </div>
-                        <div style={{ padding: "12px 16px" }}>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                            {fields.map((f, fi) => (
-                              <div key={fi} style={{ padding: "6px 0" }}>
-                                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink4)", fontWeight: 600 }}>{f.label}</div>
-                                <div style={{ fontSize: 13, color: "var(--navy)", marginTop: 2 }}>{f.value}</div>
-                              </div>
-                            ))}
-                          </div>
-                          {c.narrative && (
-                            <div style={{ marginTop: 10, padding: "10px 12px", background: "rgba(200,155,60,.04)", borderRadius: 6, border: "1px solid rgba(200,155,60,.1)" }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--gold)", fontWeight: 600 }}>Performance Narrative</span>
-                                <button onClick={() => copyToClipboard(c.narrative, `narrative-${i}`)} style={{
-                                  padding: "3px 10px", fontSize: 11, fontWeight: 600,
-                                  background: copySuccess === `narrative-${i}` ? "var(--green)" : "transparent",
-                                  color: copySuccess === `narrative-${i}` ? "#fff" : "var(--gold)",
-                                  border: `1px solid ${copySuccess === `narrative-${i}` ? "var(--green)" : "rgba(200,155,60,.3)"}`,
-                                  borderRadius: 4, cursor: "pointer",
-                                }}>
-                                  {copySuccess === `narrative-${i}` ? "✓" : "Copy"}
-                                </button>
-                              </div>
-                              <div style={{ fontSize: 12, color: "var(--ink2)", lineHeight: 1.6 }}>{c.narrative.substring(0, 300)}{c.narrative.length > 300 ? "..." : ""}</div>
-                            </div>
-                          )}
-                          {(!c.referenceEmail) && (
-                            <div style={{ marginTop: 8, padding: "6px 10px", background: "var(--red-bg)", borderRadius: 4, border: "1px solid var(--red-b)", fontSize: 11, color: "var(--red)" }}>
-                              ⚠️ Missing reference contact — SBA may contact your references. <a href={`/certifications/${certId}/8a/past-performance`} style={{ color: "var(--gold)", fontWeight: 600 }}>Add reference →</a>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+            })}
           </div>
 
-          {/* Download & Submit */}
-          <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "28px 32px", marginBottom: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "#fff", fontWeight: 400, marginBottom: 6 }}>Ready to Submit?</h3>
-                <p style={{ fontSize: 14, color: "rgba(255,255,255,.5)", lineHeight: 1.6 }}>
-                  Download your full submission package, then submit through the SBA Certify portal.
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: 12 }}>
-                <button
-                  onClick={downloadPackage}
-                  disabled={downloading}
-                  style={{
-                    padding: "12px 24px",
-                    background: "rgba(255,255,255,.1)",
-                    border: "1px solid rgba(255,255,255,.2)",
-                    borderRadius: "var(--r)",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  {downloading ? "Preparing..." : "\u2B07 Download Package"}
-                </button>
-                <a
-                  href={`/certifications/${certId}/8a/review`}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "12px 24px",
-                    background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
-                    border: "none",
-                    borderRadius: "var(--r)",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: "#fff",
-                    textDecoration: "none",
-                    boxShadow: "0 4px 16px rgba(99,102,241,.3)",
-                  }}
-                >
-                  🔍 Run GovCert Analysis
-                </a>
-                <a
-                  href="https://certifications.sba.gov"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "12px 28px",
-                    background: "var(--gold)",
-                    border: "none",
-                    borderRadius: "var(--r)",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: "#fff",
-                    textDecoration: "none",
-                  }}
-                >
-                  Go to SBA Certify &rarr;
-                </a>
-              </div>
+          {/* Bottom */}
+          <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "24px 28px", marginTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: "#fff", marginBottom: 4 }}>Ready to submit?</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,.45)" }}>Open the SBA portal side by side and work through each step above.</div>
             </div>
-          </div>
-
-          {/* Back nav */}
-          <div style={{ display: "flex", justifyContent: "flex-start", marginTop: 20 }}>
-            <a href={`/certifications/${certId}/8a/financials`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>&larr; Previous: Financials</a>
+            <div style={{ display: "flex", gap: 12 }}>
+              <a href={`/certifications/${certId}`} style={{ padding: "10px 20px", background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, textDecoration: "none" }}>← Dashboard</a>
+              <a href={`/certifications/${certId}/8a/review`} style={{ padding: "10px 20px", background: "linear-gradient(135deg, #6366F1, #8B5CF6)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Run Analysis</a>
+              <a href="https://certifications.sba.gov" target="_blank" rel="noopener noreferrer" style={{ padding: "10px 24px", background: "var(--gold)", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, textDecoration: "none" }}>Open SBA Portal →</a>
+            </div>
           </div>
         </div>
         </div>

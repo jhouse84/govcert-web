@@ -72,15 +72,16 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
         try { setSinNarratives(JSON.parse(data.application.sinNarratives)); } catch {}
       }
 
-      // Fetch ALL client documents
+      // Fetch ALL client documents (use the documents list endpoint, not by-category)
       if (data.clientId) {
         try {
-          const allCats = "FINANCIAL_STATEMENT,CONTRACT,CAPABILITY_STATEMENT,CERTIFICATION_DOCUMENT,INVOICE,TAX_RETURN,RESUME,BANK_STATEMENT,BUSINESS_LICENSE,PPQ_RESPONSE,PPQ_COMPLETED,CPARS_REPORT,RATE_CARD,PAST_PROPOSAL,CSP1_GENERATED,PRICE_PROPOSAL_GENERATED,NEGOTIATOR_LETTER_GENERATED,SUBCONTRACTING_PLAN_GENERATED,OTHER";
-          const docs = await apiRequest(`/api/upload/documents/by-category/${data.clientId}/${allCats}`);
+          const rawDocs = await apiRequest(`/api/upload/documents?clientId=${data.clientId}`);
           const grouped: Record<string, any[]> = {};
-          for (const doc of (Array.isArray(docs) ? docs : [])) {
-            if (!grouped[doc.category]) grouped[doc.category] = [];
-            grouped[doc.category].push(doc);
+          for (const doc of (Array.isArray(rawDocs) ? rawDocs : [])) {
+            // Strip heavy fields — submit page only needs id, name, category for download
+            const light = { id: doc.id, originalName: doc.originalName, category: doc.category, documentYear: doc.documentYear };
+            if (!grouped[light.category]) grouped[light.category] = [];
+            grouped[light.category].push(light);
           }
           setClientDocs(grouped);
         } catch (e) { console.error("Failed to load documents:", e); }

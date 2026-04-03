@@ -149,36 +149,63 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
       const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
 
-      // Map existing past performance entries to references
-      if (data.application?.pastPerformance?.length > 0) {
-        const mapped: PastPerfReference[] = data.application.pastPerformance.map((pp: any) => {
-          const ppqStatus = pp.ppqs?.[0]?.status || "NOT_SENT";
-          let status: RefStatus = "EMPTY";
-          // A record with a file (fileName or documentId) is COMPLETE
-          if (pp.cparsUploaded || pp.fileName || pp.documentId || ppqStatus === "COMPLETED") status = "COMPLETE";
-          else if (ppqStatus === "OPENED") status = "PPQ_OPENED";
-          else if (ppqStatus === "SENT" || ppqStatus === "PENDING") status = "PPQ_SENT";
+      // ── Build references from TWO sources and merge ──
+      // Source 1: PastPerformance records (may have AI-extracted details)
+      // Source 2: Document records with PPQ/CPARS categories (the actual files — always visible)
+      const ppRecords = data.application?.pastPerformance || [];
+      const ppDocIds = new Set(ppRecords.map((pp: any) => pp.documentId).filter(Boolean));
 
-          return {
-            id: pp.id,
-            name: [pp.referenceFirstName, pp.referenceLastName].filter(Boolean).join(" ") || pp.agencyName || pp.fileName?.replace(/\.[^.]+$/, "") || `Reference ${pp.id.slice(-4)}`,
-            agency: pp.agencyName || "",
-            status,
-            fileName: pp.fileName || null,
-            documentId: pp.documentId || null,
-            ppqId: pp.ppqs?.[0]?.id || null,
-            contractDetails: {
-              agencyName: pp.agencyName || "",
-              contractNumber: pp.contractNumber || "",
-              contractValue: pp.contractValue || "",
-              periodStart: pp.periodStart || "",
-              periodEnd: pp.periodEnd || "",
-              description: pp.description || pp.sowDescription || "",
-            },
-          };
-        });
-        setReferences(mapped);
+      const mappedFromPP: PastPerfReference[] = ppRecords.map((pp: any) => {
+        const ppqStatus = pp.ppqs?.[0]?.status || "NOT_SENT";
+        let status: RefStatus = "EMPTY";
+        if (pp.cparsUploaded || pp.fileName || pp.documentId || ppqStatus === "COMPLETED") status = "COMPLETE";
+        else if (ppqStatus === "OPENED") status = "PPQ_OPENED";
+        else if (ppqStatus === "SENT" || ppqStatus === "PENDING") status = "PPQ_SENT";
+
+        return {
+          id: pp.id,
+          name: [pp.referenceFirstName, pp.referenceLastName].filter(Boolean).join(" ") || pp.agencyName || pp.fileName?.replace(/\.[^.]+$/, "") || `Reference ${pp.id.slice(-4)}`,
+          agency: pp.agencyName || "",
+          status,
+          fileName: pp.fileName || null,
+          documentId: pp.documentId || null,
+          ppqId: pp.ppqs?.[0]?.id || null,
+          contractDetails: {
+            agencyName: pp.agencyName || "",
+            contractNumber: pp.contractNumber || "",
+            contractValue: pp.contractValue || "",
+            periodStart: pp.periodStart || "",
+            periodEnd: pp.periodEnd || "",
+            description: pp.description || pp.sowDescription || "",
+          },
+        };
+      });
+
+      // Source 2: Query actual uploaded PPQ/CPARS documents for this client
+      // Any document that exists but has no PastPerformance record still shows up
+      const clientId = data.clientId || data.client?.id;
+      let mappedFromDocs: PastPerfReference[] = [];
+      if (clientId) {
+        try {
+          const cats = "PPQ_RESPONSE,PPQ_COMPLETED,CPARS_REPORT";
+          const docs = await apiRequest(`/api/upload/documents/by-category/${clientId}/${cats}`);
+          mappedFromDocs = (Array.isArray(docs) ? docs : [])
+            .filter((doc: any) => !ppDocIds.has(doc.id)) // Don't duplicate ones already linked to PP records
+            .map((doc: any) => ({
+              id: `doc-${doc.id}`,
+              name: doc.originalName?.replace(/\.[^.]+$/, "") || "Uploaded Reference",
+              agency: "",
+              status: "COMPLETE" as RefStatus,
+              fileName: doc.originalName || null,
+              documentId: doc.id,
+              ppqId: null,
+              contractDetails: null,
+            }));
+        } catch {}
       }
+
+      // Merge: PP records first (they have richer data), then orphan documents
+      setReferences([...mappedFromPP, ...mappedFromDocs]);
 
       // Load saved SIN narratives
       if (data.application?.sinNarratives) {
@@ -935,9 +962,30 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                         {sc.label}
                       </span>
                       {ref.fileName && (
-                        <span style={{ fontSize: 11, color: "var(--ink4)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: 11, color: "var(--ink4)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={ref.fileName}>
                           {ref.fileName}
                         </span>
+                      )}
+                      {ref.documentId && (
+                        <button onClick={async () => {
+                          try {
+                            const docIdClean = ref.documentId.startsWith("doc-") ? ref.documentId.slice(4) : ref.documentId;
+                            const resp = await fetch(
+                              `${API}/api/documents/download/${docIdClean}`,
+                              { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+                            );
+                            if (!resp.ok) { setError("Download failed"); return; }
+                            const blob = await resp.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url; a.download = ref.fileName || "reference.pdf"; a.click();
+                            URL.revokeObjectURL(url);
+                          } catch { setError("Download failed"); }
+                        }}
+                          style={{ padding: "3px 10px", fontSize: 11, fontWeight: 600, color: "var(--green)", border: "1px solid var(--green-b)", borderRadius: 5, background: "transparent", cursor: "pointer" }}
+                          title="Download file to your computer for eOffer upload">
+                          Download
+                        </button>
                       )}
                       <button onClick={() => deleteReference(index)}
                         style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "var(--ink4)", padding: "2px 6px" }}

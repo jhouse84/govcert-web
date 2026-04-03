@@ -2,56 +2,126 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
-import { fmtCurrencyInput, parseCurrencyRaw, fmtPhone, parsePhoneRaw } from "@/lib/formatters";
 import { SecurityBanner } from "@/components/SecurityBadge";
 
-const CONTRACT_TYPES = ["Federal Government", "State/Local Government", "Commercial", "Non-Profit"];
+const API = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
 
-type PPQStatus = "NOT_SENT" | "PENDING" | "SENT" | "OPENED" | "COMPLETED" | "DECLINED";
-
-const PPQ_STATUS_STYLES: Record<PPQStatus, { bg: string; color: string; label: string }> = {
-  NOT_SENT: { bg: "var(--cream2)", color: "var(--ink3)", label: "Not Sent" },
-  PENDING: { bg: "var(--amber-bg)", color: "var(--amber)", label: "Pending" },
-  SENT: { bg: "var(--blue-bg,#E8EEF8)", color: "var(--blue,#1A3F7A)", label: "Sent" },
-  OPENED: { bg: "var(--purple-bg,#F0E8F8)", color: "var(--purple,#4A1A7A)", label: "Opened" },
-  COMPLETED: { bg: "var(--green-bg)", color: "var(--green)", label: "Completed" },
-  DECLINED: { bg: "var(--red-bg)", color: "var(--red)", label: "Declined" },
+/* ── SIN descriptions ── */
+const SIN_DESCRIPTIONS: Record<string, string> = {
+  "541611": "Management Consulting Services",
+  "541612": "Human Resources Consulting Services",
+  "541613": "Marketing Consulting Services",
+  "541614": "Process, Physical Distribution, and Logistics Consulting Services",
+  "541618": "Other Management Consulting Services",
+  "541620": "Environmental Consulting Services",
+  "541690": "Other Scientific and Technical Consulting Services",
+  "541511": "Custom Computer Programming Services",
+  "541512": "Computer Systems Design Services",
+  "541519": "Other Computer Related Services",
+  "611430": "Professional and Management Development Training",
+  "541990": "All Other Professional, Scientific, and Technical Services",
+  "541330": "Engineering Services",
+  "541350": "Building Inspection Services",
 };
 
-const EMPTY_CONTRACT = {
-  agencyName: "",
-  contractNumber: "",
-  contractType: "Federal Government",
-  contractValue: "",
-  periodStart: "",
-  periodEnd: "",
-  sowDescription: "",
-  hasCPARS: null as boolean | null,
-  cparsUploaded: false,
-  referenceFirstName: "",
-  referenceLastName: "",
-  referenceEmail: "",
-  referencePhone: "",
-  referenceTitle: "",
-  ppqStatus: "NOT_SENT" as PPQStatus,
-  ppqSentAt: "" as string,
-  ppqOpenedAt: "" as string,
-  ppqCompletedAt: "" as string,
-  narrative: "",
-  performanceType: "CORPORATE" as string,
-  personnelName: "",
-  personnelRole: "",
+/* ── Reference data model ── */
+type RefStatus = "EMPTY" | "PPQ_SENT" | "PPQ_OPENED" | "COMPLETE";
+
+interface PastPerfReference {
+  id: string;
+  name: string;
+  agency: string;
+  status: RefStatus;
+  fileName: string | null;
+  documentId: string | null;
+  ppqId: string | null;
+  contractDetails: {
+    agencyName: string;
+    contractNumber: string;
+    contractValue: string;
+    periodStart: string;
+    periodEnd: string;
+    description: string;
+  } | null;
+}
+
+const EMPTY_REF: PastPerfReference = {
   id: "",
+  name: "",
+  agency: "",
+  status: "EMPTY",
+  fileName: null,
+  documentId: null,
+  ppqId: null,
+  contractDetails: null,
 };
 
+const STATUS_COLORS: Record<RefStatus, { bg: string; color: string; label: string }> = {
+  EMPTY:      { bg: "var(--cream2)", color: "var(--ink4)", label: "Empty" },
+  PPQ_SENT:   { bg: "var(--amber-bg, #FFF8E8)", color: "var(--amber, #B8860B)", label: "PPQ Sent" },
+  PPQ_OPENED: { bg: "var(--blue-bg, #E8EEF8)", color: "var(--blue, #1A3F7A)", label: "PPQ Opened" },
+  COMPLETE:   { bg: "var(--green-bg)", color: "var(--green)", label: "Complete" },
+};
+
+/* ── Input style helper ── */
+const inputStyle: React.CSSProperties = {
+  width: "100%", padding: "9px 12px", border: "1px solid var(--border2)",
+  borderRadius: "var(--r)", fontSize: 13.5, outline: "none",
+  boxSizing: "border-box", fontFamily: "'DM Sans', sans-serif",
+};
+const labelStyle: React.CSSProperties = {
+  display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)",
+  marginBottom: 5, textTransform: "uppercase", letterSpacing: ".06em",
+};
+
+/* ══════════════════════════════════════════════════════════════════ */
 export default function PastPerformancePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
   const certId = String(id);
+
+  /* ── Core state ── */
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  /* ── Smart scan ── */
+  const [scanning, setScanning] = useState(false);
+  const [scanResults, setScanResults] = useState<any>(null);
+
+  /* ── Area 1: References ── */
+  const [references, setReferences] = useState<PastPerfReference[]>([]);
+  const [uploadingRef, setUploadingRef] = useState(false);
+  const [ppqModal, setPpqModal] = useState<{
+    open: boolean; step: 1 | 2 | 3;
+    refIndex: number | null;
+    name: string; email: string; title: string; agency: string;
+    relationship: string;
+    emailSubject: string; emailBody: string;
+    drafting: boolean; sending: boolean;
+  }>({
+    open: false, step: 1, refIndex: null,
+    name: "", email: "", title: "", agency: "",
+    relationship: "",
+    emailSubject: "", emailBody: "",
+    drafting: false, sending: false,
+  });
+
+  /* ── Area 2: SIN Narratives ── */
+  const [sinNarratives, setSinNarratives] = useState<Record<string, string>>({});
+  const [generatingSin, setGeneratingSin] = useState<string | null>(null);
+
+  /* ── Drag and drop ── */
+  const [dragOverArea, setDragOverArea] = useState<string | null>(null);
+
+  /* ── Misc ── */
+  const ppqFileRef = useRef<HTMLInputElement>(null);
+  const cparsFileRef = useRef<HTMLInputElement>(null);
   const [homeLink, setHomeLink] = useState("/portal");
+
   useEffect(() => {
     try {
       const token = localStorage.getItem("token");
@@ -61,47 +131,8 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
       }
     } catch {}
   }, []);
-  const [contracts, setContracts] = useState<typeof EMPTY_CONTRACT[]>([]);
-  const [expandedContract, setExpandedContract] = useState<number | null>(null);
-  const [addingContract, setAddingContract] = useState(false);
-  const [newContract, setNewContract] = useState({ ...EMPTY_CONTRACT });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [sendingPPQ, setSendingPPQ] = useState<string | null>(null);
-  const [generatingNarrative, setGeneratingNarrative] = useState<string | null>(null);
-  const [uploadingCPARS, setUploadingCPARS] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // AI file upload extraction
-  const [ppUploading, setPpUploading] = useState(false);
-  const [ppExtracted, setPpExtracted] = useState<any[]>([]);
-  const [ppDragOver, setPpDragOver] = useState(false);
-  const ppFileRef = useRef<HTMLInputElement>(null);
-
-  // PPQ Flow Modal state
-  const [ppqModal, setPpqModal] = useState<{
-    open: boolean;
-    step: 1 | 2 | 3;
-    contractIndex: number | null;
-    referenceName: string;
-    referenceEmail: string;
-    referenceTitle: string;
-    referenceAgency: string;
-    relationship: string;
-    emailSubject: string;
-    emailBody: string;
-    drafting: boolean;
-    sending: boolean;
-    showDisclaimer: boolean;
-  }>({
-    open: false, step: 1, contractIndex: null,
-    referenceName: "", referenceEmail: "", referenceTitle: "",
-    referenceAgency: "", relationship: "",
-    emailSubject: "", emailBody: "",
-    drafting: false, sending: false, showDisclaimer: true,
-  });
-
+  /* ── Initial load ── */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -114,34 +145,51 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
     try {
       const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
+
+      // Map existing past performance entries to references
       if (data.application?.pastPerformance?.length > 0) {
-        const mapped = data.application.pastPerformance.map((pp: any) => ({
-          ...EMPTY_CONTRACT,
-          id: pp.id,
-          agencyName: pp.agencyName || "",
-          contractNumber: pp.contractNumber || "",
-          contractType: pp.contractType || "Federal Government",
-          contractValue: pp.contractValue || "",
-          periodStart: pp.periodStart || "",
-          periodEnd: pp.periodEnd || "",
-          sowDescription: pp.description || "",
-          hasCPARS: pp.hasCPARS ?? null,
-          cparsUploaded: pp.cparsUploaded || false,
-          referenceFirstName: pp.referenceFirstName || "",
-          referenceLastName: pp.referenceLastName || "",
-          referenceEmail: pp.referenceEmail || "",
-          referencePhone: pp.referencePhone || "",
-          referenceTitle: pp.referenceTitle || "",
-          ppqStatus: (pp.ppqs?.[0]?.status || "NOT_SENT") as PPQStatus,
-          ppqSentAt: pp.ppqs?.[0]?.sentAt || "",
-          ppqOpenedAt: pp.ppqs?.[0]?.openedAt || "",
-          ppqCompletedAt: pp.ppqs?.[0]?.completedAt || "",
-          narrative: pp.narrative || "",
-          performanceType: pp.performanceType || "CORPORATE",
-          personnelName: pp.personnelName || "",
-          personnelRole: pp.personnelRole || "",
-        }));
-        setContracts(mapped);
+        const mapped: PastPerfReference[] = data.application.pastPerformance.map((pp: any) => {
+          const ppqStatus = pp.ppqs?.[0]?.status || "NOT_SENT";
+          let status: RefStatus = "EMPTY";
+          if (pp.cparsUploaded || ppqStatus === "COMPLETED") status = "COMPLETE";
+          else if (ppqStatus === "OPENED") status = "PPQ_OPENED";
+          else if (ppqStatus === "SENT" || ppqStatus === "PENDING") status = "PPQ_SENT";
+
+          return {
+            id: pp.id,
+            name: [pp.referenceFirstName, pp.referenceLastName].filter(Boolean).join(" ") || pp.agencyName || "",
+            agency: pp.agencyName || "",
+            status,
+            fileName: pp.fileName || null,
+            documentId: pp.documentId || null,
+            ppqId: pp.ppqs?.[0]?.id || null,
+            contractDetails: {
+              agencyName: pp.agencyName || "",
+              contractNumber: pp.contractNumber || "",
+              contractValue: pp.contractValue || "",
+              periodStart: pp.periodStart || "",
+              periodEnd: pp.periodEnd || "",
+              description: pp.description || pp.sowDescription || "",
+            },
+          };
+        });
+        setReferences(mapped);
+      }
+
+      // Load saved SIN narratives
+      if (data.application?.sinNarratives) {
+        try {
+          const parsed = typeof data.application.sinNarratives === "string"
+            ? JSON.parse(data.application.sinNarratives)
+            : data.application.sinNarratives;
+          setSinNarratives(parsed);
+        } catch {}
+      }
+
+      // Run smart scan
+      const clientId = data.clientId || data.client?.id;
+      if (clientId) {
+        runSmartScan(clientId);
       }
     } catch (err) {
       console.error(err);
@@ -151,6 +199,24 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
     }
   }
 
+  /* ── Smart Scan ── */
+  async function runSmartScan(clientId: string) {
+    setScanning(true);
+    try {
+      const data = await apiRequest("/api/applications/ai/scan-past-performance", {
+        method: "POST",
+        body: JSON.stringify({ clientId }),
+      });
+      setScanResults(data);
+    } catch (err) {
+      console.error("Smart scan failed:", err);
+      // Silently fail — show manual entry UI
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  /* ── Ensure application exists ── */
   async function ensureApplication() {
     let appId = cert?.application?.id;
     if (!appId) {
@@ -161,7 +227,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
           clientId: cert.clientId,
           certType: cert.type,
           currentStep: 1,
-        })
+        }),
       });
       appId = app.id;
       setCert((prev: any) => ({ ...prev, application: app }));
@@ -169,28 +235,20 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
     return appId;
   }
 
-  const completedRefs = contracts.filter(c =>
-    c.cparsUploaded || c.ppqStatus === "COMPLETED"
-  ).length;
-
-  const sentRefs = contracts.filter(c =>
-    c.ppqStatus === "SENT" || c.ppqStatus === "OPENED" || c.ppqStatus === "PENDING"
-  ).length;
-
-  async function handlePPFileUpload(file: File) {
-    setPpUploading(true);
+  /* ── Upload & extract PPQ / CPARS ── */
+  async function handleRefUpload(file: File, category: "PPQ_RESPONSE" | "CPARS_REPORT") {
+    setUploadingRef(true);
     setError(null);
     try {
       const token = localStorage.getItem("token");
       const clientId = cert?.clientId || cert?.client?.id;
-      const API = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
+      if (!clientId) throw new Error("No client ID found. Please reload the page.");
 
-      // 1. Upload the actual file to document storage (so it's available for eOffer Tab 4)
-      if (!clientId) throw new Error("No client ID found — please reload the page and try again");
+      // 1. Upload file
       const uploadForm = new FormData();
       uploadForm.append("file", file);
       uploadForm.append("clientId", clientId);
-      uploadForm.append("category", "PPQ_RESPONSE");
+      uploadForm.append("category", category);
       const uploadRes = await fetch(`${API}/api/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -202,7 +260,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
       }
       const uploadData = await uploadRes.json();
 
-      // 2. Extract text for AI analysis
+      // 2. Extract text
       const extractForm = new FormData();
       extractForm.append("file", file);
       const extractRes = await fetch(`${API}/api/upload/extract-text`, {
@@ -216,263 +274,115 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
       }
       const { text } = await extractRes.json();
 
-      // 3. AI extracts contract details from the PPQ
+      // 3. AI extract contract details
       const aiRes = await apiRequest("/api/applications/ai/extract-past-performance", {
         method: "POST",
         body: JSON.stringify({ text, clientId, certType: "GSA_MAS" }),
       });
 
-      // 4. Mark extracted contracts as having a completed PPQ document
-      const contracts = (aiRes.contracts || aiRes || []).map((c: any) => ({
-        ...c,
-        _uploadedFileName: file.name,
-        _uploadedDocId: uploadData.document?.id || uploadData.id,
-        _ppqComplete: true,
-      }));
+      const contracts = aiRes.contracts || aiRes || [];
+      const first = contracts[0] || {};
 
-      setPpExtracted(contracts);
-    } catch (err: any) {
-      setError("Failed to process PPQ: " + (err.message || "Unknown error"));
-    } finally {
-      setPpUploading(false);
-    }
-  }
-
-  async function addExtractedContract(extracted: any) {
-    setSaving(true);
-    setError(null);
-    try {
+      // 4. Save to backend
       const appId = await ensureApplication();
       const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
         method: "POST",
         body: JSON.stringify({
-          agencyName: extracted.agencyName || "",
-          contractNumber: extracted.contractNumber || "",
-          contractType: extracted.contractType || "Federal Government",
-          contractValue: extracted.contractValue || "",
-          periodStart: extracted.periodStart || "",
-          periodEnd: extracted.periodEnd || "",
-          description: extracted.sowDescription || extracted.description || "",
-          hasCPARS: extracted.hasCPARS ?? null,
-          cparsUploaded: extracted._ppqComplete ? true : false,
-          referenceFirstName: extracted.referenceFirstName || "",
-          referenceLastName: extracted.referenceLastName || "",
-          referenceEmail: extracted.referenceEmail || "",
-          referencePhone: extracted.referencePhone || "",
-          referenceTitle: extracted.referenceTitle || "",
-          narrative: extracted.narrative || "",
-          performanceType: extracted.performanceType || "CORPORATE",
-          personnelName: extracted.personnelName || "",
-          personnelRole: extracted.personnelRole || "",
+          agencyName: first.agencyName || "",
+          contractNumber: first.contractNumber || "",
+          contractType: first.contractType || "Federal Government",
+          contractValue: first.contractValue || "",
+          periodStart: first.periodStart || "",
+          periodEnd: first.periodEnd || "",
+          description: first.sowDescription || first.description || "",
+          cparsUploaded: category === "CPARS_REPORT",
+          referenceFirstName: first.referenceFirstName || "",
+          referenceLastName: first.referenceLastName || "",
+          referenceEmail: first.referenceEmail || "",
+          referencePhone: first.referencePhone || "",
+          referenceTitle: first.referenceTitle || "",
         }),
       });
-      setContracts(prev => [...prev, {
-        ...EMPTY_CONTRACT,
+
+      // 5. Add to references
+      const newRef: PastPerfReference = {
         id: result.id,
-        agencyName: extracted.agencyName || "",
-        contractNumber: extracted.contractNumber || "",
-        contractType: extracted.contractType || "Federal Government",
-        contractValue: extracted.contractValue || "",
-        periodStart: extracted.periodStart || "",
-        periodEnd: extracted.periodEnd || "",
-        sowDescription: extracted.sowDescription || extracted.description || "",
-        hasCPARS: extracted.hasCPARS ?? null,
-        cparsUploaded: false,
-        referenceFirstName: extracted.referenceFirstName || "",
-        referenceLastName: extracted.referenceLastName || "",
-        referenceEmail: extracted.referenceEmail || "",
-        referencePhone: extracted.referencePhone || "",
-        referenceTitle: extracted.referenceTitle || "",
-        narrative: extracted.narrative || "",
-        performanceType: extracted.performanceType || "CORPORATE",
-        personnelName: extracted.personnelName || "",
-        personnelRole: extracted.personnelRole || "",
-      }]);
-      setPpExtracted(prev => prev.filter(c => c !== extracted));
-    } catch (err: any) {
-      setError("Failed to add contract: " + (err.message || "Unknown error"));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function addNewContract() {
-    if (!cert) return;
-    if (!newContract.agencyName.trim()) { setError("Agency name is required."); return; }
-    if (!newContract.sowDescription.trim()) { setError("Scope of work is required."); return; }
-    setError(null);
-    setSaving(true);
-    try {
-      const appId = await ensureApplication();
-      const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
-        method: "POST",
-        body: JSON.stringify({
-          agencyName: newContract.agencyName,
-          contractNumber: newContract.contractNumber,
-          contractType: newContract.contractType,
-          contractValue: newContract.contractValue,
-          periodStart: newContract.periodStart,
-          periodEnd: newContract.periodEnd,
-          description: newContract.sowDescription,
-          hasCPARS: newContract.hasCPARS,
-          cparsUploaded: false,
-          referenceFirstName: newContract.referenceFirstName,
-          referenceLastName: newContract.referenceLastName,
-          referenceEmail: newContract.referenceEmail,
-          referencePhone: newContract.referencePhone,
-          referenceTitle: newContract.referenceTitle,
-          narrative: newContract.narrative,
-          performanceType: newContract.performanceType,
-          personnelName: newContract.personnelName,
-          personnelRole: newContract.personnelRole,
-        })
-      });
-      setContracts(prev => [...prev, { ...newContract, id: result.id }]);
-      setNewContract({ ...EMPTY_CONTRACT });
-      setAddingContract(false);
-      setExpandedContract(contracts.length);
-    } catch (err: any) {
-      setError("Failed to save contract: " + (err.message || "Unknown error"));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveContract(contract: typeof EMPTY_CONTRACT, index: number) {
-    setSaving(true);
-    setError(null);
-    try {
-      const appId = await ensureApplication();
-      const payload = {
-        agencyName: contract.agencyName,
-        contractNumber: contract.contractNumber,
-        contractType: contract.contractType,
-        contractValue: contract.contractValue,
-        periodStart: contract.periodStart,
-        periodEnd: contract.periodEnd,
-        description: contract.sowDescription,
-        hasCPARS: contract.hasCPARS,
-        cparsUploaded: contract.cparsUploaded,
-        referenceFirstName: contract.referenceFirstName,
-        referenceLastName: contract.referenceLastName,
-        referenceEmail: contract.referenceEmail,
-        referencePhone: contract.referencePhone,
-        referenceTitle: contract.referenceTitle,
-        narrative: contract.narrative,
-        performanceType: contract.performanceType,
-        personnelName: contract.personnelName,
-        personnelRole: contract.personnelRole,
+        name: [first.referenceFirstName, first.referenceLastName].filter(Boolean).join(" ") || first.agencyName || file.name,
+        agency: first.agencyName || "",
+        status: "COMPLETE",
+        fileName: file.name,
+        documentId: uploadData.document?.id || uploadData.id || null,
+        ppqId: null,
+        contractDetails: {
+          agencyName: first.agencyName || "",
+          contractNumber: first.contractNumber || "",
+          contractValue: first.contractValue || "",
+          periodStart: first.periodStart || "",
+          periodEnd: first.periodEnd || "",
+          description: first.sowDescription || first.description || "",
+        },
       };
-      let result;
-      if (contract.id) {
-        result = await apiRequest(`/api/applications/${appId}/past-performance/${contract.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload)
-        });
-      } else {
-        result = await apiRequest(`/api/applications/${appId}/past-performance`, {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
-        const updated = [...contracts];
-        updated[index] = { ...contract, id: result.id };
-        setContracts(updated);
-      }
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setReferences(prev => [...prev, newRef]);
     } catch (err: any) {
-      setError("Failed to save: " + (err.message || "Unknown error"));
+      setError("Failed to process upload: " + (err.message || "Unknown error"));
     } finally {
-      setSaving(false);
+      setUploadingRef(false);
     }
   }
 
-  async function deleteContract(index: number) {
-    const contract = contracts[index];
+  /* ── Delete reference ── */
+  async function deleteReference(index: number) {
+    const ref = references[index];
     try {
-      if (contract.id && cert?.application?.id) {
-        await apiRequest(`/api/applications/${cert.application.id}/past-performance/${contract.id}`, {
-          method: "DELETE"
-        });
+      if (ref.id && cert?.application?.id) {
+        await apiRequest(`/api/applications/${cert.application.id}/past-performance/${ref.id}`, { method: "DELETE" });
       }
-      setContracts(prev => prev.filter((_, i) => i !== index));
-      if (expandedContract === index) setExpandedContract(null);
+      setReferences(prev => prev.filter((_, i) => i !== index));
     } catch (err) {
       console.error(err);
+      setError("Failed to remove reference.");
     }
   }
 
-  async function sendPPQ(index: number) {
-    const contract = contracts[index];
-    if (!contract.referenceEmail || !contract.id) {
-      setError("Reference email is required to send PPQ.");
-      return;
-    }
-    setSendingPPQ(contract.id);
-    setError(null);
-    try {
-      const referenceName = [contract.referenceFirstName, contract.referenceLastName].filter(Boolean).join(" ") || "Reference";
-      await apiRequest(`/api/ppq`, {
-        method: "POST",
-        body: JSON.stringify({
-          pastPerformanceId: contract.id,
-          referenceEmail: contract.referenceEmail,
-          referenceName,
-          referenceTitle: contract.referenceTitle || "",
-          referenceAgency: contract.agencyName || "",
-          contractorName: cert?.client?.businessName || "",
-          agencyName: contract.agencyName || "",
-          contractNumber: contract.contractNumber || "",
-          periodStart: contract.periodStart || "",
-          periodEnd: contract.periodEnd || "",
-        })
-      });
-      const updated = [...contracts];
-      updated[index] = { ...contract, ppqStatus: "SENT" };
-      setContracts(updated);
-    } catch (err: any) {
-      console.error("PPQ send error:", err);
-      setError("Failed to send PPQ: " + (err.message || "Please check the reference email and try again."));
-    } finally {
-      setSendingPPQ(null);
-    }
-  }
-
-  function openPPQModal(index: number) {
-    const contract = contracts[index];
+  /* ── PPQ modal flow ── */
+  function openPPQModalForSuggestion(suggestion: any) {
     setPpqModal({
-      open: true, step: 1, contractIndex: index,
-      referenceName: `${contract.referenceFirstName} ${contract.referenceLastName}`.trim(),
-      referenceEmail: contract.referenceEmail,
-      referenceTitle: contract.referenceTitle,
-      referenceAgency: contract.agencyName,
+      open: true, step: 1, refIndex: null,
+      name: suggestion.name || "",
+      email: suggestion.email || "",
+      title: suggestion.title || "",
+      agency: suggestion.agency || "",
       relationship: "",
       emailSubject: "", emailBody: "",
-      drafting: false, sending: false, showDisclaimer: true,
+      drafting: false, sending: false,
+    });
+  }
+
+  function openPPQModalManual() {
+    setPpqModal({
+      open: true, step: 1, refIndex: null,
+      name: "", email: "", title: "", agency: "",
+      relationship: "",
+      emailSubject: "", emailBody: "",
+      drafting: false, sending: false,
     });
   }
 
   async function draftPPQEmail() {
-    if (ppqModal.contractIndex === null) return;
-    const contract = contracts[ppqModal.contractIndex];
     setPpqModal(prev => ({ ...prev, drafting: true }));
     try {
       const data = await apiRequest("/api/ppq/draft-email", {
         method: "POST",
         body: JSON.stringify({
-          pastPerformanceId: contract.id,
-          referenceEmail: ppqModal.referenceEmail,
-          referenceName: ppqModal.referenceName,
-          referenceTitle: ppqModal.referenceTitle,
-          referenceAgency: ppqModal.referenceAgency,
+          referenceEmail: ppqModal.email,
+          referenceName: ppqModal.name,
+          referenceTitle: ppqModal.title,
+          referenceAgency: ppqModal.agency,
           relationship: ppqModal.relationship,
-          contractDetails: contract.sowDescription,
           certType: cert?.type || "GSA_MAS",
           businessName: cert?.client?.businessName || "",
           senderName: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
-          personnelName: contract.performanceType === "KEY_PERSONNEL" ? contract.personnelName : undefined,
-          personnelRole: contract.performanceType === "KEY_PERSONNEL" ? contract.personnelRole : undefined,
-        })
+        }),
       });
       setPpqModal(prev => ({
         ...prev, step: 2, drafting: false,
@@ -486,27 +396,66 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
     }
   }
 
-  async function sendPPQWithCustomEmail() {
-    if (ppqModal.contractIndex === null) return;
-    const contract = contracts[ppqModal.contractIndex];
+  async function sendPPQFromModal() {
     setPpqModal(prev => ({ ...prev, sending: true }));
     try {
+      // Ensure we have a past performance record
+      const appId = await ensureApplication();
+      let ppId = ppqModal.refIndex !== null ? references[ppqModal.refIndex]?.id : null;
+
+      if (!ppId) {
+        // Create a new past performance entry for this reference
+        const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
+          method: "POST",
+          body: JSON.stringify({
+            agencyName: ppqModal.agency,
+            referenceFirstName: ppqModal.name.split(" ")[0] || "",
+            referenceLastName: ppqModal.name.split(" ").slice(1).join(" ") || "",
+            referenceEmail: ppqModal.email,
+            referenceTitle: ppqModal.title,
+          }),
+        });
+        ppId = result.id;
+      }
+
       await apiRequest("/api/ppq", {
         method: "POST",
         body: JSON.stringify({
-          pastPerformanceId: contract.id,
-          referenceEmail: ppqModal.referenceEmail,
-          referenceName: ppqModal.referenceName,
-          referenceTitle: ppqModal.referenceTitle,
-          referenceAgency: ppqModal.referenceAgency,
+          pastPerformanceId: ppId,
+          referenceEmail: ppqModal.email,
+          referenceName: ppqModal.name,
+          referenceTitle: ppqModal.title,
+          referenceAgency: ppqModal.agency,
           customEmailBody: ppqModal.emailBody,
           customEmailSubject: ppqModal.emailSubject,
           senderName: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
-        })
+          contractorName: cert?.client?.businessName || "",
+          agencyName: ppqModal.agency,
+        }),
       });
-      const updated = [...contracts];
-      updated[ppqModal.contractIndex] = { ...contract, ppqStatus: "SENT" };
-      setContracts(updated);
+
+      // Add or update reference
+      const newRef: PastPerfReference = {
+        id: ppId || "",
+        name: ppqModal.name,
+        agency: ppqModal.agency,
+        status: "PPQ_SENT",
+        fileName: null,
+        documentId: null,
+        ppqId: null,
+        contractDetails: null,
+      };
+
+      if (ppqModal.refIndex !== null) {
+        setReferences(prev => {
+          const updated = [...prev];
+          updated[ppqModal.refIndex!] = { ...updated[ppqModal.refIndex!], status: "PPQ_SENT" };
+          return updated;
+        });
+      } else {
+        setReferences(prev => [...prev, newRef]);
+      }
+
       setPpqModal(prev => ({ ...prev, step: 3, sending: false }));
     } catch (err) {
       console.error(err);
@@ -515,59 +464,63 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
     }
   }
 
-  async function generateNarrative(index: number) {
-    const contract = contracts[index];
-    const key = contract.id || String(index);
-    setGeneratingNarrative(key);
+  /* ── SIN Narrative generation ── */
+  const selectedSINs: string[] = (() => {
+    if (!cert?.application?.selectedSINs) return [];
+    const raw = cert.application.selectedSINs;
+    if (Array.isArray(raw)) return raw;
+    try { return JSON.parse(raw); } catch {}
+    return String(raw).split(",").map((s: string) => s.trim()).filter(Boolean);
+  })();
+
+  async function generateSinNarrative(sin: string) {
+    setGeneratingSin(sin);
     try {
-      const data = await apiRequest("/api/applications/ai/draft", {
+      const clientId = cert?.clientId || cert?.client?.id;
+      const data = await apiRequest("/api/applications/ai/draft-sin-narrative", {
         method: "POST",
         body: JSON.stringify({
-          section: "Relevant Project Experience",
-          prompt: `Write a GSA MAS Relevant Project Experience narrative for this contract. Describe the SIN-relevant work performed, results achieved, methodology used, compliance with applicable regulations, and how this work aligns with the proposed GSA Schedule offering. Be specific and professional.`,
-          context: {
-            businessName: cert?.client?.businessName,
-            entityType: cert?.client?.entityType,
-            naicsCode: cert?.application?.naicsCode,
-            otherSections: `Agency: ${contract.agencyName}
-Contract Number: ${contract.contractNumber}
-Contract Value: ${contract.contractValue}
-Period: ${contract.periodStart} to ${contract.periodEnd}
-Contract Type: ${contract.contractType}
-Scope of Work: ${contract.sowDescription}`,
-          }
-        })
+          sinNumber: sin,
+          sinDescription: SIN_DESCRIPTIONS[sin] || sin,
+          clientId,
+        }),
       });
-      const updated = [...contracts];
-      updated[index] = { ...contract, narrative: data.text };
-      setContracts(updated);
-      if (updated[index].id) await saveContract(updated[index], index);
+      setSinNarratives(prev => ({ ...prev, [sin]: data.text || data.narrative || "" }));
     } catch (err) {
       console.error(err);
+      setError("Failed to generate narrative for SIN " + sin);
     } finally {
-      setGeneratingNarrative(null);
+      setGeneratingSin(null);
     }
   }
 
-  async function handleCPARSUpload(file: File, index: number) {
-    setUploadingCPARS(String(index));
+  /* ── Save SIN narratives ── */
+  async function saveSinNarratives() {
+    setSaving(true);
+    setError(null);
     try {
-      const updated = [...contracts];
-      updated[index] = { ...contracts[index], cparsUploaded: true };
-      setContracts(updated);
-      if (updated[index].id) await saveContract(updated[index], index);
-    } catch (err) {
-      console.error(err);
+      const appId = await ensureApplication();
+      await apiRequest(`/api/applications/${appId}`, {
+        method: "PUT",
+        body: JSON.stringify({ sinNarratives: JSON.stringify(sinNarratives) }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      setError("Failed to save narratives: " + (err.message || "Unknown error"));
     } finally {
-      setUploadingCPARS(null);
+      setSaving(false);
     }
   }
 
-  function updateContract(index: number, field: string, value: any) {
-    const updated = [...contracts];
-    updated[index] = { ...updated[index], [field]: value };
-    setContracts(updated);
-  }
+  /* ── Computed ── */
+  const completedRefs = references.filter(r => r.status === "COMPLETE").length;
+  const sentRefs = references.filter(r => r.status === "PPQ_SENT" || r.status === "PPQ_OPENED").length;
+
+  /* ── Loading ── */
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>Loading...</div>
+  );
 
   function logout() {
     localStorage.removeItem("token");
@@ -575,14 +528,10 @@ Scope of Work: ${contract.sowDescription}`,
     router.push("/login");
   }
 
-  if (loading) return (
-    <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>Loading...</div>
-  );
-
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex" }}>
 
-      {/* Sidebar */}
+      {/* ═══ SIDEBAR ═══ */}
       <div style={{ width: 240, background: "var(--navy)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ padding: "24px 20px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
           <a href={homeLink} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
@@ -594,7 +543,9 @@ Scope of Work: ${contract.sowDescription}`,
             </span>
           </a>
         </div>
+
         <div style={{ padding: "16px 12px", flex: 1, overflowY: "auto" }}>
+          {/* References summary */}
           <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 8, fontWeight: 600 }}>References</div>
           <div style={{ margin: "8px 9px 16px", padding: "12px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "var(--r)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -612,45 +563,70 @@ Scope of Work: ${contract.sowDescription}`,
               </div>
             )}
           </div>
-          {contracts.map((c, i) => (
-            <div key={i} onClick={() => setExpandedContract(expandedContract === i ? null : i)}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", borderRadius: "var(--r)", marginBottom: 2, cursor: "pointer", background: expandedContract === i ? "rgba(200,155,60,.1)" : "transparent" }}>
-              <div style={{ width: 16, height: 16, borderRadius: "50%", background: c.cparsUploaded || c.ppqStatus === "COMPLETED" ? "var(--green)" : c.ppqStatus === "SENT" || c.ppqStatus === "OPENED" ? "#1A3F7A" : "rgba(255,255,255,.1)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#fff" }}>
-                {(c.cparsUploaded || c.ppqStatus === "COMPLETED") ? "✓" : i + 1}
+
+          {/* Reference list */}
+          {references.map((ref, i) => (
+            <div key={ref.id || i}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", borderRadius: "var(--r)", marginBottom: 2, cursor: "default",
+                background: "transparent" }}>
+              <div style={{
+                width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#fff",
+                background: ref.status === "COMPLETE" ? "var(--green)" : ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED" ? "#1A3F7A" : "rgba(255,255,255,.1)",
+              }}>
+                {ref.status === "COMPLETE" ? "\u2713" : i + 1}
               </div>
-              <span style={{ fontSize: 12, color: "rgba(255,255,255,.55)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-                {c.agencyName || "Unnamed contract"}
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,.55)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {ref.name || ref.agency || "Reference " + (i + 1)}
               </span>
             </div>
           ))}
-          {contracts.length < 5 && (
-            <button onClick={() => setAddingContract(true)}
-              style={{ width: "100%", padding: "8px 9px", background: "rgba(200,155,60,.1)", border: "1px dashed rgba(200,155,60,.3)", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, cursor: "pointer", textAlign: "left" as const, marginTop: 4 }}>
-              + Add Contract
-            </button>
+
+          {/* SIN narratives sidebar */}
+          {selectedSINs.length > 0 && (
+            <>
+              <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 8, marginTop: 20, fontWeight: 600 }}>SIN Narratives</div>
+              {selectedSINs.map(sin => (
+                <div key={sin} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", borderRadius: "var(--r)", marginBottom: 2 }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#fff",
+                    background: sinNarratives[sin]?.trim() ? "var(--green)" : "rgba(255,255,255,.1)",
+                  }}>
+                    {sinNarratives[sin]?.trim() ? "\u2713" : ""}
+                  </div>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,.55)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {sin}
+                  </span>
+                </div>
+              ))}
+            </>
           )}
         </div>
+
+        {/* User footer */}
         <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
           <div style={{ padding: "10px 12px", marginBottom: 8 }}>
             <div style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>{user?.firstName} {user?.lastName}</div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 2 }}>{user?.email}</div>
           </div>
-          <button onClick={logout} style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.1)", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", fontSize: 13, cursor: "pointer", textAlign: "left" as const }}>
+          <button onClick={logout} style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.1)", borderRadius: "var(--r)", color: "rgba(255,255,255,.5)", fontSize: 13, cursor: "pointer", textAlign: "left" }}>
             Sign Out
           </button>
         </div>
       </div>
 
-      {/* Main */}
+      {/* ═══ MAIN CONTENT ═══ */}
       <div style={{ flex: 1, overflow: "auto" }}>
         <div style={{ padding: "40px 48px", maxWidth: 900 }}>
           <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
-            ← Back to Application Dashboard
+            &larr; Back to Application Dashboard
           </a>
           <div style={{ marginTop: 20, marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Section 3 of 6</div>
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Past Performance</h1>
-            <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Add your past contracts and collect the 3 references GSA requires.</p>
+            <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>
+              Upload references and draft project narratives for your GSA MAS application.
+            </p>
           </div>
 
           <SecurityBanner
@@ -658,524 +634,386 @@ Scope of Work: ${contract.sowDescription}`,
             badges={["encryption", "audit-logged"]}
           />
 
+          {/* Error banner */}
           {error && (
             <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "var(--red)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>{error}</span>
-              <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>✕</button>
+              <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>&times;</button>
             </div>
           )}
 
-          {/* AI Upload Section */}
-          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <span style={{ fontSize: 20 }}>&#x1F4C4;</span>
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* SMART SCAN                                            */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          {scanning && (
+            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24, boxShadow: "var(--shadow)", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <span style={{ fontSize: 16, color: "var(--gold2)", animation: "spin 1.5s linear infinite" }}>&#9881;</span>
+              </div>
               <div>
-                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400, margin: 0 }}>Upload Past Performance Documents</h3>
-                <p style={{ fontSize: 12, color: "var(--ink4)", margin: 0, marginTop: 2 }}>AI will extract contract details automatically</p>
+                <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Scanning your documents for references...</div>
+                <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>Looking for past contracts, contacts, and performance data in your uploaded files.</div>
               </div>
             </div>
-            <input
-              ref={ppFileRef}
-              type="file"
-              accept=".pdf,.docx,.xlsx,.csv,.txt"
-              style={{ display: "none" }}
-              onChange={(e) => { if (e.target.files?.[0]) handlePPFileUpload(e.target.files[0]); e.target.value = ""; }}
-            />
-            <div
-              onDragOver={(e) => { e.preventDefault(); setPpDragOver(true); }}
-              onDragLeave={() => setPpDragOver(false)}
-              onDrop={(e) => { e.preventDefault(); setPpDragOver(false); if (e.dataTransfer.files?.[0]) handlePPFileUpload(e.dataTransfer.files[0]); }}
-              style={{
-                border: `2px dashed ${ppDragOver ? "var(--gold)" : "var(--border2)"}`,
-                borderRadius: "var(--r)",
-                padding: ppUploading ? "24px" : "28px",
-                textAlign: "center" as const,
-                cursor: ppUploading ? "default" : "pointer",
-                background: ppDragOver ? "rgba(200,155,60,.06)" : "var(--cream)",
-                transition: "all .2s",
-              }}
-              onClick={() => !ppUploading && ppFileRef.current?.click()}
-            >
-              {ppUploading ? (
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Extracting contract data...</div>
-                  <div style={{ fontSize: 12, color: "var(--ink4)" }}>AI is reading your document and identifying contracts</div>
-                </div>
-              ) : (
-                <div>
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>&#x1F4E4;</div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Upload a completed PPQ or CPARS report</div>
-                  <div style={{ fontSize: 12, color: "var(--ink4)", marginBottom: 4 }}>For GSA MAS, each PPQ/CPARS is a standalone deliverable uploaded directly to eOffer Tab 4.</div>
-                  <div style={{ fontSize: 11, color: "var(--ink4)", marginBottom: 10, fontStyle: "italic" }}>Your uploaded file will be saved to your document library and marked as ready for eOffer submission. AI also extracts contract data for your records.</div>
-                  <button onClick={(e) => { e.stopPropagation(); ppFileRef.current?.click(); }}
-                    style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
-                    Choose File
-                  </button>
-                </div>
-              )}
+          )}
+
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* AREA 1 — PAST PERFORMANCE REFERENCES                  */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          <div style={{ marginBottom: 36 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, margin: 0 }}>Past Performance References</h2>
+              <span style={{ fontSize: 12, color: "var(--ink4)" }}>3 required for eOffer Tab 4</span>
             </div>
 
-            {/* Extracted contracts review */}
-            {ppExtracted.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 10 }}>
-                  AI Extracted {ppExtracted.length} Reference{ppExtracted.length !== 1 ? "s" : ""} — Review & Add
+            {/* Progress bar */}
+            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "16px 20px", marginBottom: 16, boxShadow: "var(--shadow)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div>
+                  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: completedRefs >= 3 ? "var(--green)" : "var(--navy)", fontWeight: 400 }}>{completedRefs}</span>
+                  <span style={{ fontSize: 14, color: "var(--ink3)" }}> / 3 complete</span>
+                  {sentRefs > 0 && <span style={{ fontSize: 12, color: "var(--ink4)", marginLeft: 12 }}>&middot; {sentRefs} PPQ{sentRefs !== 1 ? "s" : ""} pending</span>}
                 </div>
-                {ppExtracted.map((ex, idx) => (
-                  <div key={idx} style={{ background: "var(--cream)", border: "1px solid rgba(200,155,60,.2)", borderRadius: "var(--r)", padding: "14px 18px", marginBottom: 8 }}>
-                    {ex._uploadedFileName && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, padding: "6px 10px", background: "var(--green-bg)", borderRadius: 6, border: "1px solid var(--green-b)" }}>
-                        <span style={{ color: "var(--green)", fontSize: 12, fontWeight: 700 }}>{"✓"}</span>
-                        <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 500 }}>PDF saved to document library: {ex._uploadedFileName}</span>
-                        <span style={{ fontSize: 10, color: "var(--green)", marginLeft: "auto" }}>Ready for eOffer Tab 4</span>
+                {completedRefs >= 3 && (
+                  <span style={{ padding: "5px 14px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: 100, fontSize: 12, fontWeight: 500, color: "var(--green)" }}>{"\u2713"} Requirement Met</span>
+                )}
+              </div>
+              <div style={{ height: 6, background: "var(--cream2)", borderRadius: 100, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${Math.min(100, completedRefs / 3 * 100)}%`, background: completedRefs >= 3 ? "var(--green)" : "var(--gold)", borderRadius: 100, transition: "width .5s" }} />
+              </div>
+              <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+                {[0, 1, 2].map(i => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--ink3)" }}>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: "50%",
+                      background: i < completedRefs ? "var(--green)" : i < completedRefs + sentRefs ? "#1A3F7A" : "var(--cream2)",
+                      border: `2px solid ${i < completedRefs ? "var(--green)" : i < completedRefs + sentRefs ? "#1A3F7A" : "var(--border2)"}`,
+                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#fff",
+                    }}>
+                      {i < completedRefs ? "\u2713" : i < completedRefs + sentRefs ? "\u2192" : ""}
+                    </div>
+                    Reference {i + 1}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Explanation */}
+            <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 16 }}>
+              Upload completed PPQ documents or CPARS reports. Each file counts as one reference. You can also request PPQs from references via email.
+            </p>
+
+            {/* Upload zone */}
+            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 16, boxShadow: "var(--shadow)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: 20 }}>&#128196;</span>
+                <div>
+                  <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400, margin: 0 }}>Upload PPQ or CPARS</h3>
+                  <p style={{ fontSize: 12, color: "var(--ink4)", margin: 0, marginTop: 2 }}>AI will extract contract details automatically</p>
+                </div>
+              </div>
+
+              {/* Hidden file inputs */}
+              <input ref={ppqFileRef} type="file" accept=".pdf,.docx" style={{ display: "none" }}
+                onChange={(e) => { if (e.target.files?.[0]) handleRefUpload(e.target.files[0], "PPQ_RESPONSE"); e.target.value = ""; }} />
+              <input ref={cparsFileRef} type="file" accept=".pdf,.docx" style={{ display: "none" }}
+                onChange={(e) => { if (e.target.files?.[0]) handleRefUpload(e.target.files[0], "CPARS_REPORT"); e.target.value = ""; }} />
+
+              {/* Drag and drop area */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOverArea("ref-upload"); }}
+                onDragLeave={() => setDragOverArea(null)}
+                onDrop={(e) => {
+                  e.preventDefault(); setDragOverArea(null);
+                  if (e.dataTransfer.files?.[0]) handleRefUpload(e.dataTransfer.files[0], "PPQ_RESPONSE");
+                }}
+                style={{
+                  border: `2px dashed ${dragOverArea === "ref-upload" ? "var(--gold)" : "var(--border2)"}`,
+                  borderRadius: "var(--r)", padding: uploadingRef ? "24px" : "32px",
+                  textAlign: "center", cursor: uploadingRef ? "default" : "pointer",
+                  background: dragOverArea === "ref-upload" ? "rgba(200,155,60,.06)" : "var(--cream)",
+                  transition: "all .2s",
+                }}
+                onClick={() => !uploadingRef && ppqFileRef.current?.click()}
+              >
+                {uploadingRef ? (
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Processing document...</div>
+                    <div style={{ fontSize: 12, color: "var(--ink4)" }}>Uploading file, extracting text, and identifying contract details</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>&#128228;</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>
+                      Drop a completed PPQ or CPARS report here
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--ink4)", marginBottom: 12 }}>
+                      PDF or DOCX &middot; Each file counts as one reference for eOffer Tab 4
+                    </div>
+                    <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                      <button onClick={(e) => { e.stopPropagation(); ppqFileRef.current?.click(); }}
+                        style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
+                        Upload PPQ
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); cparsFileRef.current?.click(); }}
+                        style={{ padding: "8px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 13, fontWeight: 600, color: "var(--gold2)", cursor: "pointer" }}>
+                        Upload CPARS
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Smart Scan Suggestions */}
+            {scanResults?.potentialReferences?.length > 0 && (
+              <div style={{ background: "#fff", border: "1px solid rgba(200,155,60,.2)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 16, boxShadow: "var(--shadow)" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 12 }}>
+                  Smart Scan Found {scanResults.potentialReferences.length} Potential Reference{scanResults.potentialReferences.length !== 1 ? "s" : ""}
+                </div>
+                {scanResults.potentialReferences.map((suggestion: any, idx: number) => (
+                  <div key={idx} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "12px 16px", background: "var(--cream)", borderRadius: "var(--r)",
+                    border: "1px solid var(--border)", marginBottom: 8,
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>
+                        {suggestion.name}
                       </div>
-                    )}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{ex.agencyName || "Unknown Agency"}</div>
-                        <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>
-                          {[ex.contractNumber, ex.contractType, ex.contractValue].filter(Boolean).join(" \u00B7 ")}
-                        </div>
-                        {(ex.periodStart || ex.periodEnd) && (
-                          <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>{ex.periodStart} — {ex.periodEnd}</div>
-                        )}
-                        {(ex.sowDescription || ex.description) && (
-                          <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 4, lineHeight: 1.5 }}>
-                            {(ex.sowDescription || ex.description || "").substring(0, 200)}{(ex.sowDescription || ex.description || "").length > 200 ? "..." : ""}
-                          </div>
-                        )}
+                      <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 2 }}>
+                        {suggestion.title ? suggestion.title + " at " : ""}{suggestion.agency || "Unknown Agency"}
                       </div>
-                      <button
-                        onClick={() => addExtractedContract(ex)}
-                        disabled={saving}
-                        style={{ padding: "7px 16px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", flexShrink: 0, marginLeft: 12 }}>
-                        {saving ? "Adding..." : "Add This Contract"}
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => openPPQModalForSuggestion(suggestion)}
+                        style={{ padding: "7px 14px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
+                        Send PPQ Request
+                      </button>
+                      <button onClick={() => cparsFileRef.current?.click()}
+                        style={{ padding: "7px 14px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 500, color: "var(--gold2)", cursor: "pointer" }}>
+                        I have a CPARS
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
 
-          {/* GSA Requirements */}
-          <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "22px 28px", marginBottom: 28 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold2)", marginBottom: 12 }}>GSA Requirements</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginBottom: 16 }}>
-              {[
-                { icon: "📋", title: "3 references required", body: "GSA requires at least 3 past performance references. These can be a mix of CPARS reports and completed PPQs." },
-                { icon: "📅", title: "Recency matters", body: "Each reference must be for work completed within the last 3 years, or an ongoing project with the first year completed." },
-                { icon: "🎯", title: "Relevance to your SINs", body: "Each reference should demonstrate experience similar in scope and complexity to the services you're proposing under your selected SINs." },
-              ].map((item, i) => (
-                <div key={i} style={{ display: "flex", gap: 10 }}>
-                  <span style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "#fff", marginBottom: 4 }}>{item.title}</div>
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", lineHeight: 1.6 }}>{item.body}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{ borderTop: "1px solid rgba(255,255,255,.08)", paddingTop: 14, display: "flex", gap: 24 }}>
-              {[
-                { icon: "⭐", text: "CPARS: If you've done federal work and have a CPARS report, upload it — this is the strongest form of past performance." },
-                { icon: "📝", text: "PPQ: No CPARS? GovCert generates a GSA Past Performance Questionnaire and emails it to your reference." },
-                { icon: "✦", text: "Narrative: GovCert drafts a Relevant Project Experience narrative from your contract details — you review before submission." },
-              ].map((tip, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, flex: 1 }}>
-                  <span style={{ fontSize: 14, flexShrink: 0 }}>{tip.icon}</span>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,.4)", lineHeight: 1.6 }}>{tip.text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Progress */}
-          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div>
-                <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, color: completedRefs >= 3 ? "var(--green)" : "var(--navy)", fontWeight: 400 }}>{completedRefs}</span>
-                <span style={{ fontSize: 16, color: "var(--ink3)" }}> / 3 references complete</span>
-                {sentRefs > 0 && <span style={{ fontSize: 13, color: "var(--ink4)", marginLeft: 12 }}>· {sentRefs} PPQ{sentRefs !== 1 ? "s" : ""} awaiting response</span>}
-              </div>
-              {completedRefs >= 3 && (
-                <span style={{ padding: "6px 16px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: 100, fontSize: 13, fontWeight: 500, color: "var(--green)" }}>✓ Requirement Met</span>
-              )}
-            </div>
-            <div style={{ height: 8, background: "var(--cream2)", borderRadius: 100, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${Math.min(100, completedRefs / 3 * 100)}%`, background: completedRefs >= 3 ? "var(--green)" : "var(--gold)", borderRadius: 100, transition: "width .5s" }} />
-            </div>
-            <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
-              {[0, 1, 2].map(i => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--ink3)" }}>
-                  <div style={{ width: 20, height: 20, borderRadius: "50%", background: i < completedRefs ? "var(--green)" : i < completedRefs + sentRefs ? "#1A3F7A" : "var(--cream2)", border: `2px solid ${i < completedRefs ? "var(--green)" : i < completedRefs + sentRefs ? "#1A3F7A" : "var(--border2)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#fff" }}>
-                    {i < completedRefs ? "✓" : i < completedRefs + sentRefs ? "→" : ""}
-                  </div>
-                  Reference {i + 1}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Add Contract Form */}
-          {addingContract && (
-            <div style={{ background: "#fff", border: "2px solid var(--gold)", borderRadius: "var(--rl)", padding: "28px", marginBottom: 20, boxShadow: "var(--shadow-lg)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "var(--navy)", fontWeight: 400 }}>Add Past Contract</h3>
-                <button onClick={() => { setAddingContract(false); setError(null); }} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--ink3)" }}>✕</button>
-              </div>
-
-              {/* Performance Type Toggle */}
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--ink3)", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Performance Type</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {[{ val: "CORPORATE", label: "Corporate" }, { val: "KEY_PERSONNEL", label: "Key Personnel" }].map(opt => (
-                    <button key={opt.val} type="button" onClick={() => setNewContract(prev => ({ ...prev, performanceType: opt.val }))}
-                      style={{ padding: "8px 20px", border: `1.5px solid ${newContract.performanceType === opt.val ? "var(--gold)" : "var(--border2)"}`, borderRadius: "var(--r)", background: newContract.performanceType === opt.val ? "rgba(200,155,60,.08)" : "#fff", color: newContract.performanceType === opt.val ? "var(--gold)" : "var(--ink3)", fontSize: 13, fontWeight: newContract.performanceType === opt.val ? 600 : 400, cursor: "pointer" }}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                {newContract.performanceType === "KEY_PERSONNEL" && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--ink3)", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Personnel Name *</label>
-                      <input type="text" value={newContract.personnelName} onChange={e => setNewContract(prev => ({ ...prev, personnelName: e.target.value }))} placeholder="e.g. John Smith"
-                        style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--ink3)", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Role / Title</label>
-                      <input type="text" value={newContract.personnelRole} onChange={e => setNewContract(prev => ({ ...prev, personnelRole: e.target.value }))} placeholder="e.g. Lead Systems Engineer"
-                        style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                {[
-                  { label: "Agency / Client Name *", field: "agencyName", placeholder: "e.g. U.S. Department of Defense" },
-                  { label: "Contract Number", field: "contractNumber", placeholder: "e.g. W912DR-22-C-0001" },
-                  { label: "Contract Value", field: "contractValue", placeholder: "e.g. $450,000" },
-                  { label: "Contract Type", field: "contractType", type: "select" },
-                  { label: "Period Start", field: "periodStart", type: "date" },
-                  { label: "Period End", field: "periodEnd", type: "date" },
-                ].map(f => (
-                  <div key={f.field}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--ink3)", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>{f.label}</label>
-                    {f.type === "select" ? (
-                      <select value={newContract.contractType} onChange={e => setNewContract(prev => ({ ...prev, contractType: e.target.value }))}
-                        style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, color: "var(--ink)", background: "#fff", outline: "none", boxSizing: "border-box" as const }}>
-                        {CONTRACT_TYPES.map(t => <option key={t}>{t}</option>)}
-                      </select>
-                    ) : (
-                      <input type={f.type || "text"}
-                        value={f.field === "contractValue" ? fmtCurrencyInput((newContract as any)[f.field]) : (newContract as any)[f.field]}
-                        onChange={e => {
-                          const val = f.field === "contractValue" ? parseCurrencyRaw(e.target.value) : e.target.value;
-                          setNewContract(prev => ({ ...prev, [f.field]: val }));
-                        }}
-                        placeholder={(f as any).placeholder || ""}
-                        style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--ink3)", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Scope of Work Description *</label>
-                <textarea value={newContract.sowDescription}
-                  onChange={e => setNewContract(prev => ({ ...prev, sowDescription: e.target.value }))}
-                  placeholder="Describe the work performed — services provided, key deliverables, and outcomes achieved."
-                  style={{ width: "100%", minHeight: 100, padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }} />
-              </div>
-              <div style={{ marginBottom: 20, padding: "16px 18px", background: "var(--cream)", borderRadius: "var(--r)", border: "1px solid var(--border)" }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 6 }}>Do you have a CPARS report for this contract?</div>
-                <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 12, lineHeight: 1.5 }}>CPARS reports are issued by federal agencies. If you have one, it is the strongest form of past performance.</div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  {[{ val: true, label: "Yes, I have a CPARS report" }, { val: false, label: "No, I need to send a PPQ" }].map(opt => (
-                    <button key={String(opt.val)} onClick={() => setNewContract(prev => ({ ...prev, hasCPARS: opt.val }))}
-                      style={{ flex: 1, padding: "10px", border: `1.5px solid ${newContract.hasCPARS === opt.val ? "var(--gold)" : "var(--border2)"}`, borderRadius: "var(--r)", background: newContract.hasCPARS === opt.val ? "rgba(200,155,60,.08)" : "#fff", color: newContract.hasCPARS === opt.val ? "var(--gold)" : "var(--ink3)", fontSize: 13, fontWeight: newContract.hasCPARS === opt.val ? 500 : 400, cursor: "pointer" }}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Reference Contact {newContract.hasCPARS === false ? "(for PPQ)" : ""}</div>
-                <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 12, lineHeight: 1.5 }}>
-                  {newContract.hasCPARS === false ? "GovCert will email this person a PPQ to complete online." : "Contact who can verify this contract."}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  {[
-                    { label: "First Name", field: "referenceFirstName", placeholder: "Jane" },
-                    { label: "Last Name", field: "referenceLastName", placeholder: "Smith" },
-                    { label: "Email Address *", field: "referenceEmail", placeholder: "jane.smith@agency.gov" },
-                    { label: "Phone Number", field: "referencePhone", placeholder: "(202) 555-0100" },
-                    { label: "Title / Role", field: "referenceTitle", placeholder: "Contracting Officer" },
-                  ].map(f => (
-                    <div key={f.field}>
-                      <label style={{ display: "block", fontSize: 11.5, color: "var(--ink3)", marginBottom: 4, fontWeight: 500 }}>{f.label}</label>
-                      <input type="text"
-                        value={f.field === "referencePhone" ? fmtPhone((newContract as any)[f.field]) : (newContract as any)[f.field]}
-                        onChange={e => {
-                          const val = f.field === "referencePhone" ? parsePhoneRaw(e.target.value) : e.target.value;
-                          setNewContract(prev => ({ ...prev, [f.field]: val }));
-                        }}
-                        placeholder={f.placeholder}
-                        maxLength={f.field === "referencePhone" ? 14 : undefined}
-                        style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                <button onClick={() => { setAddingContract(false); setError(null); }}
-                  style={{ padding: "10px 20px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink3)", cursor: "pointer" }}>
-                  Cancel
-                </button>
-                <button onClick={addNewContract} disabled={saving || !newContract.agencyName.trim() || !newContract.sowDescription.trim()}
-                  style={{ padding: "10px 28px", background: !newContract.agencyName.trim() || !newContract.sowDescription.trim() ? "var(--cream2)" : "var(--gold)", border: "none", borderRadius: "var(--r)", color: !newContract.agencyName.trim() || !newContract.sowDescription.trim() ? "var(--ink4)" : "#fff", fontSize: 13, fontWeight: 500, cursor: saving || !newContract.agencyName.trim() || !newContract.sowDescription.trim() ? "not-allowed" : "pointer", boxShadow: "0 4px 16px rgba(200,155,60,.3)" }}>
-                  {saving ? "Saving..." : "Add Contract →"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {contracts.length === 0 && !addingContract && (
-            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "60px 40px", textAlign: "center", boxShadow: "var(--shadow)" }}>
-              <div style={{ fontSize: 40, marginBottom: 16 }}>📋</div>
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>No contracts added yet</h3>
-              <p style={{ fontSize: 13.5, color: "var(--ink3)", maxWidth: 420, margin: "0 auto 24px", lineHeight: 1.6 }}>Add your past contracts to get started. You need at least 3 references — a mix of CPARS reports and PPQs is fine.</p>
-              <button onClick={() => setAddingContract(true)}
-                style={{ padding: "12px 32px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 16px rgba(200,155,60,.3)" }}>
-                + Add First Contract
+            {/* Manual add reference */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+              <button onClick={openPPQModalManual}
+                style={{ padding: "10px 20px", background: "#fff", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink3)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--gold)"; e.currentTarget.style.color = "var(--gold)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--ink3)"; }}>
+                + Add Reference Manually
               </button>
             </div>
-          )}
 
-          {/* Contract Cards */}
-          {contracts.map((contract, index) => {
-            const isExpanded = expandedContract === index;
-            const statusStyle = PPQ_STATUS_STYLES[contract.ppqStatus];
-            const isComplete = contract.cparsUploaded || contract.ppqStatus === "COMPLETED";
-            return (
-              <div key={contract.id || index} style={{ background: "#fff", border: `1px solid ${isComplete ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", marginBottom: 12, boxShadow: "var(--shadow)", overflow: "hidden" }}>
-                <div onClick={() => setExpandedContract(isExpanded ? null : index)}
-                  style={{ padding: "18px 24px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--cream)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "#fff")}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: isComplete ? "var(--green)" : "var(--cream2)", border: `2px solid ${isComplete ? "var(--green)" : "var(--border2)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14, color: isComplete ? "#fff" : "var(--ink3)", fontWeight: 600 }}>
-                    {isComplete ? "✓" : index + 1}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)", marginBottom: 3 }}>{contract.agencyName || "Unnamed Contract"}</div>
-                    <div style={{ fontSize: 12, color: "var(--ink3)", display: "flex", gap: 12 }}>
-                      {contract.contractNumber && <span>#{contract.contractNumber}</span>}
-                      {contract.contractValue && <span>{contract.contractValue}</span>}
-                      {contract.periodStart && <span>{contract.periodStart} – {contract.periodEnd || "Present"}</span>}
+            {/* Reference Cards (slots) */}
+            {references.length === 0 && !scanning && (
+              <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "48px 40px", textAlign: "center", boxShadow: "var(--shadow)", marginBottom: 16 }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>&#128203;</div>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "var(--navy)", fontWeight: 400, marginBottom: 6 }}>No references yet</h3>
+                <p style={{ fontSize: 13, color: "var(--ink3)", maxWidth: 400, margin: "0 auto 20px", lineHeight: 1.6 }}>
+                  Upload a PPQ or CPARS document above, or send a PPQ request to a reference by email.
+                </p>
+              </div>
+            )}
+
+            {references.map((ref, index) => {
+              const sc = STATUS_COLORS[ref.status];
+              return (
+                <div key={ref.id || index} style={{
+                  background: "#fff",
+                  border: `1px solid ${ref.status === "COMPLETE" ? "var(--green-b)" : "var(--border)"}`,
+                  borderRadius: "var(--rl)", marginBottom: 10, boxShadow: "var(--shadow)", overflow: "hidden",
+                }}>
+                  <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                      background: ref.status === "COMPLETE" ? "var(--green)" : ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED" ? "#1A3F7A" : "var(--cream2)",
+                      border: `2px solid ${ref.status === "COMPLETE" ? "var(--green)" : ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED" ? "#1A3F7A" : "var(--border2)"}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 14, color: "#fff", fontWeight: 600,
+                    }}>
+                      {ref.status === "COMPLETE" ? "\u2713" : index + 1}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>
+                        {ref.name || "Reference " + (index + 1)}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--ink4)" }}>
+                        {ref.agency}
+                        {ref.contractDetails?.contractNumber ? " \u00B7 #" + ref.contractDetails.contractNumber : ""}
+                        {ref.contractDetails?.contractValue ? " \u00B7 " + ref.contractDetails.contractValue : ""}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+                      <span style={{ padding: "4px 12px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: sc.bg, color: sc.color }}>
+                        {sc.label}
+                      </span>
+                      {ref.fileName && (
+                        <span style={{ fontSize: 11, color: "var(--ink4)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {ref.fileName}
+                        </span>
+                      )}
+                      <button onClick={() => deleteReference(index)}
+                        style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "var(--ink4)", padding: "2px 6px" }}
+                        title="Remove reference">
+                        &times;
+                      </button>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                    {contract.hasCPARS === true && <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: contract.cparsUploaded ? "var(--green-bg)" : "var(--cream2)", color: contract.cparsUploaded ? "var(--green)" : "var(--ink3)" }}>{contract.cparsUploaded ? "✓ CPARS" : "CPARS Pending"}</span>}
-                    {contract.hasCPARS === false && (
-                      <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: statusStyle.bg, color: statusStyle.color }}>
-                        PPQ: {statusStyle.label}
-                        {contract.ppqStatus === "SENT" && contract.ppqSentAt && ` · ${new Date(contract.ppqSentAt).toLocaleDateString()}`}
-                        {contract.ppqStatus === "OPENED" && contract.ppqOpenedAt && ` · ${new Date(contract.ppqOpenedAt).toLocaleDateString()}`}
-                        {contract.ppqStatus === "COMPLETED" && contract.ppqCompletedAt && ` · ${new Date(contract.ppqCompletedAt).toLocaleDateString()}`}
-                      </span>
-                    )}
-                    {contract.hasCPARS === null && <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: "var(--amber-bg)", color: "var(--amber)" }}>Action needed</span>}
-                    {contract.narrative && <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: "var(--green-bg)", color: "var(--green)" }}>✓ Narrative</span>}
-                    <span style={{ fontSize: 16, color: "var(--gold)" }}>{isExpanded ? "▲" : "▼"}</span>
-                  </div>
-                </div>
 
-                {isExpanded && (
-                  <div style={{ borderTop: "1px solid var(--border)", padding: "24px" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
-                      {[
-                        { label: "Agency / Client Name", field: "agencyName" },
-                        { label: "Contract Number", field: "contractNumber" },
-                        { label: "Contract Value", field: "contractValue" },
-                        { label: "Contract Type", field: "contractType", type: "select" },
-                        { label: "Period Start", field: "periodStart", type: "date" },
-                        { label: "Period End", field: "periodEnd", type: "date" },
-                      ].map(f => (
-                        <div key={f.field}>
-                          <label style={{ display: "block", fontSize: 11.5, color: "var(--ink3)", marginBottom: 4, fontWeight: 500 }}>{f.label}</label>
-                          {f.type === "select" ? (
-                            <select value={contract.contractType} onChange={e => updateContract(index, "contractType", e.target.value)}
-                              style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", background: "#fff" }}>
-                              {CONTRACT_TYPES.map(t => <option key={t}>{t}</option>)}
-                            </select>
-                          ) : (
-                            <input type={f.type || "text"} value={(contract as any)[f.field]}
-                              onChange={e => updateContract(index, f.field, e.target.value)}
-                              style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                  {/* Contract details if available */}
+                  {ref.contractDetails && ref.contractDetails.description && (
+                    <div style={{ padding: "0 20px 14px", borderTop: "1px solid var(--border)" }}>
+                      <div style={{ padding: "12px 0", fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
+                        {ref.contractDetails.description.substring(0, 300)}
+                        {ref.contractDetails.description.length > 300 ? "..." : ""}
+                      </div>
+                      {(ref.contractDetails.periodStart || ref.contractDetails.periodEnd) && (
+                        <div style={{ fontSize: 11, color: "var(--ink4)" }}>
+                          {ref.contractDetails.periodStart} &mdash; {ref.contractDetails.periodEnd || "Present"}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* AREA 2 — SIN NARRATIVES                               */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          {selectedSINs.length > 0 && (
+            <div style={{ marginBottom: 36 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, margin: 0 }}>Relevant Project Experience</h2>
+                <span style={{ fontSize: 12, color: "var(--ink4)" }}>1 narrative per SIN for eOffer Tab 3</span>
+              </div>
+              <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 16 }}>
+                Write or generate a narrative for each selected SIN describing your relevant project experience, methodology, and outcomes.
+              </p>
+
+              {selectedSINs.map(sin => {
+                const desc = SIN_DESCRIPTIONS[sin] || sin;
+                const narrative = sinNarratives[sin] || "";
+                const charCount = narrative.length;
+                const hasContent = narrative.trim().length > 0;
+
+                return (
+                  <div key={sin} style={{
+                    background: "#fff", border: `1px solid ${hasContent ? "var(--green-b)" : "var(--border)"}`,
+                    borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 12, boxShadow: "var(--shadow)",
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, color: "var(--navy)", fontWeight: 500 }}>
+                            SIN {sin}
+                          </span>
+                          {hasContent && (
+                            <span style={{ padding: "2px 8px", borderRadius: 100, fontSize: 10, fontWeight: 500, background: "var(--green-bg)", color: "var(--green)" }}>
+                              {charCount > 500 ? "Ready" : "Draft"}
+                            </span>
+                          )}
+                          {!hasContent && (
+                            <span style={{ padding: "2px 8px", borderRadius: 100, fontSize: 10, fontWeight: 500, background: "var(--cream2)", color: "var(--ink4)" }}>
+                              Empty
+                            </span>
                           )}
                         </div>
-                      ))}
-                    </div>
-                    <div style={{ marginBottom: 20 }}>
-                      <label style={{ display: "block", fontSize: 11.5, color: "var(--ink3)", marginBottom: 4, fontWeight: 500 }}>Scope of Work</label>
-                      <textarea value={contract.sowDescription} onChange={e => updateContract(index, "sowDescription", e.target.value)}
-                        style={{ width: "100%", minHeight: 80, padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }} />
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-                      {/* CPARS / PPQ panel */}
-                      <div style={{ padding: "16px", background: "var(--cream)", borderRadius: "var(--r)", border: "1px solid var(--border)" }}>
-                        {contract.hasCPARS === null && (
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 10 }}>Do you have a CPARS report?</div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                              {[{ val: true, label: "Yes — upload CPARS" }, { val: false, label: "No — send PPQ" }].map(opt => (
-                                <button key={String(opt.val)} onClick={() => updateContract(index, "hasCPARS", opt.val)}
-                                  style={{ padding: "9px 14px", border: "1.5px solid var(--border2)", borderRadius: "var(--r)", background: "#fff", color: "var(--ink)", fontSize: 13, cursor: "pointer", textAlign: "left" as const }}>
-                                  {opt.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {contract.hasCPARS === true && (
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 8 }}>CPARS Report</div>
-                            {contract.cparsUploaded ? (
-                              <div style={{ padding: "10px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--green)", fontWeight: 500 }}>✓ CPARS report uploaded</div>
-                            ) : (
-                              <>
-                                <input type="file" accept=".pdf" style={{ display: "none" }} ref={fileInputRef}
-                                  onChange={e => { if (e.target.files?.[0]) handleCPARSUpload(e.target.files[0], index); }} />
-                                <button onClick={() => fileInputRef.current?.click()} disabled={uploadingCPARS === String(index)}
-                                  style={{ width: "100%", padding: "10px", border: "2px dashed var(--border2)", borderRadius: "var(--r)", background: "#fff", color: "var(--ink3)", fontSize: 13, cursor: "pointer" }}>
-                                  {uploadingCPARS === String(index) ? "Uploading..." : "📄 Upload CPARS PDF"}
-                                </button>
-                              </>
-                            )}
-                            <button onClick={() => updateContract(index, "hasCPARS", null)}
-                              style={{ marginTop: 8, background: "none", border: "none", fontSize: 11, color: "var(--ink4)", cursor: "pointer", textDecoration: "underline" }}>
-                              Switch to PPQ instead
-                            </button>
-                          </div>
-                        )}
-                        {contract.hasCPARS === false && (
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>PPQ Status</div>
-                            <div style={{ display: "inline-flex", padding: "4px 12px", borderRadius: 100, background: statusStyle.bg, color: statusStyle.color, fontSize: 12, fontWeight: 500, marginBottom: 10 }}>{statusStyle.label}</div>
-                            {(contract.ppqStatus === "NOT_SENT" || contract.ppqStatus === "PENDING") && (
-                              <div>
-                                <div style={{ fontSize: 11.5, color: "var(--ink3)", marginBottom: 10, lineHeight: 1.5 }}>GovCert drafts a personalized PPQ request email using AI. You review and edit before sending.</div>
-                                <button onClick={() => openPPQModal(index)} disabled={!contract.referenceEmail}
-                                  style={{ width: "100%", padding: "10px", background: contract.referenceEmail ? "var(--gold)" : "var(--cream2)", border: "none", borderRadius: "var(--r)", color: contract.referenceEmail ? "#fff" : "var(--ink4)", fontSize: 13, fontWeight: 500, cursor: contract.referenceEmail ? "pointer" : "not-allowed", boxShadow: contract.referenceEmail ? "0 4px 16px rgba(200,155,60,.3)" : "none" }}>
-                                  Send PPQ Request
-                                </button>
-                                {!contract.referenceEmail && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 6 }}>Add reference email first</div>}
-                              </div>
-                            )}
-                            {contract.ppqStatus !== "NOT_SENT" && contract.ppqStatus !== "PENDING" && (
-                              <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.5 }}>
-                                {contract.ppqStatus === "COMPLETED" ? "✓ Reference has completed the PPQ." : "Waiting for reference to complete the PPQ."}
-                              </div>
-                            )}
-                            <button onClick={() => updateContract(index, "hasCPARS", null)}
-                              style={{ marginTop: 8, background: "none", border: "none", fontSize: 11, color: "var(--ink4)", cursor: "pointer", textDecoration: "underline" }}>
-                              Switch to CPARS instead
-                            </button>
-                          </div>
-                        )}
+                        <div style={{ fontSize: 13, color: "var(--ink3)" }}>{desc}</div>
                       </div>
-
-                      {/* Reference contact */}
-                      <div style={{ padding: "16px", background: "var(--cream)", borderRadius: "var(--r)", border: "1px solid var(--border)" }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 10 }}>Reference Contact</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          {[
-                            { label: "First Name", field: "referenceFirstName" },
-                            { label: "Last Name", field: "referenceLastName" },
-                            { label: "Email", field: "referenceEmail" },
-                            { label: "Phone", field: "referencePhone" },
-                            { label: "Title", field: "referenceTitle" },
-                          ].map(f => (
-                            <div key={f.field}>
-                              <label style={{ display: "block", fontSize: 11, color: "var(--ink4)", marginBottom: 3 }}>{f.label}</label>
-                              <input type="text" value={(contract as any)[f.field]} onChange={e => updateContract(index, f.field, e.target.value)}
-                                style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif", background: "#fff" }} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Narrative */}
-                    <div style={{ borderTop: "1px solid var(--border)", paddingTop: 20, marginBottom: 20 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>Relevant Project Experience Narrative</div>
-                          <div style={{ fontSize: 12, color: "var(--ink3)" }}>Required for each SIN — describes work performed, methodology, and results.</div>
-                        </div>
-                        <button onClick={() => generateNarrative(index)} disabled={generatingNarrative === (contract.id || String(index))}
-                          style={{ padding: "8px 18px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: "pointer", flexShrink: 0, marginLeft: 16 }}>
-                          {generatingNarrative === (contract.id || String(index)) ? "Drafting..." : "✦ Draft with AI"}
-                        </button>
-                      </div>
-                      <textarea value={contract.narrative} onChange={e => updateContract(index, "narrative", e.target.value)}
-                        placeholder="Describe the work performed, results achieved, methodology, and how this project relates to your proposed GSA Schedule offering..."
-                        style={{ width: "100%", minHeight: 140, padding: "12px 14px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }} />
-                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
-                        <span style={{ fontSize: 11, color: "var(--ink4)", fontFamily: "monospace" }}>{contract.narrative.length.toLocaleString()} chars</span>
-                      </div>
-                    </div>
-
-                    {/* Save / Delete */}
-                    <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-                      <button onClick={() => deleteContract(index)}
-                        style={{ padding: "8px 16px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", color: "var(--red)", fontSize: 13, cursor: "pointer" }}>
-                        Delete Contract
+                      <button onClick={() => generateSinNarrative(sin)}
+                        disabled={generatingSin === sin}
+                        style={{
+                          padding: "8px 16px", background: "var(--navy)", border: "none",
+                          borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 500,
+                          cursor: generatingSin === sin ? "not-allowed" : "pointer", flexShrink: 0,
+                        }}>
+                        {generatingSin === sin ? "Generating..." : "\u2726 Generate from my documents"}
                       </button>
-                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                        {saved && <span style={{ fontSize: 12, color: "var(--green)" }}>✓ Saved</span>}
-                        <button onClick={() => saveContract(contract, index)} disabled={saving}
-                          style={{ padding: "9px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-                          {saving ? "Saving..." : "Save Contract"}
-                        </button>
-                      </div>
+                    </div>
+
+                    <textarea
+                      value={narrative}
+                      onChange={e => setSinNarratives(prev => ({ ...prev, [sin]: e.target.value }))}
+                      onBlur={() => saveSinNarratives()}
+                      maxLength={10000}
+                      placeholder={`Describe your relevant project experience for ${desc}. Include work performed, methodology, results achieved, and how this experience aligns with the services you propose under this SIN...`}
+                      style={{
+                        width: "100%", minHeight: 140, padding: "12px 14px",
+                        border: "1px solid var(--border2)", borderRadius: "var(--r)",
+                        fontSize: 13.5, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif",
+                        lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box",
+                      }}
+                    />
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+                      <button onClick={() => {
+                        if (narrative) navigator.clipboard.writeText(narrative);
+                      }}
+                        style={{ background: "none", border: "none", fontSize: 12, color: "var(--ink4)", cursor: narrative ? "pointer" : "default", padding: 0, textDecoration: narrative ? "underline" : "none" }}>
+                        {narrative ? "Copy to clipboard" : ""}
+                      </button>
+                      <span style={{
+                        fontSize: 11, fontFamily: "monospace",
+                        color: charCount > 9500 ? "var(--red)" : charCount > 8000 ? "var(--amber)" : "var(--ink4)",
+                      }}>
+                        {charCount.toLocaleString()} / 10,000 characters
+                      </span>
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
 
-          {/* Add another */}
-          {contracts.length > 0 && contracts.length < 5 && !addingContract && (
-            <button onClick={() => setAddingContract(true)}
-              style={{ width: "100%", padding: "14px", background: "#fff", border: "2px dashed var(--border2)", borderRadius: "var(--rl)", color: "var(--ink3)", fontSize: 14, cursor: "pointer", marginTop: 4 }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--gold)"; e.currentTarget.style.color = "var(--gold)"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--ink3)"; }}>
-              + Add Another Contract
-            </button>
+              {/* Save button for narratives */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, alignItems: "center", marginTop: 8 }}>
+                {saved && <span style={{ fontSize: 12, color: "var(--green)" }}>{"\u2713"} Saved</span>}
+                <button onClick={saveSinNarratives} disabled={saving}
+                  style={{ padding: "10px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: saving ? "not-allowed" : "pointer" }}>
+                  {saving ? "Saving..." : "Save Narratives"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* No SINs selected notice */}
+          {selectedSINs.length === 0 && (
+            <div style={{ background: "var(--cream)", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 24, textAlign: "center" }}>
+              <div style={{ fontSize: 13, color: "var(--ink3)" }}>
+                No SINs selected yet. Select your SINs in the eligibility step to see narrative sections here.
+              </div>
+            </div>
           )}
 
           {/* Bottom nav */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 32 }}>
-            <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>← Back to Dashboard</a>
+            <a href={`/certifications/${certId}`} style={{ fontSize: 13, color: "var(--ink3)", textDecoration: "none" }}>&larr; Back to Dashboard</a>
             <button onClick={() => router.push(`/certifications/${certId}/financials`)} disabled={saving}
               style={{ padding: "12px 28px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 16px rgba(200,155,60,.35)" }}>
-              {saving ? "Saving..." : "Save & Continue →"}
+              {saving ? "Saving..." : "Save & Continue \u2192"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* PPQ Flow Modal */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* PPQ FLOW MODAL                                        */}
+      {/* ═══════════════════════════════════════════════════════ */}
       {ppqModal.open && (
         <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div onClick={() => !ppqModal.drafting && !ppqModal.sending && setPpqModal(prev => ({ ...prev, open: false }))}
             style={{ position: "absolute", inset: 0, background: "rgba(11,25,41,.7)", backdropFilter: "blur(4px)" }} />
-          <div style={{ position: "relative", width: ppqModal.step === 2 ? 680 : 520, maxHeight: "90vh", overflowY: "auto", background: "#fff", borderRadius: 16, boxShadow: "0 24px 80px rgba(0,0,0,.25)", padding: ppqModal.step === 3 ? "48px 40px" : "32px 36px" }}>
+          <div style={{
+            position: "relative", width: ppqModal.step === 2 ? 680 : 520, maxHeight: "90vh", overflowY: "auto",
+            background: "#fff", borderRadius: 16, boxShadow: "0 24px 80px rgba(0,0,0,.25)",
+            padding: ppqModal.step === 3 ? "48px 40px" : "32px 36px",
+          }}>
 
             {/* Step indicator */}
             {ppqModal.step !== 3 && (
@@ -1186,13 +1024,13 @@ Scope of Work: ${contract.sowDescription}`,
               </div>
             )}
 
-            {/* Close button */}
+            {/* Close */}
             <button onClick={() => !ppqModal.drafting && !ppqModal.sending && setPpqModal(prev => ({ ...prev, open: false }))}
               style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--ink4)", padding: 4 }}>
-              ✕
+              &times;
             </button>
 
-            {/* Step 1: Reference Details */}
+            {/* STEP 1: Reference details */}
             {ppqModal.step === 1 && (
               <div>
                 <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>Send PPQ Request</h2>
@@ -1200,58 +1038,39 @@ Scope of Work: ${contract.sowDescription}`,
                   Provide reference details and context. GovCert will draft a personalized email for you to review.
                 </p>
 
-                {/* Disclaimer popout */}
-                {ppqModal.showDisclaimer && (
-                  <div style={{ padding: "14px 18px", background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.2)", borderRadius: 10, marginBottom: 20, display: "flex", gap: 12, alignItems: "flex-start" }}>
-                    <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>&#9432;</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, color: "var(--navy)", fontWeight: 500, marginBottom: 4 }}>Better context = better email</div>
-                      <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
-                        The more detail you provide about your project and your reference&apos;s role, the better the PPQ email will be. Include specific deliverables, project outcomes, and the nature of your working relationship.
-                      </div>
-                    </div>
-                    <button onClick={() => setPpqModal(prev => ({ ...prev, showDisclaimer: false }))}
-                      style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "var(--ink4)", padding: 0, flexShrink: 0 }}>✕</button>
-                  </div>
-                )}
-
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
                   <div>
-                    <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Reference Name *</label>
-                    <input type="text" value={ppqModal.referenceName}
-                      onChange={e => setPpqModal(prev => ({ ...prev, referenceName: e.target.value }))}
-                      placeholder="Jane Smith"
-                      style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                    <label style={labelStyle}>Reference Name *</label>
+                    <input type="text" value={ppqModal.name}
+                      onChange={e => setPpqModal(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Jane Smith" style={inputStyle} />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Reference Email *</label>
-                    <input type="email" value={ppqModal.referenceEmail}
-                      onChange={e => setPpqModal(prev => ({ ...prev, referenceEmail: e.target.value }))}
-                      placeholder="jane.smith@agency.gov"
-                      style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                    <label style={labelStyle}>Reference Email *</label>
+                    <input type="email" value={ppqModal.email}
+                      onChange={e => setPpqModal(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="jane.smith@agency.gov" style={inputStyle} />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Title / Role</label>
-                    <input type="text" value={ppqModal.referenceTitle}
-                      onChange={e => setPpqModal(prev => ({ ...prev, referenceTitle: e.target.value }))}
-                      placeholder="Program Manager"
-                      style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                    <label style={labelStyle}>Title / Role</label>
+                    <input type="text" value={ppqModal.title}
+                      onChange={e => setPpqModal(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Program Manager" style={inputStyle} />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Organization / Agency</label>
-                    <input type="text" value={ppqModal.referenceAgency}
-                      onChange={e => setPpqModal(prev => ({ ...prev, referenceAgency: e.target.value }))}
-                      placeholder="Department of Navy"
-                      style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, outline: "none", boxSizing: "border-box" as const, fontFamily: "'DM Sans', sans-serif" }} />
+                    <label style={labelStyle}>Organization / Agency</label>
+                    <input type="text" value={ppqModal.agency}
+                      onChange={e => setPpqModal(prev => ({ ...prev, agency: e.target.value }))}
+                      placeholder="Department of Navy" style={inputStyle} />
                   </div>
                 </div>
 
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: "var(--ink3)", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>How do you know this person? What was their role on this project?</label>
+                  <label style={labelStyle}>How do you know this person? What was their role on this project?</label>
                   <textarea value={ppqModal.relationship}
                     onChange={e => setPpqModal(prev => ({ ...prev, relationship: e.target.value }))}
-                    placeholder="e.g. Jane was the Contracting Officer's Representative on our IT modernization project at NAVAIR. She oversaw our team's delivery of a cloud migration platform and was our primary point of contact for 18 months."
-                    style={{ width: "100%", minHeight: 100, padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13.5, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }} />
+                    placeholder="e.g. Jane was the COR on our IT modernization project at NAVAIR. She oversaw our team's delivery of a cloud migration platform for 18 months."
+                    style={{ ...inputStyle, minHeight: 100, lineHeight: 1.6, resize: "vertical" }} />
                 </div>
 
                 <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
@@ -1260,15 +1079,15 @@ Scope of Work: ${contract.sowDescription}`,
                     Cancel
                   </button>
                   <button onClick={draftPPQEmail}
-                    disabled={!ppqModal.referenceName.trim() || !ppqModal.referenceEmail.trim() || ppqModal.drafting}
+                    disabled={!ppqModal.name.trim() || !ppqModal.email.trim() || ppqModal.drafting}
                     style={{
                       padding: "10px 28px",
-                      background: (!ppqModal.referenceName.trim() || !ppqModal.referenceEmail.trim()) ? "var(--cream2)" : "var(--gold)",
+                      background: (!ppqModal.name.trim() || !ppqModal.email.trim()) ? "var(--cream2)" : "var(--gold)",
                       border: "none", borderRadius: "var(--r)",
-                      color: (!ppqModal.referenceName.trim() || !ppqModal.referenceEmail.trim()) ? "var(--ink4)" : "#fff",
+                      color: (!ppqModal.name.trim() || !ppqModal.email.trim()) ? "var(--ink4)" : "#fff",
                       fontSize: 13, fontWeight: 500,
-                      cursor: (!ppqModal.referenceName.trim() || !ppqModal.referenceEmail.trim() || ppqModal.drafting) ? "not-allowed" : "pointer",
-                      boxShadow: ppqModal.referenceName.trim() && ppqModal.referenceEmail.trim() ? "0 4px 16px rgba(200,155,60,.3)" : "none",
+                      cursor: (!ppqModal.name.trim() || !ppqModal.email.trim() || ppqModal.drafting) ? "not-allowed" : "pointer",
+                      boxShadow: ppqModal.name.trim() && ppqModal.email.trim() ? "0 4px 16px rgba(200,155,60,.3)" : "none",
                     }}>
                     {ppqModal.drafting ? "Drafting Email..." : "Draft Email with AI \u2192"}
                   </button>
@@ -1276,7 +1095,7 @@ Scope of Work: ${contract.sowDescription}`,
               </div>
             )}
 
-            {/* Step 2: Review Email */}
+            {/* STEP 2: Review email */}
             {ppqModal.step === 2 && (
               <div>
                 <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>Review & Send</h2>
@@ -1288,7 +1107,7 @@ Scope of Work: ${contract.sowDescription}`,
                 <div style={{ background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 10, padding: "20px 22px", marginBottom: 20 }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, fontSize: 13, color: "var(--ink3)" }}>
                     <span style={{ fontWeight: 500, minWidth: 36 }}>To:</span>
-                    <span style={{ color: "var(--navy)", fontWeight: 500 }}>{ppqModal.referenceEmail}</span>
+                    <span style={{ color: "var(--navy)", fontWeight: 500 }}>{ppqModal.email}</span>
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, fontSize: 13, color: "var(--ink3)" }}>
                     <span style={{ fontWeight: 500, minWidth: 36 }}>From:</span>
@@ -1302,14 +1121,14 @@ Scope of Work: ${contract.sowDescription}`,
                   </div>
                 </div>
 
-                {/* Email body editor */}
+                {/* Email body */}
                 <div style={{ marginBottom: 16 }}>
                   <textarea value={ppqModal.emailBody}
                     onChange={e => setPpqModal(prev => ({ ...prev, emailBody: e.target.value }))}
-                    style={{ width: "100%", minHeight: 260, padding: "16px 18px", border: "1px solid var(--border2)", borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.7, resize: "vertical", outline: "none", boxSizing: "border-box" as const, color: "var(--ink)" }} />
+                    style={{ width: "100%", minHeight: 260, padding: "16px 18px", border: "1px solid var(--border2)", borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.7, resize: "vertical", outline: "none", boxSizing: "border-box", color: "var(--ink)" }} />
                 </div>
 
-                {/* PPQ form link preview */}
+                {/* PPQ form link note */}
                 <div style={{ padding: "12px 16px", background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.15)", borderRadius: 8, marginBottom: 20, fontSize: 12, color: "var(--ink3)" }}>
                   <span style={{ fontWeight: 500 }}>Included in email:</span> A gold &quot;Complete the PPQ&quot; button linking to the online questionnaire form, plus your sign-off ({user?.firstName} {user?.lastName}, {cert?.client?.businessName}).
                 </div>
@@ -1317,14 +1136,14 @@ Scope of Work: ${contract.sowDescription}`,
                 <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
                   <button onClick={() => setPpqModal(prev => ({ ...prev, step: 1 }))}
                     style={{ padding: "10px 20px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, color: "var(--ink3)", cursor: "pointer" }}>
-                    ← Back
+                    &larr; Back
                   </button>
                   <div style={{ display: "flex", gap: 10 }}>
                     <button onClick={draftPPQEmail} disabled={ppqModal.drafting}
                       style={{ padding: "10px 18px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: ppqModal.drafting ? "not-allowed" : "pointer" }}>
                       {ppqModal.drafting ? "Regenerating..." : "Regenerate Email"}
                     </button>
-                    <button onClick={sendPPQWithCustomEmail} disabled={ppqModal.sending || !ppqModal.emailBody.trim()}
+                    <button onClick={sendPPQFromModal} disabled={ppqModal.sending || !ppqModal.emailBody.trim()}
                       style={{
                         padding: "10px 28px",
                         background: ppqModal.emailBody.trim() ? "var(--gold)" : "var(--cream2)",
@@ -1341,7 +1160,7 @@ Scope of Work: ${contract.sowDescription}`,
               </div>
             )}
 
-            {/* Step 3: Sent Confirmation */}
+            {/* STEP 3: Confirmation */}
             {ppqModal.step === 3 && (
               <div style={{ textAlign: "center" }}>
                 <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--green-bg)", border: "2px solid var(--green-b)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 28 }}>
@@ -1349,7 +1168,7 @@ Scope of Work: ${contract.sowDescription}`,
                 </div>
                 <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 8 }}>PPQ Request Sent</h2>
                 <p style={{ fontSize: 15, color: "var(--ink3)", marginBottom: 6, lineHeight: 1.6 }}>
-                  PPQ request sent to <strong style={{ color: "var(--navy)" }}>{ppqModal.referenceName}</strong> at <strong style={{ color: "var(--navy)" }}>{ppqModal.referenceEmail}</strong>.
+                  PPQ request sent to <strong style={{ color: "var(--navy)" }}>{ppqModal.name}</strong> at <strong style={{ color: "var(--navy)" }}>{ppqModal.email}</strong>.
                 </p>
                 <div style={{ fontSize: 13, color: "var(--ink4)", lineHeight: 1.7, marginBottom: 28 }}>
                   <p>They&apos;ll receive a link to complete the questionnaire online.</p>

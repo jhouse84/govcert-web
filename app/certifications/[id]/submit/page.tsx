@@ -610,22 +610,28 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     return false;
   }
 
-  async function handleChecklistDrop(itemId: string, file: File, docCategory: string | null) {
+  async function handleChecklistDrop(itemId: string, files: FileList | File[], docCategory: string | null) {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
     setDragOverItem(null);
     setUploadingItem(itemId);
+    const names: string[] = [];
     try {
       const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("file", file);
-      if (cert?.clientId) formData.append("clientId", cert.clientId);
-      if (docCategory) formData.append("category", docCategory);
-      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (!resp.ok) throw new Error("Upload failed");
-      setUploadedFiles(prev => ({ ...prev, [itemId]: file.name }));
+      for (const file of fileArr) {
+        const formData = new FormData();
+        formData.append("file", file);
+        if (cert?.clientId) formData.append("clientId", cert.clientId);
+        if (docCategory) formData.append("category", docCategory);
+        const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (!resp.ok) throw new Error(`Upload failed for ${file.name}`);
+        names.push(file.name);
+      }
+      setUploadedFiles(prev => ({ ...prev, [itemId]: names.length === 1 ? names[0] : `${names.length} files uploaded` }));
       setManualChecks(prev => ({ ...prev, [itemId]: true }));
     } catch (err: any) {
       setError("Failed to upload: " + (err.message || "Unknown error"));
@@ -867,7 +873,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                   <div key={item.id}
                     onDragOver={(e) => { e.preventDefault(); setDragOverItem(item.id); }}
                     onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
-                    onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.[0]) handleChecklistDrop(item.id, e.dataTransfer.files[0], Array.isArray(item.docCategory) ? item.docCategory[0] : item.docCategory || null); }}
+                    onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleChecklistDrop(item.id, e.dataTransfer.files, Array.isArray(item.docCategory) ? item.docCategory[0] : item.docCategory || null); }}
                     style={{
                     border: `1px solid ${isDragTarget ? "var(--gold)" : complete ? "var(--green-b)" : isExpanded ? "rgba(200,155,60,.25)" : "var(--border)"}`,
                     borderRadius: "var(--r)", overflow: "hidden",

@@ -110,11 +110,18 @@ const SBA_FORM_1010_CHECKLIST = [
     format: "PDF or image. Clear scan showing names, ownership percentages, and signatures.",
     docCategory: "CERTIFICATION_DOCUMENT",
   },
-  { id: "resume", label: "Resume of Disadvantaged Owner", section: null, field: null,
-    what: "A professional resume for each disadvantaged owner showing education, work history, relevant experience, and qualifications. SBA uses this to assess the owner's ability to manage the business.",
-    where: "Update your current resume to emphasize management experience, industry knowledge, and technical skills relevant to your NAICS codes.",
-    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload as PDF. Name the file: FIRM NAME_DUNS NUMBER_TYPE OF FILE.pdf",
-    format: "PDF. Standard professional resume format. 1-3 pages.",
+  { id: "form1010", label: "SBA Form 1010 — Personal History Statement", section: null, field: null,
+    what: "Required for every owner with 20%+ ownership AND every officer/director/key employee. This form covers personal background, criminal history, financial obligations, and prior government contracting experience. One form per individual.",
+    where: "Download the blank Form 1010 from sba.gov/document/sba-form-1010. Print it, fill it out by hand or electronically, sign, and scan as PDF. Each person listed on the ownership section needs their own form.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload. Upload each signed Form 1010 as a separate PDF. Name: FIRM NAME_INDIVIDUAL NAME_FORM 1010.pdf",
+    format: "PDF. Must be signed by the individual. One form per person. Incomplete or unsigned forms will delay your application.",
+    docCategory: "CERTIFICATION_DOCUMENT",
+  },
+  { id: "resume", label: "Resumes — All Owners & Key Management Personnel", section: null, field: null,
+    what: "Professional resumes for the disadvantaged owner(s), all other owners with 20%+ interest, and key management personnel. SBA assesses whether the disadvantaged owner has the capability and experience to control the business.",
+    where: "Update resumes to emphasize management experience, industry knowledge, and technical skills relevant to your NAICS codes. Include federal contracting experience if any.",
+    sbaPortal: "In certifications.sba.gov → 8(a) Application → Document Upload section → upload each as PDF. Name: FIRM NAME_INDIVIDUAL NAME_RESUME.pdf",
+    format: "PDF. Standard professional resume format. 1-3 pages per person.",
     docCategory: "RESUME",
   },
   { id: "bankStatements", label: "6 Months Business Bank Statements", section: null, field: null,
@@ -249,22 +256,29 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
     }
   }
 
-  async function handleChecklistDrop(itemId: string, file: File, docCategory: string | null) {
+  async function handleChecklistDrop(itemId: string, files: FileList | File[], docCategory: string | null) {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
     setDragOverItem(null);
     setUploadingItem(itemId);
+    const names: string[] = [];
     try {
       const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("file", file);
-      if (cert?.clientId) formData.append("clientId", cert.clientId);
-      if (docCategory) formData.append("category", docCategory);
-      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (!resp.ok) throw new Error("Upload failed");
-      setUploadedFiles(prev => ({ ...prev, [itemId]: file.name }));
+      const cat = Array.isArray(docCategory) ? docCategory[0] : docCategory;
+      for (const file of fileArr) {
+        const formData = new FormData();
+        formData.append("file", file);
+        if (cert?.clientId) formData.append("clientId", cert.clientId);
+        if (cat) formData.append("category", cat);
+        const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (!resp.ok) throw new Error(`Upload failed for ${file.name}`);
+        names.push(file.name);
+      }
+      setUploadedFiles(prev => ({ ...prev, [itemId]: names.length === 1 ? names[0] : `${names.length} files uploaded` }));
       setManualChecks(prev => ({ ...prev, [itemId]: true }));
     } catch (err: any) {
       setError("Failed to upload: " + (err.message || "Unknown error"));
@@ -420,7 +434,7 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
                   <div key={item.id}
                     onDragOver={(e) => { e.preventDefault(); setDragOverItem(item.id); }}
                     onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
-                    onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.[0]) handleChecklistDrop(item.id, e.dataTransfer.files[0], (item as any).docCategory || null); }}
+                    onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleChecklistDrop(item.id, e.dataTransfer.files, (item as any).docCategory || null); }}
                     style={{
                     border: `1px solid ${isDragTarget ? "var(--gold)" : complete ? "var(--green-b)" : isExpanded ? "rgba(200,155,60,.25)" : "var(--border)"}`,
                     borderRadius: "var(--r)", overflow: "hidden",

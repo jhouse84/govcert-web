@@ -153,6 +153,118 @@ export async function generatePDF(opts: {
 }
 
 /**
+ * Compile ALL reviewable sections of an application into a single DOCX for executive review.
+ */
+export async function compileReviewDOCX(opts: {
+  companyName: string;
+  certType: string;
+  sections: { title: string; content: string }[];
+  fileName: string;
+}): Promise<{ blob: Blob; base64: string }> {
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, PageBreak } = await import("docx");
+
+  const children: any[] = [];
+
+  // Cover page
+  children.push(new Paragraph({ spacing: { before: 2000 } }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: opts.companyName, size: 48, bold: true, color: "1A2332" })],
+    alignment: AlignmentType.CENTER,
+  }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: `${opts.certType === "GSA_MAS" ? "GSA Multiple Award Schedule" : opts.certType === "EIGHT_A" ? "8(a) Business Development" : "OASIS+"} Application`, size: 28, color: "666666" })],
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 400 },
+  }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: "EXECUTIVE REVIEW DOCUMENT", size: 32, bold: true, color: "C89B3C" })],
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 200 },
+  }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: `Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, size: 22, color: "999999" })],
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 400 },
+  }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: "Please review all sections below. Use Track Changes in Word to mark your edits and add comments where needed.", size: 22, color: "555555", italics: true })],
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 2000 },
+  }));
+
+  // Table of contents summary
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: "SECTIONS FOR REVIEW", size: 28, bold: true, color: "1A2332" })],
+    heading: HeadingLevel.HEADING_1,
+    spacing: { after: 200 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 3, color: "C89B3C" } },
+  }));
+  for (let i = 0; i < opts.sections.length; i++) {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: `${i + 1}. ${opts.sections[i].title}`, size: 22, color: "333333" })],
+      spacing: { after: 60 },
+    }));
+  }
+  children.push(new Paragraph({ spacing: { after: 400 } }));
+
+  // Each section
+  for (let i = 0; i < opts.sections.length; i++) {
+    const section = opts.sections[i];
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(new Paragraph({
+      children: [new TextRun({ text: `Section ${i + 1}: ${section.title}`, size: 28, bold: true, color: "1A2332" })],
+      heading: HeadingLevel.HEADING_1,
+      spacing: { after: 100 },
+      border: { bottom: { style: BorderStyle.SINGLE, size: 3, color: "C89B3C" } },
+    }));
+
+    // Split content into paragraphs
+    for (const para of section.content.split("\n")) {
+      if (para.trim() === "") {
+        children.push(new Paragraph({ spacing: { after: 80 } }));
+        continue;
+      }
+      const isHeader = /^[0-9]+\.?\s+[A-Z]/.test(para) || (/^[A-Z][A-Z\s/&(),.:]+$/.test(para.trim()) && para.trim().length > 3 && para.trim().length < 80);
+      if (isHeader) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: para.trim(), bold: true, size: 24, color: "1A2332" })],
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 80 },
+        }));
+      } else {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: para, size: 22, color: "333333" })],
+          spacing: { after: 60, line: 360 },
+        }));
+      }
+    }
+  }
+
+  // Footer
+  children.push(new Paragraph({ spacing: { before: 600 } }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: "Prepared with GovCert.ai — Please use Track Changes for all edits", size: 18, color: "AAAAAA", italics: true })],
+    alignment: AlignmentType.CENTER,
+  }));
+
+  const doc = new Document({
+    sections: [{ properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } }, children }],
+  });
+
+  const blob = await Packer.toBlob(doc);
+
+  // Convert to base64 for email attachment
+  const arrayBuffer = await blob.arrayBuffer();
+  const uint8 = new Uint8Array(arrayBuffer);
+  let binary = "";
+  for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+  const base64 = btoa(binary);
+
+  return { blob, base64 };
+}
+
+/**
  * Generate a Word document (.docx) from text content.
  * User can edit the content in Word before uploading to the government portal.
  */

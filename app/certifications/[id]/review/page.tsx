@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import ExecutiveReview from "@/components/ExecutiveReview";
 
 // Map section IDs from the review to the correct wizard page paths
 const SECTION_LINKS: Record<string, string> = {
@@ -405,6 +406,9 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
               </div>
             );
           })}
+
+          {/* ═══ Executive Review ═══ */}
+          {cert && <ExecutiveReview cert={cert} certId={certId} />}
 
           {/* ═══ Cure: Upload Additional Documents ═══ */}
           <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px", marginTop: 24, marginBottom: 24, boxShadow: "var(--shadow)" }}>

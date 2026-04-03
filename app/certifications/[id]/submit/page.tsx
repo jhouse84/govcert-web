@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/api";
 import { usePaywall } from "@/lib/usePaywall";
 import PaywallModal from "@/components/PaywallModal";
 import { generatePDF, generateDOCX } from "@/lib/generatePDF";
+import ExecutiveReview from "@/components/ExecutiveReview";
 
 /* ═══════════════════════════════════════════════════════════════════
    GSA MAS eOffer Submission Package
@@ -445,6 +446,9 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
               <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer" }}>&times;</button>
             </div>
           )}
+
+          {/* Executive Review */}
+          {cert && <ExecutiveReview cert={cert} certId={certId} />}
 
           {/* GovCert Analysis CTA */}
           <a href={`/certifications/${certId}/review`}

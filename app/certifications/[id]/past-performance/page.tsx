@@ -406,8 +406,16 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   async function deleteReference(index: number) {
     const ref = references[index];
     try {
-      if (ref.id && cert?.application?.id) {
+      // Delete PastPerformance record if it exists (non-document-sourced)
+      if (ref.id && !ref.id.startsWith("doc-") && cert?.application?.id) {
         await apiRequest(`/api/applications/${cert.application.id}/past-performance/${ref.id}`, { method: "DELETE" });
+      }
+      // Also delete the Document record if it exists
+      if (ref.documentId) {
+        const docId = ref.documentId.startsWith("doc-") ? ref.documentId.slice(4) : ref.documentId;
+        try {
+          await apiRequest(`/api/upload/documents/${docId}`, { method: "DELETE" });
+        } catch {} // Non-fatal — document may already be gone
       }
       setReferences(prev => prev.filter((_, i) => i !== index));
     } catch (err) {

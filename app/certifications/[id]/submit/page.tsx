@@ -490,21 +490,59 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     }
   }
 
-  function downloadCSP1() {
+  async function downloadCSP1() {
     if (lcats.length === 0) return;
-    const headers = ["Labor Category Title", "Description", "Education", "Min Years Experience", "MFC Rate", "GSA Rate"];
-    const rows = lcats.map((l: any) => [
-      l.title || "", (l.description || "").replace(/"/g, '""'), l.education || "", l.experience || "",
-      l.mfcRate || l.baseRate || "", l.gsaRate || "",
-    ]);
-    const csv = [headers.join(","), ...rows.map(r => r.map((v: any) => `"${v}"`).join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `CSP-1_${cert?.client?.businessName?.replace(/\s+/g, "_") || "pricing"}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const XLSX = (await import("xlsx")).default;
+
+    const selectedSINs = cert?.application?.selectedSINs || "";
+    const headers = [
+      "SIN(s) Proposed", "Labor Category / Service Proposed (Title)", "Labor Category / Service Description",
+      "Minimum Education / Certification Level", "Minimum Years of Experience", "Domestic / Overseas",
+      "Commercial Price List (CPL) or Market Rate", "Most Favored Customer (MFC)", "MFC Discount (%)",
+      "Proposed GSA Rate (including IFF)", "Unit of Issue",
+    ];
+    const rows = lcats.map((l: any) => {
+      const baseRate = parseFloat(l.baseRate || l.mfcRate || "0");
+      const mfcRate = parseFloat(l.mfcRate || "0");
+      const gsaRate = parseFloat(l.gsaRate || "0");
+      const discount = baseRate > 0 ? (((baseRate - mfcRate) / baseRate) * 100).toFixed(2) : "0.00";
+      return [
+        selectedSINs, l.title || "", l.description || "", l.education || "Bachelor's Degree",
+        l.experience || l.yearsExperience || "", "Domestic",
+        `$${(baseRate || mfcRate).toFixed(2)}`, `$${mfcRate.toFixed(2)}`, `${discount}%`,
+        `$${gsaRate.toFixed(2)}`, "Hourly",
+      ];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = [
+      { wch: 18 }, { wch: 35 }, { wch: 50 }, { wch: 30 }, { wch: 12 },
+      { wch: 15 }, { wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 22 }, { wch: 12 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "CSP-1 Pricelist");
+    const fileName = `CSP-1_${cert?.client?.businessName?.replace(/\s+/g, "_") || "pricing"}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    // Also save to GovCert as a Document record for drag-and-drop
+    try {
+      const xlsxBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([xlsxBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const file = new File([blob], fileName, { type: blob.type });
+      const token = localStorage.getItem("token");
+      const clientId = cert?.clientId || cert?.client?.id;
+      if (clientId && token) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("clientId", clientId);
+        formData.append("category", "RATE_CARD");
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+      }
+    } catch {}
   }
 
   async function saveInlineField(field: any) {
@@ -1324,7 +1362,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                 {lcats.length > 0 && (
                   <button onClick={downloadCSP1}
                     style={{ padding: "7px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 500, color: "var(--gold2)", cursor: "pointer" }}>
-                    Download CSP-1 (CSV)
+                    Download CSP-1 (Excel)
                   </button>
                 )}
               </div>

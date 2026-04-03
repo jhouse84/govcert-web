@@ -138,12 +138,87 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
           if (grouped.PAST_PROPOSAL?.length) autoChecked.push("proposals");
           if (grouped.CONTRACT?.length) autoChecked.push("proposals");
           if (autoChecked.length > 0) setCheckedItems(prev => [...new Set([...prev, ...autoChecked])]);
+
+          // AUTO-PROCESS: If docs exist but no LCATs have been created yet,
+          // automatically analyze the documents and extract LCATs
+          const hasLcats = data.application?.pricingData && (() => {
+            try { const p = JSON.parse(data.application.pricingData); return (p.lcats || []).length > 0; } catch { return false; }
+          })();
+          const allDocs = Object.values(grouped).flat();
+          if (!hasLcats && allDocs.length > 0) {
+            // Auto-select all docs and process them
+            setSelectedDocIds(new Set(allDocs.map((d: any) => d.id)));
+            setActiveTab("invoices");
+            // Fire processExistingDocs after state settles
+            setTimeout(() => {
+              autoProcessDocs(data, grouped);
+            }, 100);
+          }
         } catch {}
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function autoProcessDocs(certData: any, docs: Record<string, any[]>) {
+    const allDocs = Object.values(docs).flat();
+    if (allDocs.length === 0) return;
+    setProcessingInvoices(true);
+    setError(null);
+    try {
+      const clientId = certData?.clientId || certData?.client?.id;
+      const fullDocs = await apiRequest(`/api/upload/documents?clientId=${clientId}`);
+      const useIds = new Set(allDocs.map((d: any) => d.id));
+      const withText = (Array.isArray(fullDocs) ? fullDocs : []).filter(
+        (d: any) => useIds.has(d.id) && d.extractedText?.trim()
+      );
+      if (withText.length === 0) {
+        setProcessingInvoices(false);
+        return;
+      }
+      let combined = "";
+      for (const doc of withText) {
+        const snippet = `--- ${doc.originalName} ---\n${doc.extractedText.substring(0, 15000)}\n\n`;
+        if (combined.length + snippet.length > 50000) break;
+        combined += snippet;
+      }
+      const selectedSINs = certData?.application?.selectedSINs || "";
+      const data = await apiRequest("/api/applications/ai/draft", {
+        method: "POST",
+        body: JSON.stringify({
+          section: "Invoice Analysis for GSA CSP-1 Pricing",
+          prompt: `Analyze these invoices/documents and extract all billable service line items. Group similar services together. Return a JSON array:
+[
+  {
+    "serviceType": "plain English name",
+    "description": "what work was performed",
+    "invoiceCount": 1,
+    "rateRange": "e.g. $125-$175/hr",
+    "highestRate": "150.00",
+    "suggestedLcatTitle": "GSA-compliant LCAT title",
+    "suggestedEducation": "Bachelor's Degree",
+    "suggestedYearsExp": "5",
+    "rationale": "one sentence explaining why this maps to this LCAT"
+  }
+]
+Selected SINs: ${selectedSINs}
+Company: ${certData?.client?.businessName}
+Return ONLY the JSON array.`,
+          context: { businessName: certData?.client?.businessName, otherSections: combined },
+          clientId,
+        }),
+      });
+      const clean = data.text.replace(/```json|```/g, "").trim();
+      setInvoiceGroups(JSON.parse(clean));
+      setInvoicesProcessed(true);
+    } catch (err) {
+      console.error("Auto-process failed:", err);
+      setError("Failed to analyze uploaded documents. Click 'Pull LCATs' to retry.");
+    } finally {
+      setProcessingInvoices(false);
     }
   }
 
@@ -472,16 +547,83 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
   }
 
   async function exportCSP1() {
-    const rows = [
-      ["Labor Category Title", "Description", "Minimum Education", "Minimum Years Experience", "Most Favored Customer Rate ($/hr)", "GSA Rate w/ IFF ($/hr)"],
-      ...lcats.map(l => [l.title, l.description, l.education, l.yearsExperience, l.mfcRate, l.gsaRate])
+    const XLSX = (await import("xlsx")).default;
+
+    // GSA CSP-1 required columns
+    const headers = [
+      "SIN(s) Proposed",
+      "Labor Category / Service Proposed (Title)",
+      "Labor Category / Service Description",
+      "Minimum Education / Certification Level",
+      "Minimum Years of Experience",
+      "Domestic / Overseas",
+      "Commercial Price List (CPL) or Market Rate",
+      "Most Favored Customer (MFC)",
+      "MFC Discount (%)",
+      "Proposed GSA Rate (including IFF)",
+      "Unit of Issue",
     ];
-    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${cert?.client?.businessName?.replace(/\s+/g, "_")}_CSP1_Pricing.csv`;
-    a.click();
+
+    const selectedSINs = cert?.application?.selectedSINs || "";
+    const rows = lcats.map(l => {
+      const baseRate = parseFloat(l.baseRate || l.mfcRate || "0");
+      const mfcRate = parseFloat(l.mfcRate || "0");
+      const gsaRate = parseFloat(l.gsaRate || "0");
+      const mfcDiscount = baseRate > 0 ? (((baseRate - mfcRate) / baseRate) * 100).toFixed(2) : "0.00";
+      return [
+        selectedSINs,
+        l.title || "",
+        l.description || "",
+        l.education || "Bachelor's Degree",
+        l.yearsExperience || "",
+        "Domestic",
+        baseRate > 0 ? `$${baseRate.toFixed(2)}` : `$${mfcRate.toFixed(2)}`,
+        `$${mfcRate.toFixed(2)}`,
+        `${mfcDiscount}%`,
+        `$${gsaRate.toFixed(2)}`,
+        "Hourly",
+      ];
+    });
+
+    const wsData = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Set column widths for readability
+    ws["!cols"] = [
+      { wch: 18 }, { wch: 35 }, { wch: 50 }, { wch: 30 }, { wch: 12 },
+      { wch: 15 }, { wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 22 }, { wch: 12 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "CSP-1 Pricelist");
+
+    const fileName = `${cert?.client?.businessName?.replace(/\s+/g, "_") || "Company"}_CSP-1_Pricelist.xlsx`;
+
+    // 1. Download to user's computer
+    XLSX.writeFile(wb, fileName);
+
+    // 2. Save a copy to GovCert as a Document record (for drag-and-drop on submit page)
+    try {
+      const xlsxBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([xlsxBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const file = new File([blob], fileName, { type: blob.type });
+      const token = localStorage.getItem("token");
+      const clientId = cert?.clientId || cert?.client?.id;
+      if (clientId && token) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("clientId", clientId);
+        formData.append("category", "RATE_CARD");
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to save CSP-1 to GovCert documents:", err);
+      // Non-fatal — user already has the download
+    }
   }
 
   function logout() {
@@ -823,8 +965,27 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
 
               {invoicesProcessed && invoiceGroups.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 12 }}>
-                    Found {invoiceGroups.length} service type{invoiceGroups.length !== 1 ? "s" : ""} in your documents
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)" }}>
+                      Found {invoiceGroups.length} service type{invoiceGroups.length !== 1 ? "s" : ""} in your documents
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {invoiceGroups.some(g => !lcats.some(l => l.title === g.suggestedLcatTitle)) && (
+                        <button onClick={() => {
+                          const newOnes = invoiceGroups.filter(g => !lcats.some(l => l.title === g.suggestedLcatTitle));
+                          newOnes.forEach(g => addGroupAsLcat(g));
+                        }}
+                          style={{ padding: "7px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                          Add All to CSP-1 ({invoiceGroups.filter(g => !lcats.some(l => l.title === g.suggestedLcatTitle)).length})
+                        </button>
+                      )}
+                      {lcats.length > 0 && (
+                        <button onClick={exportCSP1}
+                          style={{ padding: "7px 16px", background: "var(--green)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                          Export CSP-1 Excel
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
                     {invoiceGroups.map((group, i) => {
@@ -1231,7 +1392,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   {lcats.length > 0 && (
                     <button onClick={exportCSP1} style={{ padding: "12px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
-                      ⬇ Export CSP-1 CSV
+                      ⬇ Export CSP-1 Excel
                     </button>
                   )}
                   {saved && <span style={{ fontSize: 12, color: "var(--green)" }}>✓ Saved</span>}

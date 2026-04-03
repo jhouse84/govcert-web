@@ -60,12 +60,14 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
     finally { setLoading(false); }
   }
 
-  async function runDocAnalysis(clientId: string, certType: string) {
+  async function runDocAnalysis(clientId: string, certType: string, forceFullRescan = false) {
     setAnalyzingDocs(true);
     try {
+      // Pass existing fingerprints so the backend only analyzes NEW documents
+      const existingFingerprints = (!forceFullRescan && docAnalysis?.fingerprints) ? docAnalysis.fingerprints : [];
       const report = await apiRequest("/api/applications/ai/document-analysis", {
         method: "POST",
-        body: JSON.stringify({ clientId, certType }),
+        body: JSON.stringify({ clientId, certType, existingFingerprints }),
       });
       setDocAnalysis(report);
       sessionStorage.setItem(`docAnalysis_${certId}`, JSON.stringify(report));

@@ -12,6 +12,7 @@ export async function generatePDF(opts: {
   signatureImage?: string | null;
   clientId?: string | null;
   category?: string | null;
+  apiUrl?: string;
 }): Promise<void> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -139,7 +140,7 @@ export async function generatePDF(opts: {
         formData.append("file", file);
         formData.append("clientId", opts.clientId);
         formData.append("category", opts.category);
-        await fetch(`${typeof window !== "undefined" ? (window as any).__NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL || "" : ""}/api/upload`, {
+        await fetch(`${opts.apiUrl || "https://govcert-production.up.railway.app"}/api/upload`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: formData,

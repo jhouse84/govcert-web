@@ -34,6 +34,9 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   const [expandedStep, setExpandedStep] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [clientDocs, setClientDocs] = useState<Record<string, any[]>>({});
+  const [dragOverStep, setDragOverStep] = useState<string | null>(null);
+  const [uploadingStep, setUploadingStep] = useState<string | null>(null);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
   const [sinNarratives, setSinNarratives] = useState<Record<string, string>>({});
   const [eofferData, setEofferData] = useState<any>({});
   const [samValidation, setSamValidation] = useState<any>(null);
@@ -117,6 +120,44 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
       const a = document.createElement("a"); a.href = url; a.download = doc.originalName || "document"; a.click();
       URL.revokeObjectURL(url);
     } catch { setError("Download failed"); }
+  }
+
+  async function handleFileDrop(stepId: string, files: FileList, category: string) {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
+    setUploadingStep(stepId);
+    setDragOverStep(null);
+    try {
+      const token = localStorage.getItem("token");
+      const clientId = cert?.clientId || cert?.client?.id;
+      for (const file of fileArr) {
+        const formData = new FormData();
+        formData.append("file", file);
+        if (clientId) formData.append("clientId", clientId);
+        formData.append("category", category);
+        const resp = await fetch(`${API_URL}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (!resp.ok) throw new Error(`Upload failed for ${file.name}`);
+      }
+      // Refresh docs
+      if (clientId) {
+        const rawDocs = await apiRequest(`/api/upload/documents?clientId=${clientId}`);
+        const grouped: Record<string, any[]> = {};
+        for (const doc of (Array.isArray(rawDocs) ? rawDocs : [])) {
+          const light = { id: doc.id, originalName: doc.originalName, category: doc.category, documentYear: doc.documentYear };
+          if (!grouped[light.category]) grouped[light.category] = [];
+          grouped[light.category].push(light);
+        }
+        setClientDocs(grouped);
+      }
+    } catch (err: any) {
+      setError("Upload failed: " + (err.message || ""));
+    } finally {
+      setUploadingStep(null);
+    }
   }
 
   async function downloadCSP1() {
@@ -238,11 +279,11 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     // ── STEP 7: UPLOAD DOCUMENTS ──
     { id: "upload-financials", label: "Financial Statements (2 Years)", eofferLocation: "eOffer → Upload Documents", type: "files",
       status: (clientDocs.FINANCIAL_STATEMENT || []).length > 0 ? "ready" : "missing",
-      content: { docs: clientDocs.FINANCIAL_STATEMENT || [], note: "Upload your P&L + Balance Sheet for the 2 most recent fiscal years." } },
+      content: { docs: clientDocs.FINANCIAL_STATEMENT || [], note: "Upload your P&L + Balance Sheet for the 2 most recent fiscal years. Drag and drop files here.", dropCategory: "FINANCIAL_STATEMENT" } },
 
     { id: "upload-pp", label: "Past Performance References (CPARS / PPQs)", eofferLocation: "eOffer → Upload Documents", type: "files",
       status: (clientDocs.PPQ_RESPONSE || []).length + (clientDocs.PPQ_COMPLETED || []).length + (clientDocs.CPARS_REPORT || []).length > 0 ? "ready" : "missing",
-      content: { docs: [...(clientDocs.PPQ_RESPONSE || []), ...(clientDocs.PPQ_COMPLETED || []), ...(clientDocs.CPARS_REPORT || [])], note: "Minimum 3 references. Each file = one reference for eOffer." } },
+      content: { docs: [...(clientDocs.PPQ_RESPONSE || []), ...(clientDocs.PPQ_COMPLETED || []), ...(clientDocs.CPARS_REPORT || [])], note: "Minimum 3 references. Each file = one reference for eOffer. Drag and drop files here.", dropCategory: "PPQ_RESPONSE" } },
 
     { id: "upload-csp1", label: "CSP-1 Pricelist (Excel)", eofferLocation: "eOffer → Upload Documents", type: "files",
       status: (() => { try { return (JSON.parse(app?.pricingData || "{}").lcats || []).length > 0 ? "ready" : "missing"; } catch { return "missing"; } })(),
@@ -260,6 +301,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Price_Proposal.pdf`,
           clientId: cert?.clientId || client?.id,
           category: "PRICE_PROPOSAL_GENERATED",
+          apiUrl: API_URL,
         }) : null,
         docs: clientDocs.PRICE_PROPOSAL_GENERATED || [],
       } },
@@ -278,6 +320,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           signatureImage: eofferData.signatureImage || null,
           clientId: cert?.clientId || client?.id,
           category: "NEGOTIATOR_LETTER_GENERATED",
+          apiUrl: API_URL,
         }) : null,
         docs: clientDocs.NEGOTIATOR_LETTER_GENERATED || [],
       } },
@@ -295,6 +338,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Subcontracting_Plan.pdf`,
           clientId: cert?.clientId || client?.id,
           category: "SUBCONTRACTING_PLAN_GENERATED",
+          apiUrl: API_URL,
         }) : null,
         docs: clientDocs.SUBCONTRACTING_PLAN_GENERATED || [],
       } },
@@ -514,8 +558,8 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                                   )}
                                 </div>
                                 {n.value && (
-                                  <div style={{ padding: "12px 14px", fontSize: 12.5, color: "var(--ink)", lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 200, overflowY: "auto" }}>
-                                    {n.value.substring(0, 500)}{n.value.length > 500 ? "..." : ""}
+                                  <div style={{ padding: "12px 14px", fontSize: 12.5, color: "var(--ink)", lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 400, overflowY: "auto" }}>
+                                    {n.value}
                                   </div>
                                 )}
                               </div>
@@ -574,9 +618,14 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                         </div>
                       )}
 
-                      {/* FILES type */}
+                      {/* FILES type — with drag-and-drop upload */}
                       {step.type === "files" && (
-                        <div>
+                        <div
+                          onDragOver={step.content?.dropCategory ? (e) => { e.preventDefault(); setDragOverStep(step.id); } : undefined}
+                          onDragLeave={step.content?.dropCategory ? () => setDragOverStep(null) : undefined}
+                          onDrop={step.content?.dropCategory ? (e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleFileDrop(step.id, e.dataTransfer.files, step.content.dropCategory); } : undefined}
+                          style={dragOverStep === step.id ? { border: "2px dashed var(--gold)", borderRadius: "var(--r)", padding: 8, background: "rgba(200,155,60,.04)" } : {}}>
+                          {uploadingStep === step.id && <div style={{ fontSize: 12, color: "var(--gold)", fontWeight: 500, marginBottom: 8 }}>Uploading...</div>}
                           {step.content?.note && <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 10, lineHeight: 1.6 }}>{step.content.note}</div>}
                           {/* Generated file button */}
                           {step.content?.generated && step.content?.generateFn && (

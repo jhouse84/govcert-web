@@ -566,10 +566,15 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         // Auto-save immediately — this cost money to generate
         (async () => {
           try {
-            const appId = await ensureApplication();
-            await apiRequest(`/api/applications/${appId}`, {
-              method: "PUT",
-              body: JSON.stringify({ sinNarratives: JSON.stringify(updated) }),
+            await apiRequest("/api/applications", {
+              method: "POST",
+              body: JSON.stringify({
+                certificationId: certId,
+                clientId: cert?.clientId || cert?.client?.id,
+                certType: cert?.type,
+                currentStep: cert?.application?.currentStep || 1,
+                sinNarratives: JSON.stringify(updated),
+              }),
             });
           } catch (e) { console.error("Auto-save SIN narrative failed:", e); }
         })();
@@ -621,10 +626,15 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
     setSaving(true);
     setError(null);
     try {
-      const appId = await ensureApplication();
-      await apiRequest(`/api/applications/${appId}`, {
-        method: "PUT",
-        body: JSON.stringify({ sinNarratives: JSON.stringify(sinNarratives) }),
+      await apiRequest("/api/applications", {
+        method: "POST",
+        body: JSON.stringify({
+          certificationId: certId,
+          clientId: cert?.clientId || cert?.client?.id,
+          certType: cert?.type,
+          currentStep: cert?.application?.currentStep || 1,
+          sinNarratives: JSON.stringify(sinNarratives),
+        }),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);

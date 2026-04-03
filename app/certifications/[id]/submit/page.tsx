@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { usePaywall } from "@/lib/usePaywall";
 import PaywallModal from "@/components/PaywallModal";
+import { generatePDF } from "@/lib/generatePDF";
 
 /* ═══════════════════════════════════════════════════════════════════
    GSA MAS eOffer Submission Package
@@ -246,20 +247,46 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
       status: (() => { try { return (JSON.parse(app?.pricingData || "{}").lcats || []).length > 0 ? "ready" : "missing"; } catch { return "missing"; } })(),
       content: { generated: true, generateLabel: "Download CSP-1 Excel", generateFn: downloadCSP1, docs: clientDocs.CSP1_GENERATED || [], note: "Generated from your Pricing page LCATs." } },
 
-    { id: "upload-price-proposal", label: "Price Proposal / Commercial Sales Practices", eofferLocation: "eOffer → Upload Documents", type: "text",
+    { id: "upload-price-proposal", label: "Price Proposal / Commercial Sales Practices", eofferLocation: "eOffer → Upload Documents (PDF)", type: "text",
       status: app?.priceProposal ? "ready" : "missing",
-      content: { narratives: app?.priceProposal ? [{ label: "Price Proposal", value: app.priceProposal, id: "price-proposal", charLimit: null }] : [], emptyMessage: "Generate on the Pricing page → Price Proposal section." } },
+      content: {
+        narratives: app?.priceProposal ? [{ label: "Price Proposal", value: app.priceProposal, id: "price-proposal", charLimit: null }] : [],
+        emptyMessage: "Generate on the Pricing page → Price Proposal section.",
+        pdfDownload: app?.priceProposal ? () => generatePDF({
+          title: "Price Proposal / Commercial Sales Practices",
+          companyName: client?.businessName || "",
+          content: app.priceProposal,
+          fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Price_Proposal.pdf`,
+        }) : null,
+      } },
 
-    { id: "upload-neg-letter", label: "Authorized Negotiator Letter", eofferLocation: "eOffer → Upload Documents", type: "text",
+    { id: "upload-neg-letter", label: "Authorized Negotiator Letter", eofferLocation: "eOffer → Upload Documents (PDF)", type: "text",
       status: eofferData.negotiatorLetter ? "ready" : "missing",
-      content: { narratives: eofferData.negotiatorLetter ? [{ label: "Negotiator Letter", value: eofferData.negotiatorLetter, id: "neg-letter", charLimit: null }] : [], emptyMessage: "Generate on the Authorized Negotiator Letter page.", signatureImage: eofferData.signatureImage } },
+      content: {
+        narratives: eofferData.negotiatorLetter ? [{ label: "Negotiator Letter", value: eofferData.negotiatorLetter, id: "neg-letter", charLimit: null }] : [],
+        emptyMessage: "Generate on the Authorized Negotiator Letter page.",
+        signatureImage: eofferData.signatureImage,
+        pdfDownload: eofferData.negotiatorLetter ? () => generatePDF({
+          title: "Authorized Negotiator Designation Letter",
+          companyName: client?.businessName || "",
+          content: eofferData.negotiatorLetter,
+          fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Authorized_Negotiator_Letter.pdf`,
+          signatureImage: eofferData.signatureImage || null,
+        }) : null,
+      } },
 
-    { id: "upload-subcon", label: "Subcontracting Plan", eofferLocation: "eOffer → Upload Documents (if applicable)", type: "text",
+    { id: "upload-subcon", label: "Subcontracting Plan", eofferLocation: "eOffer → Upload Documents (PDF, if applicable)", type: "text",
       status: eofferData.clauseSmallBiz === "Small Business" ? "ready" : eofferData.subcontractingPlan ? "ready" : "missing",
       content: {
         narratives: eofferData.subcontractingPlan ? [{ label: "Subcontracting Plan", value: eofferData.subcontractingPlan, id: "subcon-plan", charLimit: null }] : [],
         emptyMessage: eofferData.clauseSmallBiz === "Small Business" ? "Small Business Exempt — no plan required. Select 'Small Business Exempt' in eOffer." : "Generate on the Subcontracting Plan page.",
         exempt: eofferData.clauseSmallBiz === "Small Business",
+        pdfDownload: eofferData.subcontractingPlan ? () => generatePDF({
+          title: "Subcontracting Plan (FAR 52.219-9)",
+          companyName: client?.businessName || "",
+          content: eofferData.subcontractingPlan,
+          fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Subcontracting_Plan.pdf`,
+        }) : null,
       } },
 
     // ── STEP 8: SUBMIT ──
@@ -346,6 +373,25 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
               <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer" }}>&times;</button>
             </div>
           )}
+
+          {/* GovCert Analysis CTA */}
+          <a href={`/certifications/${certId}/review`}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", marginBottom: 20,
+              background: "linear-gradient(135deg, #1A2332 0%, #2D3748 100%)", borderRadius: "var(--rl)", textDecoration: "none",
+              border: "1px solid rgba(99,102,241,.3)", boxShadow: "0 4px 20px rgba(99,102,241,.15)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg, #6366F1, #8B5CF6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                {"\uD83D\uDD0D"}
+              </div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#fff" }}>Run GovCert Analysis</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 2 }}>AI review of your entire application — scores each section, identifies gaps, and recommends improvements before you submit.</div>
+              </div>
+            </div>
+            <div style={{ padding: "10px 20px", background: "rgba(99,102,241,.2)", border: "1px solid rgba(99,102,241,.4)", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+              Analyze →
+            </div>
+          </a>
 
           {/* ═══ STEPS ═══ */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -465,6 +511,13 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                               </div>
                             );
                           })}
+                          {/* PDF Download button */}
+                          {step.content.pdfDownload && (
+                            <button onClick={step.content.pdfDownload}
+                              style={{ width: "100%", padding: "12px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 6 }}>
+                              {"\u2B07"} Download as PDF for eOffer Upload
+                            </button>
+                          )}
                           {/* Signature image for negotiator letter */}
                           {step.content.signatureImage && (
                             <div style={{ padding: "8px 14px", borderTop: "1px solid var(--border)" }}>

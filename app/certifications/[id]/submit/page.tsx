@@ -75,7 +75,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
       // Fetch ALL client documents
       if (data.clientId) {
         try {
-          const allCats = "FINANCIAL_STATEMENT,CONTRACT,CAPABILITY_STATEMENT,CERTIFICATION_DOCUMENT,INVOICE,TAX_RETURN,RESUME,BANK_STATEMENT,BUSINESS_LICENSE,PPQ_RESPONSE,PPQ_COMPLETED,CPARS_REPORT,RATE_CARD,PAST_PROPOSAL,CSP1_GENERATED,OTHER";
+          const allCats = "FINANCIAL_STATEMENT,CONTRACT,CAPABILITY_STATEMENT,CERTIFICATION_DOCUMENT,INVOICE,TAX_RETURN,RESUME,BANK_STATEMENT,BUSINESS_LICENSE,PPQ_RESPONSE,PPQ_COMPLETED,CPARS_REPORT,RATE_CARD,PAST_PROPOSAL,CSP1_GENERATED,PRICE_PROPOSAL_GENERATED,NEGOTIATOR_LETTER_GENERATED,SUBCONTRACTING_PLAN_GENERATED,OTHER";
           const docs = await apiRequest(`/api/upload/documents/by-category/${data.clientId}/${allCats}`);
           const grouped: Record<string, any[]> = {};
           for (const doc of (Array.isArray(docs) ? docs : [])) {
@@ -257,7 +257,10 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           companyName: client?.businessName || "",
           content: app.priceProposal,
           fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Price_Proposal.pdf`,
+          clientId: cert?.clientId || client?.id,
+          category: "PRICE_PROPOSAL_GENERATED",
         }) : null,
+        docs: clientDocs.PRICE_PROPOSAL_GENERATED || [],
       } },
 
     { id: "upload-neg-letter", label: "Authorized Negotiator Letter", eofferLocation: "eOffer → Upload Documents (PDF)", type: "text",
@@ -272,7 +275,10 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           content: eofferData.negotiatorLetter,
           fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Authorized_Negotiator_Letter.pdf`,
           signatureImage: eofferData.signatureImage || null,
+          clientId: cert?.clientId || client?.id,
+          category: "NEGOTIATOR_LETTER_GENERATED",
         }) : null,
+        docs: clientDocs.NEGOTIATOR_LETTER_GENERATED || [],
       } },
 
     { id: "upload-subcon", label: "Subcontracting Plan", eofferLocation: "eOffer → Upload Documents (PDF, if applicable)", type: "text",
@@ -286,7 +292,10 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           companyName: client?.businessName || "",
           content: eofferData.subcontractingPlan,
           fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Subcontracting_Plan.pdf`,
+          clientId: cert?.clientId || client?.id,
+          category: "SUBCONTRACTING_PLAN_GENERATED",
         }) : null,
+        docs: clientDocs.SUBCONTRACTING_PLAN_GENERATED || [],
       } },
 
     // ── STEP 8: SUBMIT ──
@@ -517,6 +526,21 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                               style={{ width: "100%", padding: "12px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 6 }}>
                               {"\u2B07"} Download as PDF for eOffer Upload
                             </button>
+                          )}
+                          {/* Previously generated PDF files */}
+                          {(step.content.docs || []).length > 0 && (
+                            <div style={{ marginTop: 8 }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--green)", marginBottom: 6 }}>Saved PDF — ready for eOffer</div>
+                              {step.content.docs.map((doc: any) => (
+                                <div key={doc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "var(--green-bg)", borderRadius: "var(--r)", border: "1px solid var(--green-b)", marginBottom: 4 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{doc.originalName}</div>
+                                  <button onClick={() => downloadDoc(doc)}
+                                    style={{ padding: "5px 14px", fontSize: 11, fontWeight: 600, color: "var(--green)", border: "1px solid var(--green-b)", borderRadius: 5, background: "transparent", cursor: "pointer" }}>
+                                    Download
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
                           )}
                           {/* Signature image for negotiator letter */}
                           {step.content.signatureImage && (

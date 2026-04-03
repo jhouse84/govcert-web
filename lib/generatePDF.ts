@@ -10,6 +10,8 @@ export async function generatePDF(opts: {
   content: string;
   fileName: string;
   signatureImage?: string | null;
+  clientId?: string | null;
+  category?: string | null;
 }): Promise<void> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -118,10 +120,33 @@ export async function generatePDF(opts: {
   // ── Save ──
   const pdfBytes = await pdf.save();
   const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+
+  // Download to user's computer
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = opts.fileName;
   a.click();
   URL.revokeObjectURL(url);
+
+  // Also save to GovCert as a Document record (for submit page)
+  if (opts.clientId && opts.category) {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      if (token) {
+        const file = new File([blob], opts.fileName, { type: "application/pdf" });
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("clientId", opts.clientId);
+        formData.append("category", opts.category);
+        await fetch(`${typeof window !== "undefined" ? (window as any).__NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL || "" : ""}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to save PDF to GovCert documents:", e);
+    }
+  }
 }

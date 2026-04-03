@@ -1464,6 +1464,80 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
             )}
           </div>
 
+          {/* ═══ Download All Files for eOffer ═══ */}
+          {(() => {
+            // Collect all downloadable documents across all categories
+            const allDocs = Object.values(clientDocs).flat();
+            if (allDocs.length === 0) return null;
+
+            async function downloadFile(doc: any) {
+              try {
+                const resp = await fetch(
+                  `${process.env.NEXT_PUBLIC_API_URL || ""}/api/documents/download/${doc.id}`,
+                  { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+                );
+                if (!resp.ok) { setError("Download failed for " + doc.originalName); return; }
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url; a.download = doc.originalName || "document"; a.click();
+                URL.revokeObjectURL(url);
+              } catch { setError("Download failed"); }
+            }
+
+            async function downloadAll() {
+              for (const doc of allDocs) {
+                await downloadFile(doc);
+                // Small delay between downloads so browser doesn't block them
+                await new Promise(r => setTimeout(r, 300));
+              }
+            }
+
+            return (
+              <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <div>
+                    <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, margin: 0 }}>
+                      Download Files for eOffer
+                    </h3>
+                    <p style={{ fontSize: 12, color: "var(--ink3)", marginTop: 4, marginBottom: 0 }}>
+                      Download each file to your computer, then upload them into eOffer. {allDocs.length} file{allDocs.length !== 1 ? "s" : ""} ready.
+                    </p>
+                  </div>
+                  <button onClick={downloadAll}
+                    style={{ padding: "10px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
+                    Download All ({allDocs.length})
+                  </button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {allDocs.map((doc: any) => (
+                    <div key={doc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "var(--cream)", borderRadius: "var(--r)", border: "1px solid var(--border)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: 14 }}>{
+                          doc.category === "FINANCIAL_STATEMENT" ? "\uD83D\uDCC8" :
+                          doc.category === "CPARS_REPORT" || doc.category === "PPQ_RESPONSE" || doc.category === "PPQ_COMPLETED" ? "\u2B50" :
+                          doc.category === "CAPABILITY_STATEMENT" ? "\uD83C\uDFE2" :
+                          doc.category === "INVOICE" || doc.category === "RATE_CARD" ? "\uD83D\uDCB0" :
+                          doc.category === "RESUME" ? "\uD83D\uDC64" :
+                          doc.category === "CERTIFICATION_DOCUMENT" ? "\uD83D\uDCC4" :
+                          "\uD83D\uDCC1"
+                        }</span>
+                        <div style={{ overflow: "hidden" }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.originalName}</div>
+                          <div style={{ fontSize: 10, color: "var(--ink4)" }}>{doc.category?.replace(/_/g, " ")}{doc.documentYear ? ` \u00B7 ${doc.documentYear}` : ""}</div>
+                        </div>
+                      </div>
+                      <button onClick={() => downloadFile(doc)}
+                        style={{ padding: "5px 14px", fontSize: 11, fontWeight: 600, color: "var(--green)", border: "1px solid var(--green-b)", borderRadius: 5, background: "transparent", cursor: "pointer", flexShrink: 0 }}>
+                        Download
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Bottom actions */}
           <div style={{ background: "var(--navy)", borderRadius: "var(--rl)", padding: "28px 32px", marginTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>

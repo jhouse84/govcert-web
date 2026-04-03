@@ -30,6 +30,11 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
   const [sinSearch, setSinSearch] = useState("");
   const [sinCategoryFilter, setSinCategoryFilter] = useState("");
 
+  // Document analysis state
+  const [docAnalysis, setDocAnalysis] = useState<any>(null);
+  const [analyzingDocs, setAnalyzingDocs] = useState(false);
+  const [analysisExpanded, setAnalysisExpanded] = useState(true);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -43,8 +48,32 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
     try {
       const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
+      // Trigger document analysis on first load (if not already cached)
+      const cacheKey = `docAnalysis_${certId}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try { setDocAnalysis(JSON.parse(cached)); } catch {}
+      } else if (data.clientId) {
+        runDocAnalysis(data.clientId, data.type);
+      }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
+  }
+
+  async function runDocAnalysis(clientId: string, certType: string) {
+    setAnalyzingDocs(true);
+    try {
+      const report = await apiRequest("/api/applications/ai/document-analysis", {
+        method: "POST",
+        body: JSON.stringify({ clientId, certType }),
+      });
+      setDocAnalysis(report);
+      sessionStorage.setItem(`docAnalysis_${certId}`, JSON.stringify(report));
+    } catch (err) {
+      console.error("Document analysis failed:", err);
+    } finally {
+      setAnalyzingDocs(false);
+    }
   }
 
   async function saveSINs() {
@@ -377,6 +406,117 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
                 <button style={{ padding: "8px 18px", background: "var(--amber)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Apply for Startup Springboard</button>
                 <button style={{ padding: "8px 18px", background: "transparent", border: "1px solid var(--amber-b)", borderRadius: "var(--r)", color: "var(--amber)", fontSize: 13, cursor: "pointer" }}>Learn More</button>
               </div>
+            </div>
+          )}
+
+          {/* ── Document Analysis / Readiness Report ── */}
+          {(analyzingDocs || docAnalysis) && (
+            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", marginBottom: 24, boxShadow: "var(--shadow)", overflow: "hidden" }}>
+              <div
+                onClick={() => setAnalysisExpanded(!analysisExpanded)}
+                style={{ padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", background: docAnalysis ? (docAnalysis.overallReadiness >= 80 ? "var(--green-bg)" : docAnalysis.overallReadiness >= 50 ? "rgba(200,155,60,.06)" : "rgba(200,60,60,.04)") : "var(--cream)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: docAnalysis ? (docAnalysis.overallReadiness >= 80 ? "var(--green)" : docAnalysis.overallReadiness >= 50 ? "var(--gold)" : "var(--red)") : "var(--cream2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 600 }}>
+                    {analyzingDocs ? "..." : docAnalysis?.overallReadiness || 0}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)" }}>
+                      {analyzingDocs ? "Analyzing your documents..." : `Document Readiness: ${docAnalysis?.readinessLabel || "Unknown"}`}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--ink3)" }}>
+                      {analyzingDocs ? "Scanning all uploaded files to assess submission readiness" : `${docAnalysis?.documentsAnalyzed || 0} documents analyzed · ${docAnalysis?.sections?.filter((s: any) => s.status === "ready").length || 0} sections ready`}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {!analyzingDocs && (
+                    <button onClick={(e) => { e.stopPropagation(); const clientId = cert?.clientId || cert?.client?.id; if (clientId) { sessionStorage.removeItem(`docAnalysis_${certId}`); runDocAnalysis(clientId, cert.type); } }}
+                      style={{ padding: "6px 14px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 11, color: "var(--ink3)", cursor: "pointer" }}>
+                      Re-scan
+                    </button>
+                  )}
+                  <span style={{ fontSize: 14, color: "var(--gold)" }}>{analysisExpanded ? "\u25B2" : "\u25BC"}</span>
+                </div>
+              </div>
+
+              {analysisExpanded && !analyzingDocs && docAnalysis && (
+                <div style={{ padding: "0 24px 24px" }}>
+                  {/* Critical Gaps */}
+                  {docAnalysis.criticalGaps?.length > 0 && (
+                    <div style={{ marginTop: 16, padding: "14px 16px", background: "rgba(200,60,60,.04)", border: "1px solid rgba(200,60,60,.12)", borderRadius: "var(--r)" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--red)", marginBottom: 8 }}>Critical Gaps</div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink2)", lineHeight: 1.7 }}>
+                        {docAnalysis.criticalGaps.map((gap: string, i: number) => <li key={i}>{gap}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Section Breakdown */}
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--ink3)", marginBottom: 10 }}>Section Readiness</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {(docAnalysis.sections || []).map((sec: any, i: number) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: "var(--r)", background: sec.status === "ready" ? "var(--green-bg)" : sec.status === "draftable" ? "rgba(200,155,60,.06)" : sec.status === "partial" ? "rgba(200,155,60,.03)" : "var(--cream)", border: `1px solid ${sec.status === "ready" ? "var(--green-b)" : sec.status === "draftable" ? "rgba(200,155,60,.15)" : "var(--border)"}` }}>
+                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: sec.status === "ready" ? "var(--green)" : sec.status === "draftable" ? "var(--gold)" : sec.status === "partial" ? "var(--amber)" : "var(--cream2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 700, flexShrink: 0 }}>
+                            {sec.status === "ready" ? "\u2713" : sec.score || 0}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>{sec.name}</div>
+                            <div style={{ fontSize: 11.5, color: "var(--ink3)", lineHeight: 1.5 }}>
+                              {sec.status === "ready" ? sec.whatWeCanDo : sec.status === "draftable" ? sec.whatWeCanDo : sec.whatsMissing || sec.improvementTips}
+                            </div>
+                            {sec.documentsAvailable?.length > 0 && (
+                              <div style={{ fontSize: 10.5, color: "var(--ink4)", marginTop: 3 }}>
+                                Sources: {sec.documentsAvailable.join(", ")}
+                              </div>
+                            )}
+                          </div>
+                          <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 10, fontWeight: 600, background: sec.status === "ready" ? "var(--green-bg)" : sec.status === "draftable" ? "rgba(200,155,60,.1)" : sec.status === "partial" ? "var(--amber-bg)" : "var(--cream2)", color: sec.status === "ready" ? "var(--green)" : sec.status === "draftable" ? "var(--gold)" : sec.status === "partial" ? "var(--amber)" : "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em", flexShrink: 0 }}>
+                            {sec.status === "draftable" ? "AI Can Draft" : sec.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Quick Wins */}
+                  {docAnalysis.quickWins?.length > 0 && (
+                    <div style={{ marginTop: 16, padding: "14px 16px", background: "rgba(200,155,60,.04)", border: "1px solid rgba(200,155,60,.12)", borderRadius: "var(--r)" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--gold)", marginBottom: 8 }}>Quick Wins</div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink2)", lineHeight: 1.7 }}>
+                        {docAnalysis.quickWins.map((win: string, i: number) => <li key={i}>{win}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Next Steps */}
+                  {docAnalysis.nextSteps?.length > 0 && (
+                    <div style={{ marginTop: 16, padding: "14px 16px", background: "rgba(26,35,50,.02)", border: "1px solid var(--border)", borderRadius: "var(--r)" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--navy)", marginBottom: 8 }}>Recommended Next Steps</div>
+                      <ol style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink2)", lineHeight: 1.7 }}>
+                        {docAnalysis.nextSteps.map((step: string, i: number) => <li key={i}>{step}</li>)}
+                      </ol>
+                    </div>
+                  )}
+
+                  {/* Documents Without Text */}
+                  {docAnalysis.documentsNeedingReupload > 0 && (
+                    <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(200,60,60,.03)", borderRadius: "var(--r)", border: "1px solid rgba(200,60,60,.08)", fontSize: 12, color: "var(--red)" }}>
+                      {docAnalysis.documentsNeedingReupload} document{docAnalysis.documentsNeedingReupload !== 1 ? "s" : ""} could not be read — try re-uploading as PDF for full analysis.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {analysisExpanded && analyzingDocs && (
+                <div style={{ padding: "20px 24px", textAlign: "center" as const }}>
+                  <div style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 8 }}>Scanning and fingerprinting each document...</div>
+                  <div style={{ height: 4, background: "var(--cream2)", borderRadius: 100, overflow: "hidden", maxWidth: 300, margin: "0 auto" }}>
+                    <div style={{ height: "100%", width: "60%", background: "var(--gold)", borderRadius: 100, animation: "pulse 1.5s infinite" }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 8 }}>This may take 30-60 seconds for large document sets</div>
+                </div>
+              )}
             </div>
           )}
 

@@ -182,22 +182,50 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
     setError(null);
     try {
       const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("file", file);
-      const extractRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload/extract-text`, {
+      const clientId = cert?.clientId || cert?.client?.id;
+      const API = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
+
+      // 1. Upload the actual file to document storage (so it's available for eOffer Tab 4)
+      const uploadForm = new FormData();
+      uploadForm.append("file", file);
+      if (clientId) uploadForm.append("clientId", clientId);
+      uploadForm.append("category", "PPQ_RESPONSE");
+      const uploadRes = await fetch(`${API}/api/upload/document`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+        body: uploadForm,
+      });
+      if (!uploadRes.ok) throw new Error("Failed to upload file");
+      const uploadData = await uploadRes.json();
+
+      // 2. Extract text for AI analysis
+      const extractForm = new FormData();
+      extractForm.append("file", file);
+      const extractRes = await fetch(`${API}/api/upload/extract-text`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: extractForm,
       });
       if (!extractRes.ok) throw new Error("Failed to extract text from file");
       const { text } = await extractRes.json();
+
+      // 3. AI extracts contract details from the PPQ
       const aiRes = await apiRequest("/api/applications/ai/extract-past-performance", {
         method: "POST",
-        body: JSON.stringify({ text, clientId: cert?.clientId, certType: "GSA_MAS" }),
+        body: JSON.stringify({ text, clientId, certType: "GSA_MAS" }),
       });
-      setPpExtracted(aiRes.contracts || aiRes || []);
+
+      // 4. Mark extracted contracts as having a completed PPQ document
+      const contracts = (aiRes.contracts || aiRes || []).map((c: any) => ({
+        ...c,
+        _uploadedFileName: file.name,
+        _uploadedDocId: uploadData.document?.id || uploadData.id,
+        _ppqComplete: true,
+      }));
+
+      setPpExtracted(contracts);
     } catch (err: any) {
-      setError("Failed to extract contract data: " + (err.message || "Unknown error"));
+      setError("Failed to process PPQ: " + (err.message || "Unknown error"));
     } finally {
       setPpUploading(false);
     }
@@ -219,7 +247,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
           periodEnd: extracted.periodEnd || "",
           description: extracted.sowDescription || extracted.description || "",
           hasCPARS: extracted.hasCPARS ?? null,
-          cparsUploaded: false,
+          cparsUploaded: extracted._ppqComplete ? true : false,
           referenceFirstName: extracted.referenceFirstName || "",
           referenceLastName: extracted.referenceLastName || "",
           referenceEmail: extracted.referenceEmail || "",
@@ -684,10 +712,17 @@ Scope of Work: ${contract.sowDescription}`,
             {ppExtracted.length > 0 && (
               <div style={{ marginTop: 16 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 10 }}>
-                  AI Extracted {ppExtracted.length} Contract{ppExtracted.length !== 1 ? "s" : ""} — Review & Add
+                  AI Extracted {ppExtracted.length} Reference{ppExtracted.length !== 1 ? "s" : ""} — Review & Add
                 </div>
                 {ppExtracted.map((ex, idx) => (
                   <div key={idx} style={{ background: "var(--cream)", border: "1px solid rgba(200,155,60,.2)", borderRadius: "var(--r)", padding: "14px 18px", marginBottom: 8 }}>
+                    {ex._uploadedFileName && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, padding: "6px 10px", background: "var(--green-bg)", borderRadius: 6, border: "1px solid var(--green-b)" }}>
+                        <span style={{ color: "var(--green)", fontSize: 12, fontWeight: 700 }}>{"✓"}</span>
+                        <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 500 }}>PDF saved to document library: {ex._uploadedFileName}</span>
+                        <span style={{ fontSize: 10, color: "var(--green)", marginLeft: "auto" }}>Ready for eOffer Tab 4</span>
+                      </div>
+                    )}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>{ex.agencyName || "Unknown Agency"}</div>

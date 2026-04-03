@@ -104,28 +104,18 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
           setMode("review");
         } catch {}
       } else if (data.client?.id) {
-        // Auto-populate from eligibility/extracted profile data
+        // Auto-extract from uploaded financial documents if they exist
         try {
-          const defaults = await apiRequest(`/api/applications/preview-defaults/${data.client.id}/${data.type || "GSA_MAS"}`);
-          if (defaults?.defaults?.annualRevenue) {
-            const rev = defaults.defaults.annualRevenue;
-            // Try to get 3-year revenue from eligibility intake
-            const eligibility = await apiRequest(`/api/eligibility/${data.client.id}`).catch(() => null);
-            const rev3 = eligibility?.revenue3Years ? JSON.parse(eligibility.revenue3Years) : null;
-            const yr = new Date().getFullYear();
-            const prefilled: FinancialData = {
-              year1: { revenue: rev3?.[0] ? String(rev3[0]) : String(rev) },
-              year2: { revenue: rev3?.[1] ? String(rev3[1]) : "" },
-              year1Label: String(yr - 1),
-              year2Label: String(yr - 2),
-              source: null,
-              notes: "Pre-filled from your uploaded documents. Review and complete the remaining fields.",
-            };
-            setFinancials(prefilled);
-            setAutoFilledSource("eligibility");
-            setMode("review");
+          const finDocs = await apiRequest(`/api/upload/documents/by-category/${data.client.id}/FINANCIAL_STATEMENT,TAX_RETURN`);
+          const docsWithText = (Array.isArray(finDocs) ? finDocs : []).filter((d: any) => d.extractedText?.trim());
+          if (docsWithText.length > 0) {
+            const combinedText = docsWithText.map((d: any) => `--- ${d.originalName} (${d.documentYear || "Unknown Year"}) ---\n${d.extractedText}`).join("\n\n");
+            setAutoFilledSource("extractedProfile");
+            await extractFinancialsFromText(combinedText, docsWithText.map((d: any) => d.originalName).join(", "));
           }
-        } catch {}
+        } catch (e) {
+          console.error("Auto-extract from docs failed:", e);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -167,64 +157,64 @@ export default function FinancialsPage({ params }: { params: Promise<{ id: strin
 
   async function extractFinancialsFromText(text: string, fileNames: string) {
     try {
-      const data = await apiRequest("/api/applications/ai/draft", {
+      // Use dedicated financial extraction endpoint (Opus, 60K chars, CPA-level accuracy)
+      const data = await apiRequest("/api/applications/ai/extract-financials", {
         method: "POST",
-        body: JSON.stringify({
-          section: "Financial Data Extraction",
-          prompt: `You are extracting financial data from uploaded business documents. This may include P&L statements, Balance Sheets, tax returns, or financial summaries in various formats (PDF, Excel export, CSV).
-
-CRITICAL: Search the ENTIRE document thoroughly. The Balance Sheet data is often on a separate page or section from the P&L. Do NOT stop after finding revenue.
-
-Return ONLY a valid JSON object with this exact structure:
-{
-  "year1Label": "YYYY",
-  "year2Label": "YYYY",
-  "year1": {
-    "revenue": "number",
-    "cogs": "number",
-    "grossProfit": "number",
-    "operatingExpenses": "number",
-    "operatingIncome": "number",
-    "netIncome": "number",
-    "totalAssets": "number",
-    "totalLiabilities": "number",
-    "ownersEquity": "number",
-    "cashAndEquivalents": "number",
-    "accountsReceivable": "number",
-    "currentLiabilities": "number"
-  },
-  "year2": { same 12 fields }
-}
-
-RULES:
-- year1 = most recent fiscal year, year2 = prior year
-- All values as plain numbers without $ or commas (e.g. "450000" not "$450,000")
-- If a value is not found, use empty string ""
-- LOOK FOR THESE ALTERNATE LABELS:
-  * "revenue" = Total Revenue, Sales, Gross Sales, Total Income, Gross Receipts
-  * "cogs" = Cost of Goods Sold, Cost of Sales, Cost of Revenue, Direct Costs
-  * "grossProfit" = Gross Profit, Gross Margin
-  * "operatingExpenses" = Total Operating Expenses, SG&A, Total Expenses (minus COGS)
-  * "operatingIncome" = Operating Income, Operating Profit, Income from Operations, EBIT
-  * "netIncome" = Net Income, Net Profit, Net Earnings, Bottom Line, Net Income (Loss)
-  * "totalAssets" = Total Assets
-  * "totalLiabilities" = Total Liabilities, Total Liabilities and Equity minus Equity
-  * "ownersEquity" = Owner's Equity, Stockholders' Equity, Net Worth, Total Equity, Retained Earnings + Paid-in Capital
-  * "cashAndEquivalents" = Cash, Cash and Cash Equivalents, Bank Accounts
-  * "accountsReceivable" = Accounts Receivable, A/R, Trade Receivables
-  * "currentLiabilities" = Current Liabilities, Short-term Liabilities, Current Portion
-- If a Balance Sheet is present, extract ALL balance sheet fields — do not skip them
-- If only one year of data exists, populate year1 and leave year2 fields as ""`,
-          context: {
-            businessName: cert?.client?.businessName,
-            otherSections: text.substring(0, 15000),
-          },
-        }),
+        body: JSON.stringify({ text, clientId: cert?.clientId || cert?.client?.id, fileNames }),
       });
+
+      // Map the detailed response to our financials format
+      const result = data;
+      const mapped: any = {
+        year1Label: result.year1Label || "",
+        year2Label: result.year2Label || "",
+        year1: {
+          revenue: result.year1?.revenue ?? "",
+          cogs: result.year1?.costOfGoodsSold ?? "",
+          grossProfit: result.year1?.grossProfit ?? "",
+          operatingExpenses: result.year1?.operatingExpenses ?? "",
+          operatingIncome: result.year1?.operatingIncome ?? "",
+          netIncome: result.year1?.netIncome ?? "",
+          totalAssets: result.year1?.totalAssets ?? "",
+          totalLiabilities: result.year1?.totalLiabilities ?? "",
+          ownersEquity: result.year1?.ownersEquity ?? "",
+          cashAndEquivalents: result.year1?.cashAndEquivalents ?? "",
+          accountsReceivable: result.year1?.accountsReceivable ?? "",
+          currentLiabilities: result.year1?.totalCurrentLiabilities ?? "",
+        },
+        year2: {
+          revenue: result.year2?.revenue ?? "",
+          cogs: result.year2?.costOfGoodsSold ?? "",
+          grossProfit: result.year2?.grossProfit ?? "",
+          operatingExpenses: result.year2?.operatingExpenses ?? "",
+          operatingIncome: result.year2?.operatingIncome ?? "",
+          netIncome: result.year2?.netIncome ?? "",
+          totalAssets: result.year2?.totalAssets ?? "",
+          totalLiabilities: result.year2?.totalLiabilities ?? "",
+          ownersEquity: result.year2?.ownersEquity ?? "",
+          cashAndEquivalents: result.year2?.cashAndEquivalents ?? "",
+          accountsReceivable: result.year2?.accountsReceivable ?? "",
+          currentLiabilities: result.year2?.totalCurrentLiabilities ?? "",
+        },
+        source: "upload",
+        uploadedFileNames: fileNames,
+        accountingBasis: result.accountingBasis || null,
+        basisEvidence: result.basisEvidence || null,
+        ratios: result.ratios || null,
+        gsaFlags: result.gsaFlags || null,
+        notes: result.notes || null,
+      };
+
+      // Convert null values to empty strings for form display
+      for (const year of ["year1", "year2"]) {
+        for (const key of Object.keys(mapped[year])) {
+          if (mapped[year][key] === null) mapped[year][key] = "";
+          else if (typeof mapped[year][key] === "number") mapped[year][key] = String(mapped[year][key]);
+        }
+      }
+
       try {
-        const clean = data.text.replace(/```json|```/g, "").trim();
-        const parsed = JSON.parse(clean);
-        setFinancials({ ...parsed, source: "upload", uploadedFileNames: fileNames });
+        setFinancials(mapped);
         setAutoFilledSource("extractedProfile");
         setMode("review");
       } catch {

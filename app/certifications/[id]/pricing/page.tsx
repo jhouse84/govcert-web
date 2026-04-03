@@ -632,7 +632,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
         const formData = new FormData();
         formData.append("file", file);
         formData.append("clientId", clientId);
-        formData.append("category", "RATE_CARD");
+        formData.append("category", "CSP1_GENERATED");
         await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/upload`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },

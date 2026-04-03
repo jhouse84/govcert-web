@@ -3,13 +3,20 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
+// Map section IDs from the review to the correct wizard page paths
 const SECTION_LINKS: Record<string, string> = {
-  "social-disadvantage": "corporate",
-  "economic-disadvantage": "qcp",
-  "business-plan": "experience",
-  "corporate": "past-performance",
-  "past-performance": "financials",
-  "financials": "pricing",
+  "corporate-experience": "corporate",
+  "corporate": "corporate",
+  "quality-control": "qcp",
+  "qcp": "qcp",
+  "past-performance": "past-performance",
+  "project-experience": "past-performance",
+  "pricing": "pricing",
+  "company-info": "submit",
+  "financials": "financials",
+  "social-disadvantage": "8a/social-disadvantage",
+  "economic-disadvantage": "8a/economic-disadvantage",
+  "business-plan": "8a/business-plan",
 };
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; border: string; label: string }> = {
@@ -32,6 +39,10 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
   const [review, setReview] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [reviewHistory, setReviewHistory] = useState<{ score: number; date: string }[]>([]);
+  const [cureUploading, setCureUploading] = useState(false);
+  const [cureUploadResult, setCureUploadResult] = useState<any>(null);
+  const [curedSections, setCuredSections] = useState<Set<string>>(new Set());
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -109,6 +120,78 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
     } finally {
       setAnalyzing(false);
     }
+  }
+
+  async function handleCureUpload(files: FileList) {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
+    setCureUploading(true);
+    setCureUploadResult(null);
+    try {
+      const token = localStorage.getItem("token");
+      const clientId = cert?.clientId || cert?.client?.id;
+      const results = [];
+
+      for (const file of fileArr) {
+        // 1. Upload the file
+        const formData = new FormData();
+        formData.append("file", file);
+        if (clientId) formData.append("clientId", clientId);
+        const uploadResp = await fetch(`${API_URL}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        const uploadData = await uploadResp.json();
+        const doc = uploadData.document || uploadData;
+
+        // 2. Determine where this goes in the submission portal
+        const category = doc.category || "OTHER";
+        const placement = getDocumentPlacement(category, file.name, cert?.type);
+        results.push({ fileName: file.name, category, placement, docId: doc.id });
+      }
+
+      setCureUploadResult(results);
+    } catch (err: any) {
+      setError("Upload failed: " + (err.message || ""));
+    } finally {
+      setCureUploading(false);
+    }
+  }
+
+  function getDocumentPlacement(category: string, fileName: string, certType: string): { portal: string; section: string; instruction: string } {
+    const name = fileName.toLowerCase();
+    const isGSA = certType === "GSA_MAS";
+
+    // Smart detection from filename
+    if (name.includes("8(a)") || name.includes("8a") || name.includes("sba cert")) {
+      return {
+        portal: isGSA ? "eOffer → Solicitation Clauses → Small Business Representation" : "certifications.sba.gov → Document Upload",
+        section: isGSA ? "Upload Documents — proves 8(a) certification status for small business set-aside eligibility" : "Supporting certification documentation",
+        instruction: isGSA ? "Upload as PDF in eOffer Upload Documents. Also reference in your Small Business Representation clause." : "Upload as supporting documentation for your 8(a) renewal or new application."
+      };
+    }
+
+    const placements: Record<string, { portal: string; section: string; instruction: string }> = {
+      FINANCIAL_STATEMENT: { portal: isGSA ? "eOffer → Upload Documents" : "certifications.sba.gov → Document Upload", section: "Financial Statements", instruction: "Upload as PDF. GSA requires 2 years of P&L + Balance Sheet." },
+      TAX_RETURN: { portal: isGSA ? "eOffer → Upload Documents" : "certifications.sba.gov → Document Upload", section: "Tax Returns", instruction: "Upload complete returns with all schedules." },
+      CPARS_REPORT: { portal: isGSA ? "eOffer → Upload Documents → Past Performance" : "Symphony Portal → Past Performance", section: "Past Performance References", instruction: "Each CPARS report counts as one reference. Minimum 3 for GSA MAS, 5 for OASIS+." },
+      PPQ_RESPONSE: { portal: isGSA ? "eOffer → Upload Documents → Past Performance" : "certifications.sba.gov → Past Performance", section: "Past Performance References", instruction: "Each completed PPQ counts as one reference." },
+      CAPABILITY_STATEMENT: { portal: isGSA ? "eOffer → Upload Documents → Technical Proposal" : "certifications.sba.gov → Entity Information", section: "Corporate Experience", instruction: "Supports your corporate experience narrative." },
+      RESUME: { portal: isGSA ? "Not required for GSA MAS" : "certifications.sba.gov → Document Upload", section: "Key Personnel Resumes", instruction: "Upload for each owner and key management personnel." },
+      CERTIFICATION_DOCUMENT: { portal: isGSA ? "eOffer → Upload Documents" : "certifications.sba.gov → Document Upload", section: "Certifications & Legal Documents", instruction: "Upload as supporting documentation." },
+      INVOICE: { portal: isGSA ? "eOffer → Upload Documents → Price Proposal support" : "Not typically required", section: "Pricing Evidence", instruction: "Supports your commercial pricing claims in the Price Proposal." },
+      BANK_STATEMENT: { portal: "certifications.sba.gov → Document Upload", section: "Bank Statements (8(a) only)", instruction: "6 months of consecutive business bank statements." },
+      BUSINESS_LICENSE: { portal: isGSA ? "eOffer → Upload Documents" : "certifications.sba.gov → Document Upload", section: "Business Formation Documents", instruction: "Articles of incorporation, business licenses, permits." },
+      CONTRACT: { portal: isGSA ? "Supports Past Performance narratives" : "certifications.sba.gov → Past Performance", section: "Contract Evidence", instruction: "Used to verify past performance claims and support SIN narratives." },
+      RATE_CARD: { portal: isGSA ? "Supports CSP-1 pricing" : "Not typically required", section: "Pricing Support", instruction: "Your commercial rate card supports MFC pricing claims in the CSP-1." },
+    };
+
+    return placements[category] || {
+      portal: isGSA ? "eOffer → Upload Documents" : "certifications.sba.gov → Document Upload",
+      section: "Supporting Documents",
+      instruction: "Upload as a supporting document. The AI classifier will determine the best category."
+    };
   }
 
   if (loading) return (
@@ -287,15 +370,31 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
                   </div>
                 )}
 
-                {/* Improvements */}
+                {/* Improvements with Cure Actions */}
                 {section.improvements?.length > 0 && (
                   <div style={{ background: "rgba(200,155,60,.04)", border: "1px solid rgba(200,155,60,.12)", borderRadius: "var(--r)", padding: "10px 14px" }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--gold)", marginBottom: 4 }}>How to Improve:</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--gold)", marginBottom: 8 }}>How to Improve:</div>
                     {section.improvements.map((imp: string, i: number) => (
-                      <div key={i} style={{ display: "flex", gap: 6, marginBottom: 3, fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.5 }}>
-                        <span style={{ color: "var(--gold)", flexShrink: 0 }}>→</span> {imp}
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8, padding: "6px 0", borderBottom: i < section.improvements.length - 1 ? "1px solid rgba(200,155,60,.08)" : "none" }}>
+                        <div style={{ display: "flex", gap: 6, fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.5, flex: 1 }}>
+                          <span style={{ color: "var(--gold)", flexShrink: 0 }}>→</span> {imp}
+                        </div>
+                        {sectionLink && (
+                          <a href={`/certifications/${certId}/${sectionLink}`}
+                            onClick={() => setCuredSections(prev => new Set([...prev, section.id]))}
+                            style={{ padding: "4px 12px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 10, fontWeight: 600, color: "var(--gold2)", textDecoration: "none", flexShrink: 0, whiteSpace: "nowrap" as const }}>
+                            Fix This →
+                          </a>
+                        )}
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Cured indicator */}
+                {curedSections.has(section.id) && (
+                  <div style={{ marginTop: 8, padding: "6px 12px", background: "rgba(46,125,50,.06)", borderRadius: "var(--r)", border: "1px solid rgba(46,125,50,.15)", fontSize: 11, color: "var(--green)", display: "flex", alignItems: "center", gap: 6 }}>
+                    {"\u2713"} You visited this section to make improvements. Re-run the analysis to see your updated score.
                   </div>
                 )}
 
@@ -306,6 +405,61 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
               </div>
             );
           })}
+
+          {/* ═══ Cure: Upload Additional Documents ═══ */}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px", marginTop: 24, marginBottom: 24, boxShadow: "var(--shadow)" }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 4 }}>
+              Upload Additional Documents
+            </h3>
+            <p style={{ fontSize: 13, color: "var(--ink3)", marginBottom: 16, lineHeight: 1.6 }}>
+              Upload any document to strengthen your application. GovCert will classify it and tell you exactly where it goes in the government portal.
+            </p>
+
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleCureUpload(e.dataTransfer.files); }}
+              style={{ border: "2px dashed var(--border2)", borderRadius: "var(--r)", padding: "24px", textAlign: "center" as const, cursor: "pointer", background: "var(--cream)" }}
+              onClick={() => { const input = document.createElement("input"); input.type = "file"; input.multiple = true; input.accept = ".pdf,.docx,.xlsx,.csv,.txt"; input.onchange = (e: any) => { if (e.target.files?.length) handleCureUpload(e.target.files); }; input.click(); }}>
+              {cureUploading ? (
+                <div style={{ fontSize: 14, color: "var(--gold)", fontWeight: 500 }}>Uploading and classifying...</div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 24, marginBottom: 8 }}>{"\uD83D\uDCC4"}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>Drop files here or click to upload</div>
+                  <div style={{ fontSize: 12, color: "var(--ink4)" }}>PDF, Word, Excel — any document that supports your application</div>
+                </div>
+              )}
+            </div>
+
+            {/* Upload results — shows where each doc goes */}
+            {cureUploadResult && cureUploadResult.length > 0 && (
+              <div style={{ marginTop: 16, display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--green)" }}>
+                  {"\u2713"} {cureUploadResult.length} document{cureUploadResult.length !== 1 ? "s" : ""} uploaded and classified
+                </div>
+                {cureUploadResult.map((r: any, i: number) => (
+                  <div key={i} style={{ padding: "14px 16px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)" }}>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 6 }}>{r.fileName}</div>
+                    <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 4 }}>
+                      <strong>Classified as:</strong> {r.category.replace(/_/g, " ")}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--ink2)", marginBottom: 4 }}>
+                      <strong>Where it goes:</strong> {r.placement.portal}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--ink2)", marginBottom: 4 }}>
+                      <strong>Section:</strong> {r.placement.section}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--ink3)", fontStyle: "italic", lineHeight: 1.5 }}>
+                      {r.placement.instruction}
+                    </div>
+                  </div>
+                ))}
+                <div style={{ fontSize: 12, color: "var(--ink3)", padding: "8px 0" }}>
+                  These documents are now saved in your GovCert file library and will appear in the correct section of your submission page. Re-run the analysis to see how they affect your scores.
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Bottom actions */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28, padding: "20px 24px", background: "var(--navy)", borderRadius: "var(--rl)" }}>

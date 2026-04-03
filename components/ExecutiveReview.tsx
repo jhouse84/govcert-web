@@ -119,20 +119,78 @@ export default function ExecutiveReview({ cert, certId }: { cert: any; certId: s
     }
   }
 
-  async function incorporateFeedback(reviewId: string) {
-    setIncorporating(true);
-    setIncorporateResult(null);
+  // Diff-based review
+  const [diffSections, setDiffSections] = useState<any[]>([]);
+  const [diffLoading, setDiffLoading] = useState(false);
+  const [diffReviewId, setDiffReviewId] = useState<string | null>(null);
+  const [sectionDecisions, setSectionDecisions] = useState<Record<string, "accept" | "keep" | "edit">>({});
+  const [sectionEdits, setSectionEdits] = useState<Record<string, string>>({});
+  const [condensingSection, setCondensingSection] = useState<string | null>(null);
+  const [applyingChanges, setApplyingChanges] = useState(false);
+
+  async function loadDiff(reviewId: string) {
+    setDiffLoading(true);
+    setDiffReviewId(reviewId);
+    setDiffSections([]);
+    setSectionDecisions({});
+    setSectionEdits({});
     try {
-      const result = await apiRequest(`/api/applications/${app.id}/executive-review/incorporate`, {
+      const result = await apiRequest(`/api/applications/${app.id}/executive-review/diff`, {
         method: "POST",
         body: JSON.stringify({ reviewId }),
       });
-      setIncorporateResult(result);
-      await loadReviews();
+      setDiffSections(result.sections || []);
     } catch (err: any) {
-      setError("Failed to incorporate feedback: " + (err.message || ""));
+      setError("Failed to load diff: " + (err.message || ""));
     } finally {
-      setIncorporating(false);
+      setDiffLoading(false);
+    }
+  }
+
+  async function condenseSection(sectionId: string, text: string, charLimit: number) {
+    setCondensingSection(sectionId);
+    try {
+      const data = await apiRequest("/api/applications/ai/condense-narrative", {
+        method: "POST",
+        body: JSON.stringify({ narrative: text, charLimit }),
+      });
+      if (data.narrative) {
+        setSectionEdits(prev => ({ ...prev, [sectionId]: data.narrative }));
+      }
+    } catch (err: any) {
+      setError("Failed to condense: " + (err.message || ""));
+    } finally {
+      setCondensingSection(null);
+    }
+  }
+
+  async function applyAcceptedChanges() {
+    setApplyingChanges(true);
+    try {
+      const changes: any[] = [];
+      for (const section of diffSections) {
+        const decision = sectionDecisions[section.id];
+        if (decision === "accept") {
+          const text = sectionEdits[section.id] || section.reviewerVersion;
+          if (text) changes.push({ field: section.field, subKey: section.subKey, newText: text });
+        } else if (decision === "edit") {
+          const text = sectionEdits[section.id];
+          if (text) changes.push({ field: section.field, subKey: section.subKey, newText: text });
+        }
+      }
+      if (changes.length === 0) { setError("No sections selected to update."); setApplyingChanges(false); return; }
+      await apiRequest(`/api/applications/${app.id}/executive-review/apply`, {
+        method: "POST",
+        body: JSON.stringify({ changes }),
+      });
+      setDiffSections([]);
+      setDiffReviewId(null);
+      await loadReviews();
+      setIncorporateResult({ changeSummary: [`${changes.length} section${changes.length !== 1 ? "s" : ""} updated from reviewer feedback.`], rejectedSuggestions: [] });
+    } catch (err: any) {
+      setError("Failed to apply changes: " + (err.message || ""));
+    } finally {
+      setApplyingChanges(false);
     }
   }
 
@@ -179,14 +237,140 @@ export default function ExecutiveReview({ cert, certId }: { cert: any; certId: s
                   </div>
                 ))}
               </div>
-              {r.status === "FEEDBACK_RECEIVED" && (
-                <button onClick={() => incorporateFeedback(r.id)} disabled={incorporating}
-                  style={{ marginTop: 10, padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: incorporating ? "wait" : "pointer", width: "100%" }}>
-                  {incorporating ? "Incorporating feedback..." : "Incorporate Feedback & Update Narratives"}
+              {(r.status === "FEEDBACK_RECEIVED" || r.status === "IN_REVIEW") && r.reviewers?.some((rv: any) => rv.status === "SUBMITTED") && (
+                <button onClick={() => loadDiff(r.id)} disabled={diffLoading}
+                  style={{ marginTop: 10, padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: diffLoading ? "wait" : "pointer", width: "100%" }}>
+                  {diffLoading && diffReviewId === r.id ? "Loading section comparison..." : "Review Changes Section by Section"}
                 </button>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Section-by-section diff view */}
+      {diffSections.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>
+              Review Changes ({diffSections.filter(s => s.hasChanges).length} sections with changes)
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setDiffSections([]); setDiffReviewId(null); }}
+                style={{ padding: "6px 14px", background: "var(--cream2)", border: "none", borderRadius: "var(--r)", fontSize: 11, cursor: "pointer", color: "var(--ink3)" }}>
+                Cancel
+              </button>
+              <button onClick={applyAcceptedChanges} disabled={applyingChanges || Object.keys(sectionDecisions).length === 0}
+                style={{ padding: "6px 18px", background: Object.keys(sectionDecisions).length > 0 ? "var(--green)" : "var(--cream2)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 600, cursor: "pointer", color: Object.keys(sectionDecisions).length > 0 ? "#fff" : "var(--ink4)" }}>
+                {applyingChanges ? "Applying..." : `Apply ${Object.values(sectionDecisions).filter(d => d !== "keep").length} Changes`}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {diffSections.map((section: any) => {
+              const decision = sectionDecisions[section.id];
+              const editText = sectionEdits[section.id];
+              const displayText = decision === "accept" ? (editText || section.reviewerVersion) : decision === "edit" ? (editText || section.current) : section.current;
+              const charCount = (displayText || "").length;
+              const isOver = section.charLimit && charCount > section.charLimit;
+
+              if (!section.hasChanges && !section.reviewerVersion) return null; // Skip sections not found
+
+              return (
+                <div key={section.id} style={{ border: `1px solid ${decision === "accept" ? "var(--green-b)" : section.hasChanges ? "var(--amber-b, rgba(200,155,60,.2))" : "var(--border)"}`, borderRadius: "var(--r)", overflow: "hidden", background: "#fff" }}>
+                  {/* Section header */}
+                  <div style={{ padding: "10px 14px", background: section.hasChanges ? "rgba(200,155,60,.06)" : "var(--cream)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>{section.label}</div>
+                      <div style={{ fontSize: 11, color: section.hasChanges ? "var(--gold)" : "var(--ink4)" }}>
+                        {section.hasChanges ? section.changeSummary : "No changes detected"}
+                      </div>
+                    </div>
+                    {section.hasChanges && section.reviewerVersion && (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => { setSectionDecisions(prev => ({ ...prev, [section.id]: "accept" })); setSectionEdits(prev => ({ ...prev, [section.id]: section.reviewerVersion })); }}
+                          style={{ padding: "4px 12px", background: decision === "accept" ? "var(--green)" : "transparent", border: `1px solid ${decision === "accept" ? "var(--green)" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 10, fontWeight: 600, cursor: "pointer", color: decision === "accept" ? "#fff" : "var(--green)" }}>
+                          Accept
+                        </button>
+                        <button onClick={() => setSectionDecisions(prev => ({ ...prev, [section.id]: "keep" }))}
+                          style={{ padding: "4px 12px", background: decision === "keep" ? "var(--navy)" : "transparent", border: `1px solid ${decision === "keep" ? "var(--navy)" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 10, fontWeight: 600, cursor: "pointer", color: decision === "keep" ? "#fff" : "var(--ink3)" }}>
+                          Keep Mine
+                        </button>
+                        <button onClick={() => { setSectionDecisions(prev => ({ ...prev, [section.id]: "edit" })); setSectionEdits(prev => ({ ...prev, [section.id]: section.reviewerVersion || section.current })); }}
+                          style={{ padding: "4px 12px", background: decision === "edit" ? "var(--gold)" : "transparent", border: `1px solid ${decision === "edit" ? "var(--gold)" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 10, fontWeight: 600, cursor: "pointer", color: decision === "edit" ? "#fff" : "var(--gold)" }}>
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content comparison */}
+                  {section.hasChanges && section.reviewerVersion && (
+                    <div style={{ padding: "12px 14px" }}>
+                      {decision === "edit" ? (
+                        <div>
+                          <textarea
+                            value={editText || section.reviewerVersion || section.current}
+                            onChange={e => setSectionEdits(prev => ({ ...prev, [section.id]: e.target.value }))}
+                            style={{ width: "100%", minHeight: 150, padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12.5, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.7, resize: "vertical", outline: "none", boxSizing: "border-box" }}
+                          />
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+                            {section.charLimit && (
+                              <span style={{ fontSize: 11, fontFamily: "monospace", color: isOver ? "var(--red)" : "var(--ink4)" }}>
+                                {charCount.toLocaleString()} / {section.charLimit.toLocaleString()} chars{isOver ? " — over limit!" : ""}
+                              </span>
+                            )}
+                            {isOver && (
+                              <button onClick={() => condenseSection(section.id, editText || section.reviewerVersion, section.charLimit)}
+                                disabled={condensingSection === section.id}
+                                style={{ padding: "4px 14px", background: "var(--red)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
+                                {condensingSection === section.id ? "Shortening..." : "Shorten to fit"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          {/* Current version */}
+                          <div>
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: decision === "accept" ? "var(--red)" : "var(--navy)", marginBottom: 6 }}>
+                              {decision === "accept" ? "Current (will be replaced)" : "Current Version"}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: "var(--ink3)", lineHeight: 1.6, maxHeight: 200, overflowY: "auto", padding: "8px 10px", background: decision === "accept" ? "rgba(200,60,60,.03)" : "var(--cream)", borderRadius: "var(--r)", border: `1px solid ${decision === "accept" ? "rgba(200,60,60,.1)" : "var(--border)"}`, whiteSpace: "pre-wrap" }}>
+                              {section.current?.substring(0, 800)}{(section.current?.length || 0) > 800 ? "..." : ""}
+                            </div>
+                          </div>
+                          {/* Reviewer version */}
+                          <div>
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: decision === "accept" ? "var(--green)" : "var(--gold)", marginBottom: 6 }}>
+                              {decision === "accept" ? "Reviewer\u2019s (will be applied)" : "Reviewer\u2019s Version"}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: "var(--ink2)", lineHeight: 1.6, maxHeight: 200, overflowY: "auto", padding: "8px 10px", background: decision === "accept" ? "rgba(46,125,50,.04)" : "rgba(200,155,60,.04)", borderRadius: "var(--r)", border: `1px solid ${decision === "accept" ? "var(--green-b)" : "rgba(200,155,60,.15)"}`, whiteSpace: "pre-wrap" }}>
+                              {section.reviewerVersion?.substring(0, 800)}{(section.reviewerVersion?.length || 0) > 800 ? "..." : ""}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Char limit warning after accept */}
+                      {decision === "accept" && section.charLimit && (section.reviewerVersion || "").length > section.charLimit && (
+                        <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "var(--red-bg)", borderRadius: "var(--r)", border: "1px solid var(--red-b)" }}>
+                          <span style={{ fontSize: 11, color: "var(--red)" }}>
+                            {(editText || section.reviewerVersion || "").length.toLocaleString()} / {section.charLimit.toLocaleString()} chars — over limit
+                          </span>
+                          <button onClick={() => { setSectionDecisions(prev => ({ ...prev, [section.id]: "edit" })); setSectionEdits(prev => ({ ...prev, [section.id]: section.reviewerVersion })); }}
+                            style={{ padding: "3px 12px", background: "var(--red)", border: "none", borderRadius: "var(--r)", fontSize: 10, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
+                            Edit to shorten
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

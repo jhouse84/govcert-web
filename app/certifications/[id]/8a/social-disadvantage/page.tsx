@@ -234,7 +234,8 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
           clientId: cert?.clientId,
         }),
       });
-      setNarrative(data.narrative || "");
+      const generatedNarrative = data.narrative || "";
+      setNarrative(generatedNarrative);
       setStrengthScore(data.strengthScore || null);
       setGaps(data.gaps || []);
       setSuggestions(data.suggestions || []);
@@ -243,6 +244,16 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
       setFeedbackRound(1);
       setFollowUpAnswers({});
       setMode("refine");
+      // Auto-save immediately — this cost money to generate
+      apiRequest("/api/applications", {
+        method: "POST",
+        body: JSON.stringify({
+          certificationId: certId, clientId: cert?.clientId, certType: cert?.type,
+          currentStep: cert?.application?.currentStep || 1,
+          socialDisadvantageNarrative: generatedNarrative,
+          socialDisadvantageAnswers: JSON.stringify(answers),
+        }),
+      }).catch(e => console.error("Auto-save social narrative failed:", e));
     } catch (err: any) {
       setError("AI generation failed: " + (err.message || "Please try again."));
     } finally {
@@ -265,7 +276,8 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
           clientId: cert?.clientId,
         }),
       });
-      setNarrative(data.narrative || narrative);
+      const strengthenedNarrative = data.narrative || narrative;
+      setNarrative(strengthenedNarrative);
       setStrengthScore(data.strengthScore || strengthScore);
       setGaps(data.gaps || []);
       setSuggestions(data.suggestions || []);
@@ -274,6 +286,16 @@ export default function SocialDisadvantagePage({ params }: { params: Promise<{ i
       setImprovementsSummary(data.improvementsSummary || "");
       setFeedbackRound(prev => prev + 1);
       setFollowUpAnswers({});
+      // Auto-save strengthened version
+      apiRequest("/api/applications", {
+        method: "POST",
+        body: JSON.stringify({
+          certificationId: certId, clientId: cert?.clientId, certType: cert?.type,
+          currentStep: cert?.application?.currentStep || 1,
+          socialDisadvantageNarrative: strengthenedNarrative,
+          socialDisadvantageAnswers: JSON.stringify(answers),
+        }),
+      }).catch(e => console.error("Auto-save strengthened narrative failed:", e));
     } catch (err: any) {
       setError("Failed to strengthen narrative: " + (err.message || "Please try again."));
     } finally {

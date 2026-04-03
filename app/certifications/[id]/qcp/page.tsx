@@ -250,7 +250,12 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
           clientId: cert?.clientId || cert?.client?.id,
         })
       });
-      setAnswers(prev => ({ ...prev, [promptId]: data.text }));
+      setAnswers(prev => {
+        const updated = { ...prev, [promptId]: data.text };
+        // Auto-save — this cost money to generate
+        saveAnswersData(updated).catch(e => console.error("Auto-save QCP failed:", e));
+        return updated;
+      });
     } catch (err) { console.error(err); }
     finally { setGenerating(null); }
   }

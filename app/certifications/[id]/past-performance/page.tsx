@@ -563,7 +563,20 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         }),
       });
       const narrative = data.text || data.narrative || "";
-      setSinNarratives(prev => ({ ...prev, [sin]: narrative }));
+      setSinNarratives(prev => {
+        const updated = { ...prev, [sin]: narrative };
+        // Auto-save immediately — this cost money to generate
+        (async () => {
+          try {
+            const appId = await ensureApplication();
+            await apiRequest(`/api/applications/${appId}`, {
+              method: "PUT",
+              body: JSON.stringify({ sinNarratives: JSON.stringify(updated) }),
+            });
+          } catch (e) { console.error("Auto-save SIN narrative failed:", e); }
+        })();
+        return updated;
+      });
     } catch (err) {
       console.error(err);
       setError("Failed to generate narrative for SIN " + sin);
@@ -582,7 +595,20 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         body: JSON.stringify({ narrative, charLimit: 10000 }),
       });
       if (data.narrative) {
-        setSinNarratives(prev => ({ ...prev, [sin]: data.narrative }));
+        setSinNarratives(prev => {
+          const updated = { ...prev, [sin]: data.narrative };
+          // Auto-save condensed version
+          (async () => {
+            try {
+              const appId = await ensureApplication();
+              await apiRequest(`/api/applications/${appId}`, {
+                method: "PUT",
+                body: JSON.stringify({ sinNarratives: JSON.stringify(updated) }),
+              });
+            } catch (e) { console.error("Auto-save condensed narrative failed:", e); }
+          })();
+          return updated;
+        });
       }
     } catch (err) {
       console.error(err);

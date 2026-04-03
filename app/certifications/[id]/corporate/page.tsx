@@ -361,7 +361,19 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
           clientId: cert?.clientId || cert?.client?.id,
         }),
       });
-      setNarratives(prev => ({ ...prev, [sectionId]: data.text }));
+      setNarratives(prev => {
+        const updated = { ...prev, [sectionId]: data.text };
+        // Auto-save — this cost money to generate
+        apiRequest("/api/applications", {
+          method: "POST",
+          body: JSON.stringify({
+            certificationId: certId, clientId: cert?.clientId || cert?.client?.id, certType: cert?.type,
+            currentStep: cert?.application?.currentStep || 1,
+            narrativeCorp: JSON.stringify({ narratives: updated, guidedAnswers }),
+          }),
+        }).catch(e => console.error("Auto-save corp narrative failed:", e));
+        return updated;
+      });
     } catch (err) { setError("Failed to regenerate section."); }
     finally { setGenerating(null); }
   }

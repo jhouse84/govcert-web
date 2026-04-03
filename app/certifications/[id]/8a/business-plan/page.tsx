@@ -247,7 +247,12 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
       BP_SECTIONS.forEach(s => {
         if (data[s.id]) newSections[s.id] = data[s.id];
       });
-      setSections(prev => ({ ...prev, ...newSections }));
+      setSections(prev => {
+        const updated = { ...prev, ...newSections };
+        // Auto-save immediately — this cost money to generate
+        autoSaveSections(updated);
+        return updated;
+      });
       if (data.strengthScore) setBpScore(data.strengthScore);
       if (data.suggestions) setBpSuggestions(data.suggestions);
       setMode("refine");
@@ -283,12 +288,28 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
           },
         }),
       });
-      setSections(prev => ({ ...prev, [sectionId]: data.text }));
+      setSections(prev => {
+        const updated = { ...prev, [sectionId]: data.text };
+        autoSaveSections(updated);
+        return updated;
+      });
     } catch {
       setError(`Failed to generate ${section?.label}.`);
     } finally {
       setGenerating(null);
     }
+  }
+
+  function autoSaveSections(updatedSections: Record<string, string>) {
+    apiRequest("/api/applications", {
+      method: "POST",
+      body: JSON.stringify({
+        certificationId: certId, clientId: cert?.clientId, certType: cert?.type,
+        currentStep: cert?.application?.currentStep || 1,
+        businessPlanData: JSON.stringify(updatedSections),
+        businessPlanAnswers: JSON.stringify(bpAnswers),
+      }),
+    }).catch(e => console.error("Auto-save business plan failed:", e));
   }
 
   async function saveData() {

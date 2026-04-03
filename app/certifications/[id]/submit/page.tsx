@@ -511,7 +511,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
 
   async function downloadCSP1() {
     if (lcats.length === 0) return;
-    const XLSX = (await import("xlsx")).default;
+    const XLSX = await import("xlsx");
 
     const selectedSINs = cert?.application?.selectedSINs || "";
     const headers = [

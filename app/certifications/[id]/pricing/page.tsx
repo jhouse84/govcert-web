@@ -566,7 +566,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
   }
 
   async function exportCSP1() {
-    const XLSX = (await import("xlsx")).default;
+    const XLSX = await import("xlsx");
 
     // GSA CSP-1 required columns
     const headers = [

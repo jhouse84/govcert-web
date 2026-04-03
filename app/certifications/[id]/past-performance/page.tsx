@@ -154,13 +154,14 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         const mapped: PastPerfReference[] = data.application.pastPerformance.map((pp: any) => {
           const ppqStatus = pp.ppqs?.[0]?.status || "NOT_SENT";
           let status: RefStatus = "EMPTY";
-          if (pp.cparsUploaded || ppqStatus === "COMPLETED") status = "COMPLETE";
+          // A record with a file (fileName or documentId) is COMPLETE
+          if (pp.cparsUploaded || pp.fileName || pp.documentId || ppqStatus === "COMPLETED") status = "COMPLETE";
           else if (ppqStatus === "OPENED") status = "PPQ_OPENED";
           else if (ppqStatus === "SENT" || ppqStatus === "PENDING") status = "PPQ_SENT";
 
           return {
             id: pp.id,
-            name: [pp.referenceFirstName, pp.referenceLastName].filter(Boolean).join(" ") || pp.agencyName || "",
+            name: [pp.referenceFirstName, pp.referenceLastName].filter(Boolean).join(" ") || pp.agencyName || pp.fileName?.replace(/\.[^.]+$/, "") || `Reference ${pp.id.slice(-4)}`,
             agency: pp.agencyName || "",
             status,
             fileName: pp.fileName || null,
@@ -299,11 +300,12 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
           } catch { /* AI extraction is optional — file is still saved */ }
         }
 
-        // 4. Save past performance record to DB
+        // 4. Save past performance record to DB (with file tracking)
+        const docId = uploadData.document?.id || uploadData.id || null;
         const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
           method: "POST",
           body: JSON.stringify({
-            agencyName: first.agencyName || "",
+            agencyName: first.agencyName || file.name.replace(/\.[^.]+$/, ""),
             contractNumber: first.contractNumber || "",
             contractType: first.contractType || "Federal Government",
             contractValue: first.contractValue || "",
@@ -316,6 +318,8 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
             referenceEmail: first.referenceEmail || "",
             referencePhone: first.referencePhone || "",
             referenceTitle: first.referenceTitle || "",
+            fileName: file.name,
+            documentId: docId,
           }),
         });
 

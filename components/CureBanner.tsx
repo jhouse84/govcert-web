@@ -1,16 +1,21 @@
 "use client";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 /**
- * Displays a cure banner when the user arrives from the GovCert Analysis "Fix This" button.
- * Also returns the cure text so the wizard page can inject it into AI prompts.
+ * Returns the cure text from URL query params.
+ * Safe to call — returns empty string if useSearchParams fails.
  */
 export function useCure(): string {
-  const searchParams = useSearchParams();
-  return searchParams.get("cure") || "";
+  try {
+    const searchParams = useSearchParams();
+    return searchParams?.get("cure") || "";
+  } catch {
+    return "";
+  }
 }
 
-export default function CureBanner() {
+function CureBannerInner() {
   const cure = useCure();
   if (!cure) return null;
 
@@ -41,5 +46,13 @@ export default function CureBanner() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CureBanner() {
+  return (
+    <Suspense fallback={null}>
+      <CureBannerInner />
+    </Suspense>
   );
 }

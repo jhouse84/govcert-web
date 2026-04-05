@@ -1223,9 +1223,9 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                         </div>
                       </div>
                     </div>
-                    <button onClick={runGapAnalysis} disabled={runningGapAnalysis}
-                      style={{ padding: "8px 18px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: runningGapAnalysis ? "not-allowed" : "pointer", opacity: runningGapAnalysis ? 0.7 : 1, flexShrink: 0 }}>
-                      {runningGapAnalysis ? "Analyzing..." : gapAnalysis ? "Re-analyze" : "✦ Run Gap Analysis"}
+                    <button onClick={() => { console.log("Gap analysis clicked"); runGapAnalysis(); }} disabled={runningGapAnalysis}
+                      style={{ padding: "8px 18px", background: runningGapAnalysis ? "var(--gold)" : "var(--navy)", border: "none", borderRadius: "var(--r)", color: runningGapAnalysis ? "#fff" : "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: runningGapAnalysis ? "not-allowed" : "pointer", opacity: runningGapAnalysis ? 0.9 : 1, flexShrink: 0 }}>
+                      {runningGapAnalysis ? "Analyzing your LCATs against SINs... (this takes 30-45 seconds)" : gapAnalysis ? "✦ Re-analyze" : "✦ Run Gap Analysis"}
                     </button>
                   </div>
 

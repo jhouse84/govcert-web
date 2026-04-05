@@ -1247,8 +1247,8 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                         {gapAnalysis.summary}
                       </div>
 
-                      {/* One-click: use GovCert's full recommended list */}
-                      {(gapAnalysis.suggestedLcats?.length > 0 || (gapAnalysis.extraLcats || []).length > 0) && (
+                      {/* One-click: use GovCert's full recommended list — always visible after analysis */}
+                      {gapAnalysis && (
                         <button onClick={async () => {
                           try {
                             const clientId = cert?.clientId || cert?.client?.id;

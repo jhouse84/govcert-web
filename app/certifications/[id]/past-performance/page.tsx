@@ -96,6 +96,8 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   const [references, setReferences] = useState<PastPerfReference[]>([]);
   const [uploadingRef, setUploadingRef] = useState(false);
   const [expandedRef, setExpandedRef] = useState<number | null>(null);
+  const [editingRef, setEditingRef] = useState<number | null>(null);
+  const [editData, setEditData] = useState<Record<string, string>>({});
   const [ppqModal, setPpqModal] = useState<{
     open: boolean; step: 1 | 2 | 3;
     refIndex: number | null;
@@ -1040,12 +1042,76 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                       )}
                       {!ref.fileName && (
                         <div style={{ padding: "10px 14px", background: "var(--cream)", borderRadius: "var(--r)", border: "1px solid var(--border)", marginBottom: 10, fontSize: 12, color: "var(--ink4)" }}>
-                          No file attached. Upload a PPQ or CPARS above.
+                          No file attached. Upload a PPQ or CPARS above, or request one via email.
                         </div>
                       )}
-                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+
+                      {/* SIN mapping — which SINs should this contract support? */}
+                      {selectedSINs.length > 0 && (
+                        <div style={{ padding: "10px 14px", background: "rgba(200,155,60,.04)", borderRadius: "var(--r)", border: "1px solid rgba(200,155,60,.12)", marginBottom: 10 }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--gold)", textTransform: "uppercase" as const, letterSpacing: ".06em", marginBottom: 6 }}>Use for SIN narrative</div>
+                          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                            {selectedSINs.map(sin => (
+                              <button key={sin} onClick={(e) => {
+                                e.stopPropagation();
+                                const contractContext = `Focus on the ${ref.agency || ref.name} contract${ref.contractDetails?.contractNumber ? " (#" + ref.contractDetails.contractNumber + ")" : ""}${ref.contractDetails?.contractValue ? ", valued at " + ref.contractDetails.contractValue : ""}${ref.contractDetails?.description ? ". Work performed: " + ref.contractDetails.description.substring(0, 200) : ""}`;
+                                setSinPrompts(prev => ({ ...prev, [sin]: contractContext }));
+                                setSinPromptOpen(sin);
+                                // Scroll to the SIN narrative
+                                const el = document.getElementById(`sin-${sin}`);
+                                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                              }}
+                                style={{ padding: "4px 10px", background: "#fff", border: "1px solid var(--border2)", borderRadius: 100, fontSize: 11, color: "var(--navy)", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                                <span>{sin}</span>
+                                <span style={{ color: "var(--ink4)", fontSize: 9 }}>{(SIN_DESCRIPTIONS[sin] || "").substring(0, 20)}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ fontSize: 10, color: "var(--ink4)", marginTop: 4 }}>Click a SIN to pre-fill its narrative with this contract as the focus</div>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {!ref.fileName && (
+                            <button onClick={(e) => { e.stopPropagation(); openPPQModalManual(); }} style={{ padding: "5px 14px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 500, color: "var(--gold2)", cursor: "pointer" }}>Request PPQ via Email</button>
+                          )}
+                          {editingRef === index ? (
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button onClick={(e) => { e.stopPropagation(); setEditingRef(null); }} style={{ padding: "5px 14px", background: "var(--cream2)", border: "none", borderRadius: "var(--r)", fontSize: 11, color: "var(--ink3)", cursor: "pointer" }}>Cancel</button>
+                              <button onClick={async (e) => {
+                                e.stopPropagation();
+                                const updated = { ...ref, agency: editData.agencyName || ref.agency, name: editData.agencyName || ref.name, contractDetails: { ...ref.contractDetails, agencyName: editData.agencyName, contractNumber: editData.contractNumber, contractValue: editData.contractValue, periodStart: editData.periodStart, periodEnd: editData.periodEnd, description: editData.description } };
+                                setReferences(prev => prev.map((r, i) => i === index ? updated : r));
+                                if (ref.id && !ref.id.startsWith("doc-") && cert?.application?.id) {
+                                  try { await apiRequest(`/api/applications/${cert.application.id}/past-performance/${ref.id}`, { method: "PUT", body: JSON.stringify({ agencyName: editData.agencyName || ref.agency, contractNumber: editData.contractNumber, contractValue: editData.contractValue, periodStart: editData.periodStart, periodEnd: editData.periodEnd, description: editData.description }) }); } catch {}
+                                }
+                                setEditingRef(null);
+                              }} style={{ padding: "5px 14px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 600, color: "#fff", cursor: "pointer" }}>Save</button>
+                            </div>
+                          ) : (
+                            <button onClick={(e) => { e.stopPropagation(); setEditingRef(index); setEditData({ agencyName: ref.agency || "", contractNumber: ref.contractDetails?.contractNumber || "", contractValue: ref.contractDetails?.contractValue || "", periodStart: ref.contractDetails?.periodStart || "", periodEnd: ref.contractDetails?.periodEnd || "", description: ref.contractDetails?.description || "" }); }} style={{ padding: "5px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 11, color: "var(--ink3)", cursor: "pointer" }}>Edit Details</button>
+                          )}
+                        </div>
                         <button onClick={(e) => { e.stopPropagation(); deleteReference(index); }} style={{ padding: "5px 14px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 11, color: "var(--red)", cursor: "pointer" }}>Remove</button>
                       </div>
+
+                      {/* Inline edit form */}
+                      {editingRef === index && (
+                        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          {[{ key: "agencyName", label: "Agency" }, { key: "contractNumber", label: "Contract #" }, { key: "contractValue", label: "Value" }, { key: "periodStart", label: "Start Date" }, { key: "periodEnd", label: "End Date" }].map(f => (
+                            <div key={f.key}>
+                              <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>{f.label}</label>
+                              <input value={editData[f.key] || ""} onChange={e => setEditData(prev => ({ ...prev, [f.key]: e.target.value }))} onClick={e => e.stopPropagation()} style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, outline: "none", boxSizing: "border-box" as const, marginTop: 2 }} />
+                            </div>
+                          ))}
+                          <div style={{ gridColumn: "1 / -1" }}>
+                            <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Description</label>
+                            <textarea value={editData.description || ""} onChange={e => setEditData(prev => ({ ...prev, description: e.target.value }))} onClick={e => e.stopPropagation()} style={{ width: "100%", minHeight: 60, padding: "6px 8px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5, resize: "vertical", outline: "none", boxSizing: "border-box" as const, marginTop: 2 }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1106,7 +1172,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                 const hasContent = narrative.trim().length > 0;
 
                 return (
-                  <div key={sin} style={{
+                  <div key={sin} id={`sin-${sin}`} style={{
                     background: "#fff", border: `1px solid ${hasContent ? "var(--green-b)" : "var(--border)"}`,
                     borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 12, boxShadow: "var(--shadow)",
                   }}>

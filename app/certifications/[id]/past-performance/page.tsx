@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { SecurityBanner } from "@/components/SecurityBadge";
-import CureBanner, { useCure } from "@/components/CureBanner";
+import CureBanner from "@/components/CureBanner";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://govcert-production.up.railway.app";
 
@@ -81,7 +81,14 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   const { id } = React.use(params);
   const certId = String(id);
 
-  const cureText = useCure();
+  // Cure text read safely via state (useSearchParams requires Suspense)
+  const [cureText, setCureText] = useState("");
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      setCureText(params.get("cure") || "");
+    } catch {}
+  }, []);
   /* ── Core state ── */
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);

@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { SecurityBanner, ProvenanceBadge } from "@/components/SecurityBadge";
-import CureBanner, { useCure } from "@/components/CureBanner";
+import CureBanner from "@/components/CureBanner";
 import { CharCountWithShorten } from "@/components/ShortenButton";
 import RedraftWizard from "@/components/RedraftWizard";
 
@@ -46,7 +46,8 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
   const { id } = React.use(params);
   const certId = String(id);
 
-  const cureText = useCure();
+  const [cureText, setCureText] = useState("");
+  useEffect(() => { try { setCureText(new URLSearchParams(window.location.search).get("cure") || ""); } catch {} }, []);
   const [cert, setCert] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);

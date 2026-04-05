@@ -527,8 +527,7 @@ export default function PortalPage() {
                           ] : [
                             { key: "narrativeCorp", label: "Corporate Experience", icon: "🏢", hasData: !!cert.application?.narrativeCorp, href: `/certifications/${cert.id}/corporate` },
                             { key: "narrativeQCP", label: "Quality Control Plan", icon: "✅", hasData: !!cert.application?.narrativeQCP, href: `/certifications/${cert.id}/qcp` },
-                            { key: "pp", label: "Past Performance", icon: "⭐", hasData: (cert.application?.pastPerformance?.length || 0) >= 3, count: cert.application?.pastPerformance?.length || 0, href: `/certifications/${cert.id}/past-performance` },
-                            { key: "narrativeExp", label: "Project Experience", icon: "📋", hasData: !!cert.application?.narrativeExp, href: `/certifications/${cert.id}/experience` },
+                            { key: "pp", label: "Past Performance & Project Experience", icon: "⭐", hasData: (cert.application?.pastPerformance?.length || 0) >= 3, count: cert.application?.pastPerformance?.length || 0, href: `/certifications/${cert.id}/past-performance` },
                             { key: "financialData", label: "Financial Statements", icon: "📊", hasData: !!cert.application?.financialData, href: `/certifications/${cert.id}/financials` },
                             { key: "pricingData", label: "Pricing (CSP-1)", icon: "💰", hasData: !!cert.application?.pricingData, href: `/certifications/${cert.id}/pricing` },
                           ]).map(section => (

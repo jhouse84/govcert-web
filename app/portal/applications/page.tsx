@@ -24,8 +24,7 @@ const STATUS_LABELS: Record<string, { label: string; bg: string; color: string; 
 const GSA_SECTIONS = [
   { key: "narrativeCorp", label: "Corporate Experience", icon: "🏢", path: "corporate" },
   { key: "narrativeQCP", label: "Quality Control Plan", icon: "✅", path: "qcp" },
-  { key: "pp", label: "Past Performance", icon: "⭐", path: "past-performance" },
-  { key: "narrativeExp", label: "Project Experience", icon: "📋", path: "experience" },
+  { key: "pp", label: "Past Performance & Project Experience", icon: "⭐", path: "past-performance" },
   { key: "financialData", label: "Financials", icon: "📊", path: "financials" },
   { key: "pricingData", label: "Pricing", icon: "💰", path: "pricing" },
 ];

@@ -1243,9 +1243,52 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                         </span>
                       </div>
 
-                      <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.6, marginBottom: gapAnalysis.suggestedLcats.length > 0 ? 14 : 0 }}>
+                      <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.6, marginBottom: 14 }}>
                         {gapAnalysis.summary}
                       </div>
+
+                      {/* One-click: use GovCert's full recommended list */}
+                      {(gapAnalysis.suggestedLcats?.length > 0 || (gapAnalysis.extraLcats || []).length > 0) && (
+                        <button onClick={async () => {
+                          try {
+                            const clientId = cert?.clientId || cert?.client?.id;
+                            // Fetch the ideal list
+                            const idealData = await apiRequest("/api/applications/ai/ideal-lcat-list", {
+                              method: "POST",
+                              body: JSON.stringify({ clientId, certType: cert?.type }),
+                            });
+                            const idealLcats = idealData.idealLcatList?.idealLcats || [];
+                            if (idealLcats.length === 0) { setError("No ideal LCAT list available"); return; }
+                            // Replace entire CSP-1 with ideal list
+                            const newLcats = idealLcats.map((l: any) => ({
+                              id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
+                              title: l.title || "",
+                              description: l.description || "",
+                              education: l.education || "Bachelor's Degree",
+                              yearsExperience: l.yearsExperience || "",
+                              baseRate: l.suggestedRate || "0",
+                              mfcRate: l.suggestedRate || "0",
+                              gsaRate: calcGsaRate(l.suggestedRate || "0"),
+                              rateStatus: null,
+                              rateNote: l.justification || "",
+                            }));
+                            setLcats(newLcats);
+                            setGapAnalysis(null);
+                            // Save
+                            await apiRequest("/api/applications", {
+                              method: "POST",
+                              body: JSON.stringify({
+                                certificationId: certId, clientId, certType: cert?.type,
+                                currentStep: cert?.application?.currentStep || 1,
+                                pricingData: JSON.stringify({ lcats: newLcats, notes, extractedGroups: invoiceGroups }),
+                              }),
+                            });
+                          } catch (err: any) { setError("Failed: " + (err.message || "")); }
+                        }}
+                          style={{ width: "100%", padding: "12px 20px", background: "linear-gradient(135deg, #1A2332, #2D3748)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 14, fontWeight: 600, cursor: "pointer", marginBottom: 14 }}>
+                          Use GovCert{"\u2019"}s Recommended LCAT List ({gapAnalysis.idealTotal || "?"} LCATs with rates)
+                        </button>
+                      )}
 
                       {gapAnalysis.suggestedLcats?.length > 0 && (
                         <div style={{ marginTop: 14 }}>

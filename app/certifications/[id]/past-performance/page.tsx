@@ -1065,9 +1065,42 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                 <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, margin: 0 }}>Relevant Project Experience</h2>
                 <span style={{ fontSize: 12, color: "var(--ink4)" }}>1 narrative per SIN for eOffer Tab 3</span>
               </div>
-              <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 16 }}>
+              <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 12 }}>
                 Write or generate a narrative for each selected SIN describing your relevant project experience, methodology, and outcomes.
               </p>
+
+              {/* SIN chips — add/remove */}
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 16, alignItems: "center" }}>
+                {selectedSINs.map(sin => (
+                  <div key={sin} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", background: sinNarratives[sin] ? "var(--green-bg)" : "var(--cream)", border: `1px solid ${sinNarratives[sin] ? "var(--green-b)" : "var(--border)"}`, borderRadius: 100, fontSize: 12 }}>
+                    <span style={{ fontWeight: 500, color: "var(--navy)" }}>{sin}</span>
+                    {sinNarratives[sin] && <span style={{ color: "var(--green)", fontSize: 10 }}>{"\u2713"}</span>}
+                    <button onClick={async (e) => {
+                      e.preventDefault();
+                      if (!confirm(`Remove SIN ${sin}? Its narrative will be preserved but hidden.`)) return;
+                      const updated = selectedSINs.filter(s => s !== sin).join(",");
+                      try {
+                        await apiRequest("/api/applications", { method: "POST", body: JSON.stringify({ certificationId: certId, clientId: cert?.clientId || cert?.client?.id, certType: cert?.type, currentStep: cert?.application?.currentStep || 1, selectedSINs: updated }) });
+                        setCert((prev: any) => ({ ...prev, application: { ...prev.application, selectedSINs: updated } }));
+                      } catch { setError("Failed to remove SIN"); }
+                    }} style={{ background: "none", border: "none", color: "var(--ink4)", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1 }} title={`Remove SIN ${sin}`}>&times;</button>
+                  </div>
+                ))}
+                <select onChange={async (e) => {
+                  const v = e.target.value; if (!v || selectedSINs.includes(v)) return;
+                  const updated = [...selectedSINs, v].join(",");
+                  try {
+                    await apiRequest("/api/applications", { method: "POST", body: JSON.stringify({ certificationId: certId, clientId: cert?.clientId || cert?.client?.id, certType: cert?.type, currentStep: cert?.application?.currentStep || 1, selectedSINs: updated }) });
+                    setCert((prev: any) => ({ ...prev, application: { ...prev.application, selectedSINs: updated } }));
+                  } catch { setError("Failed to add SIN"); }
+                  e.target.value = "";
+                }} style={{ padding: "4px 8px", border: "1px solid var(--border2)", borderRadius: 100, fontSize: 11, color: "var(--gold)", background: "#fff", cursor: "pointer" }}>
+                  <option value="">+ Add SIN</option>
+                  {Object.entries(SIN_DESCRIPTIONS).filter(([c]) => !selectedSINs.includes(c)).map(([c, d]) => (
+                    <option key={c} value={c}>{c} — {d}</option>
+                  ))}
+                </select>
+              </div>
 
               {selectedSINs.map(sin => {
                 const desc = SIN_DESCRIPTIONS[sin] || sin;

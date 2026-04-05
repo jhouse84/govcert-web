@@ -49,6 +49,8 @@ type GapAnalysis = {
   isComplete: boolean;
   pricingJustification?: string;
   sinCoverage?: Record<string, any>;
+  extraLcats?: any[];
+  idealTotal?: number;
 };
 
 export default function PricingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -297,72 +299,50 @@ Return ONLY the JSON array.`,
     }
   }, [activeTab, cert?.clientId]);
 
-  // ── GAP ANALYSIS ──
+  // ── GAP ANALYSIS — deterministic diff against ideal state ──
   async function runGapAnalysis() {
     setRunningGapAnalysis(true);
     setError(null);
     try {
       const clientId = cert?.clientId || cert?.client?.id;
 
-      // Step 1: Run gap analysis
       const data = await apiRequest("/api/applications/ai/gap-analysis", {
         method: "POST",
         body: JSON.stringify({
           clientId,
           certType: cert?.type,
           currentLcats: lcats,
-          selectedSINs: cert?.application?.selectedSINs || "",
-        }),
-      });
-      setGapAnalysis(data);
-
-      // Step 2: Auto-add all suggested LCATs with their rates
-      const newLcats = [...lcats];
-      if (data.suggestedLcats?.length > 0) {
-        for (const suggestion of data.suggestedLcats) {
-          const lcatObj = typeof suggestion === "string" ? { title: suggestion } : suggestion;
-          const title = lcatObj.title || lcatObj.suggestedLcatTitle || "";
-          // Skip if already exists
-          if (newLcats.some(l => l.title === title)) continue;
-          const rate = lcatObj.suggestedRate || "0";
-          newLcats.push({
-            id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
-            title,
-            description: lcatObj.description || "",
-            education: lcatObj.education || "Bachelor's Degree",
-            yearsExperience: lcatObj.yearsExperience || "",
-            baseRate: rate,
-            mfcRate: rate,
-            gsaRate: calcGsaRate(rate),
-            rateStatus: null,
-            rateNote: lcatObj.justification || "",
-          });
-        }
-        setLcats(newLcats);
-      }
-
-      // Step 3: Save the updated LCATs
-      await apiRequest("/api/applications", {
-        method: "POST",
-        body: JSON.stringify({
-          certificationId: certId,
-          clientId,
-          certType: cert?.type,
-          currentStep: cert?.application?.currentStep || 1,
-          pricingData: JSON.stringify({ lcats: newLcats, notes, extractedGroups: invoiceGroups }),
         }),
       });
 
-      // Step 4: If Price Proposal already exists, prompt to update it
-      if (priceProposal && data.pricingJustification) {
-        setShowUpdateProposalPrompt(true);
+      // Compute extras — LCATs in CSP-1 but not in ideal
+      const idealTitles = (data.suggestedLcats || []).map((l: any) => (l.title || "").toLowerCase().trim());
+      // All ideal titles (both missing AND already covered)
+      const allIdealTitles = new Set<string>();
+      for (const [, coverage] of Object.entries(data.sinCoverage || {})) {
+        for (const title of ((coverage as any).covered || [])) allIdealTitles.add(title.toLowerCase().trim());
+        for (const title of ((coverage as any).gaps || [])) allIdealTitles.add(title.toLowerCase().trim());
       }
+      // Also add the suggested (missing) ones
+      for (const l of (data.suggestedLcats || [])) allIdealTitles.add((l.title || "").toLowerCase().trim());
+
+      const extras = lcats.filter(l => {
+        const t = (l.title || "").toLowerCase().trim();
+        return !allIdealTitles.has(t) && ![...allIdealTitles].some(it => t.includes(it) || it.includes(t));
+      });
+
+      setGapAnalysis({ ...data, extraLcats: extras });
     } catch (err: any) {
       setError("Gap analysis failed: " + (err.message || ""));
       console.error(err);
     } finally {
       setRunningGapAnalysis(false);
     }
+  }
+
+  function removeExtraLcat(lcatId: string) {
+    setLcats(prev => prev.filter(l => l.id !== lcatId));
+    setGapAnalysis(null); // Reset so they can re-run to verify
   }
 
   // ── RATE BENCHMARK ──
@@ -1318,7 +1298,41 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                         </div>
                       )}
 
-                      {gapAnalysis.isComplete && (
+                      {/* Potential Removals — LCATs in CSP-1 but not in ideal */}
+                      {(gapAnalysis.extraLcats || []).length > 0 && (
+                        <div style={{ marginTop: 14 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--red)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>
+                            Not in Ideal List — Consider Removing ({(gapAnalysis.extraLcats || []).length})
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 10, lineHeight: 1.5 }}>
+                            These LCATs are on your CSP-1 but weren't identified as necessary for your selected SINs. You can keep them if they serve your business, or remove them to streamline your pricelist.
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            {(gapAnalysis.extraLcats || []).map((lcat: any) => (
+                              <div key={lcat.id} style={{ padding: "12px 14px", background: "rgba(200,60,60,.03)", border: "1px solid rgba(200,60,60,.12)", borderRadius: "var(--r)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--navy)" }}>{lcat.title}</div>
+                                  <div style={{ fontSize: 11, color: "var(--ink4)" }}>
+                                    {lcat.education || ""} {lcat.yearsExperience ? `| ${lcat.yearsExperience}+ yrs` : ""} {lcat.mfcRate ? `| $${lcat.mfcRate}/hr` : ""}
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <button onClick={() => { /* keep — just dismiss from extras */ setGapAnalysis(prev => prev ? { ...prev, extraLcats: (prev.extraLcats || []).filter((l: any) => l.id !== lcat.id) } : prev); }}
+                                    style={{ padding: "5px 14px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 11, fontWeight: 500, cursor: "pointer", color: "var(--ink3)" }}>
+                                    Keep
+                                  </button>
+                                  <button onClick={() => removeExtraLcat(lcat.id)}
+                                    style={{ padding: "5px 14px", background: "var(--red)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 600, cursor: "pointer", color: "#fff" }}>
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {gapAnalysis.isComplete && (gapAnalysis.extraLcats || []).length === 0 && (
                         <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 13, color: "var(--green)", fontWeight: 500 }}>
                           {"\u2713"} Your LCAT list appears comprehensive for your selected SINs and services.
                         </div>

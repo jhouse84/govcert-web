@@ -279,8 +279,11 @@ Return ONLY the JSON array.`,
   // ── GAP ANALYSIS ──
   async function runGapAnalysis() {
     setRunningGapAnalysis(true);
+    setError(null);
     try {
       const clientId = cert?.clientId || cert?.client?.id;
+
+      // Step 1: Run gap analysis
       const data = await apiRequest("/api/applications/ai/gap-analysis", {
         method: "POST",
         body: JSON.stringify({
@@ -291,8 +294,63 @@ Return ONLY the JSON array.`,
         }),
       });
       setGapAnalysis(data);
-      // Auto-save gap analysis results
-      saveExtractedGroups(invoiceGroups);
+
+      // Step 2: Auto-add all suggested LCATs with their rates
+      const newLcats = [...lcats];
+      if (data.suggestedLcats?.length > 0) {
+        for (const suggestion of data.suggestedLcats) {
+          const lcatObj = typeof suggestion === "string" ? { title: suggestion } : suggestion;
+          const title = lcatObj.title || lcatObj.suggestedLcatTitle || "";
+          // Skip if already exists
+          if (newLcats.some(l => l.title === title)) continue;
+          const rate = lcatObj.suggestedRate || "0";
+          newLcats.push({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
+            title,
+            description: lcatObj.description || "",
+            education: lcatObj.education || "Bachelor's Degree",
+            yearsExperience: lcatObj.yearsExperience || "",
+            baseRate: rate,
+            mfcRate: rate,
+            gsaRate: calcGsaRate(rate),
+            rateStatus: null,
+            rateNote: lcatObj.justification || "",
+          });
+        }
+        setLcats(newLcats);
+      }
+
+      // Step 3: Save the updated LCATs
+      await apiRequest("/api/applications", {
+        method: "POST",
+        body: JSON.stringify({
+          certificationId: certId,
+          clientId,
+          certType: cert?.type,
+          currentStep: cert?.application?.currentStep || 1,
+          pricingData: JSON.stringify({ lcats: newLcats, notes, extractedGroups: invoiceGroups }),
+        }),
+      });
+
+      // Step 4: Auto-regenerate Price Proposal with justification language
+      if (data.pricingJustification) {
+        setGeneratingProposal(true);
+        try {
+          const proposalData = await apiRequest("/api/applications/ai/generate-price-proposal", {
+            method: "POST",
+            body: JSON.stringify({ clientId, certType: cert?.type }),
+          });
+          if (proposalData.document) {
+            setPriceProposal(proposalData.document);
+            setProposalSaved(true);
+          }
+        } catch (e) {
+          console.error("Price proposal regeneration failed:", e);
+          // Non-fatal — gap analysis still succeeded
+        } finally {
+          setGeneratingProposal(false);
+        }
+      }
     } catch (err: any) {
       setError("Gap analysis failed: " + (err.message || ""));
       console.error(err);

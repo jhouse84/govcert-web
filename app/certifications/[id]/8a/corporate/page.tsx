@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { CharCountWithShorten } from "@/components/ShortenButton";
 import CertSidebar from "@/components/CertSidebar";
 import RedraftWizard from "@/components/RedraftWizard";
 import { ProvenanceBadge } from "@/components/SecurityBadge";
@@ -549,10 +550,24 @@ export default function CorporateExperience8aPage({ params }: { params: Promise<
                     rows={8}
                     style={{ width: "100%", padding: 16, border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 14, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.8, resize: "vertical", color: "var(--navy)", outline: "none", boxSizing: "border-box" }}
                   />
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                    <span style={{ fontSize: 12, color: "var(--ink4)" }}>{(narratives[s.id]?.length || 0).toLocaleString()} / {s.maxChars.toLocaleString()} chars</span>
-                    {(narratives[s.id]?.length || 0) > s.maxChars && <span style={{ fontSize: 12, color: "var(--red)", fontWeight: 500 }}>Over limit</span>}
-                  </div>
+                  <CharCountWithShorten
+                    text={narratives[s.id] || ""}
+                    charLimit={s.maxChars}
+                    onShortened={(newText) => {
+                      setNarratives(prev => {
+                        const updated = { ...prev, [s.id]: newText };
+                        apiRequest("/api/applications", {
+                          method: "POST",
+                          body: JSON.stringify({
+                            certificationId: certId, clientId: cert?.clientId || cert?.client?.id, certType: cert?.type,
+                            currentStep: cert?.application?.currentStep || 1,
+                            narrativeCorp: JSON.stringify({ narratives: updated, guidedAnswers }),
+                          }),
+                        }).catch(e => console.error("Auto-save failed:", e));
+                        return updated;
+                      });
+                    }}
+                  />
                 </div>
               ))}
             </div>

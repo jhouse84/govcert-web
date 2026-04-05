@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { CharCountWithShorten } from "@/components/ShortenButton";
 import CertSidebar from "@/components/CertSidebar";
 import { ProvenanceBadge } from "@/components/SecurityBadge";
 
@@ -624,16 +625,17 @@ export default function BusinessPlanPage({ params }: { params: Promise<{ id: str
                 }}
               />
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-                <span style={{ fontSize: 12, color: "var(--ink4)" }}>
-                  {(sections[s.id]?.length || 0).toLocaleString()} / {s.maxChars.toLocaleString()} characters
-                </span>
-                {(sections[s.id]?.length || 0) > s.maxChars && (
-                  <span style={{ fontSize: 12, color: "var(--red)", fontWeight: 500 }}>
-                    Over limit by {((sections[s.id]?.length || 0) - s.maxChars).toLocaleString()} characters
-                  </span>
-                )}
-              </div>
+              <CharCountWithShorten
+                text={sections[s.id] || ""}
+                charLimit={s.maxChars}
+                onShortened={(newText) => {
+                  setSections(prev => {
+                    const updated = { ...prev, [s.id]: newText };
+                    autoSaveSections(updated);
+                    return updated;
+                  });
+                }}
+              />
             </div>
           ))}
           </>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import RedraftWizard from "@/components/RedraftWizard";
 import CureBanner, { useCure } from "@/components/CureBanner";
+import { CharCountWithShorten } from "@/components/ShortenButton";
 
 const PROMPTS = [
   { id: "overview", label: "Quality Control Overview", hint: "Overall QC approach and philosophy", maxChars: 2000 },
@@ -675,14 +676,17 @@ export default function QCPPage({ params }: { params: Promise<{ id: string }> })
                     placeholder="Your drafted content will appear here. You can also type or speak directly."
                     style={{ width: "100%", minHeight: 140, padding: "12px 14px", border: `1px solid ${(answers[prompt.id]?.length || 0) > prompt.maxChars ? "var(--red)" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 13.5, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }}
                   />
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, alignItems: "center" }}>
-                    {(answers[prompt.id]?.length || 0) > prompt.maxChars
-                      ? <span style={{ fontSize: 11, color: "var(--red)" }}>Over recommended limit — consider trimming</span>
-                      : <span />}
-                    <span style={{ fontSize: 11, color: (answers[prompt.id]?.length || 0) > prompt.maxChars ? "var(--red)" : "var(--ink4)", fontFamily: "monospace" }}>
-                      {(answers[prompt.id]?.length || 0).toLocaleString()} / {prompt.maxChars.toLocaleString()}
-                    </span>
-                  </div>
+                  <CharCountWithShorten
+                    text={answers[prompt.id] || ""}
+                    charLimit={prompt.maxChars}
+                    onShortened={(newText) => {
+                      setAnswers(prev => {
+                        const updated = { ...prev, [prompt.id]: newText };
+                        saveAnswersData(updated).catch(e => console.error("Auto-save failed:", e));
+                        return updated;
+                      });
+                    }}
+                  />
                 </div>
               ))}
 

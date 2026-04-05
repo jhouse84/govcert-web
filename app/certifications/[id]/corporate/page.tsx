@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { SecurityBanner, ProvenanceBadge } from "@/components/SecurityBadge";
 import CureBanner, { useCure } from "@/components/CureBanner";
+import { CharCountWithShorten } from "@/components/ShortenButton";
 import RedraftWizard from "@/components/RedraftWizard";
 
 // ── STRUCTURED QUESTIONS ──
@@ -819,12 +820,25 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
                     placeholder={`Write or dictate the ${section.label} section, or click Redraft to have AI draft it...`}
                     style={{ width: "100%", minHeight: 140, padding: "12px 14px", border: `1px solid ${(narratives[section.id]?.length || 0) > section.maxChars ? "var(--red)" : "var(--border2)"}`, borderRadius: "var(--r)", fontSize: 13.5, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }}
                   />
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
-                    <span style={{ fontSize: 11, color: (narratives[section.id]?.length || 0) > section.maxChars ? "var(--red)" : "var(--ink4)", fontFamily: "'DM Mono', monospace" }}>
-                      {(narratives[section.id]?.length || 0).toLocaleString()} / {section.maxChars.toLocaleString()}
-                      {(narratives[section.id]?.length || 0) > section.maxChars && " ⚠ Over limit"}
-                    </span>
-                  </div>
+                  <CharCountWithShorten
+                    text={narratives[section.id] || ""}
+                    charLimit={section.maxChars}
+                    onShortened={(newText) => {
+                      setNarratives(prev => {
+                        const updated = { ...prev, [section.id]: newText };
+                        // Auto-save
+                        apiRequest("/api/applications", {
+                          method: "POST",
+                          body: JSON.stringify({
+                            certificationId: certId, clientId: cert?.clientId || cert?.client?.id, certType: cert?.type,
+                            currentStep: cert?.application?.currentStep || 1,
+                            narrativeCorp: JSON.stringify({ narratives: updated, guidedAnswers }),
+                          }),
+                        }).catch(e => console.error("Auto-save failed:", e));
+                        return updated;
+                      });
+                    }}
+                  />
                 </div>
               ))}
 

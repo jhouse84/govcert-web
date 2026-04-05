@@ -44,9 +44,11 @@ const EMPTY_LCAT: Omit<LCAT, "id"> = {
 type GapAnalysis = {
   score: number;
   missingSINs: string[];
-  suggestedLcats: string[];
+  suggestedLcats: any[];
   summary: string;
   isComplete: boolean;
+  pricingJustification?: string;
+  sinCoverage?: Record<string, any>;
 };
 
 export default function PricingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -276,38 +278,23 @@ Return ONLY the JSON array.`,
 
   // ── GAP ANALYSIS ──
   async function runGapAnalysis() {
-    if (lcats.length === 0) return;
     setRunningGapAnalysis(true);
     try {
-      const selectedSINs = cert?.application?.selectedSINs || "";
-      const lcatTitles = lcats.map(l => l.title).join(", ");
-      const data = await apiRequest("/api/applications/ai/draft", {
+      const clientId = cert?.clientId || cert?.client?.id;
+      const data = await apiRequest("/api/applications/ai/gap-analysis", {
         method: "POST",
         body: JSON.stringify({
-          section: "LCAT Coverage Gap Analysis",
-          prompt: `Analyze this company's Labor Category list for GSA MAS completeness.
-
-Company: ${cert?.client?.businessName}
-Selected SINs: ${selectedSINs}
-Current LCATs: ${lcatTitles}
-Corporate Experience: ${cert?.application?.narrativeCorp ? cert.application.narrativeCorp.substring(0, 1000) : "Not provided"}
-
-Return ONLY a valid JSON object:
-{
-  "score": 0-100,
-  "isComplete": true/false,
-  "summary": "2-3 sentence plain English assessment of whether this LCAT list is comprehensive",
-  "missingSINs": ["SIN code that has no matching LCAT"],
-  "suggestedLcats": ["LCAT title that seems missing based on their SINs and experience"]
-}
-
-Be specific. If their Corporate Experience mentions services not covered by any LCAT, flag them. suggestedLcats should be max 5 items. Return ONLY valid JSON.`,
-          context: { businessName: cert?.client?.businessName, otherSections: "" },
+          clientId,
+          certType: cert?.type,
+          currentLcats: lcats,
+          selectedSINs: cert?.application?.selectedSINs || "",
         }),
       });
-      const clean = data.text.replace(/```json|```/g, "").trim();
-      setGapAnalysis(JSON.parse(clean));
-    } catch (err) {
+      setGapAnalysis(data);
+      // Auto-save gap analysis results
+      saveExtractedGroups(invoiceGroups);
+    } catch (err: any) {
+      setError("Gap analysis failed: " + (err.message || ""));
       console.error(err);
     } finally {
       setRunningGapAnalysis(false);
@@ -1213,27 +1200,67 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                         {gapAnalysis.summary}
                       </div>
 
-                      {gapAnalysis.suggestedLcats.length > 0 && (
-                        <div style={{ marginTop: 12 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--amber)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>
-                            Suggested additions:
+                      {gapAnalysis.suggestedLcats?.length > 0 && (
+                        <div style={{ marginTop: 14 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--amber)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>
+                            Recommended Additional LCATs ({gapAnalysis.suggestedLcats.length})
                           </div>
-                          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
-                            {gapAnalysis.suggestedLcats.map((lcat, i) => (
-                              <button key={i}
-                                onClick={() => { setLibrarySearch(lcat); setActiveTab("library"); }}
-                                style={{ padding: "5px 12px", background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: 100, fontSize: 12, color: "var(--amber)", cursor: "pointer", fontWeight: 500 }}>
-                                + {lcat}
-                              </button>
-                            ))}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            {gapAnalysis.suggestedLcats.map((lcat: any, i: number) => {
+                              const lcatObj = typeof lcat === "string" ? { title: lcat } : lcat;
+                              const alreadyAdded = lcats.some(l => l.title === (lcatObj.title || lcatObj.suggestedLcatTitle));
+                              return (
+                                <div key={i} style={{ padding: "14px 16px", background: alreadyAdded ? "var(--green-bg)" : "#fff", border: `1px solid ${alreadyAdded ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--r)" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)", marginBottom: 4 }}>{lcatObj.title || lcatObj.suggestedLcatTitle}</div>
+                                      {lcatObj.description && <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.5, marginBottom: 6 }}>{lcatObj.description}</div>}
+                                      <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--ink4)", flexWrap: "wrap" as const }}>
+                                        {lcatObj.education && <span>Education: {lcatObj.education}</span>}
+                                        {lcatObj.yearsExperience && <span>Exp: {lcatObj.yearsExperience}+ yrs</span>}
+                                        {lcatObj.suggestedRate && <span style={{ color: "var(--green)", fontWeight: 500 }}>Rate: ${lcatObj.suggestedRate}/hr</span>}
+                                        {lcatObj.relevantSINs && <span>SINs: {Array.isArray(lcatObj.relevantSINs) ? lcatObj.relevantSINs.join(", ") : lcatObj.relevantSINs}</span>}
+                                      </div>
+                                      {lcatObj.justification && <div style={{ fontSize: 11, color: "var(--ink3)", marginTop: 6, fontStyle: "italic", lineHeight: 1.5 }}>{lcatObj.justification}</div>}
+                                    </div>
+                                    {alreadyAdded ? (
+                                      <span style={{ padding: "6px 14px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 11, color: "var(--green)", fontWeight: 500, flexShrink: 0 }}>{"\u2713"} Added</span>
+                                    ) : (
+                                      <button onClick={() => {
+                                        addLcat({
+                                          title: lcatObj.title || lcatObj.suggestedLcatTitle || "",
+                                          description: lcatObj.description || "",
+                                          education: lcatObj.education || "Bachelor's Degree",
+                                          yearsExperience: lcatObj.yearsExperience || "",
+                                          baseRate: lcatObj.suggestedRate || "",
+                                          mfcRate: lcatObj.suggestedRate || "",
+                                          gsaRate: calcGsaRate(lcatObj.suggestedRate || "0"),
+                                          rateStatus: null,
+                                          rateNote: "",
+                                        });
+                                      }}
+                                        style={{ padding: "7px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "var(--gold2)", cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" as const }}>
+                                        Add to CSP-1
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                          <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 6 }}>Click any suggestion to search the LCAT library for it</div>
                         </div>
                       )}
 
                       {gapAnalysis.isComplete && (
                         <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 13, color: "var(--green)", fontWeight: 500 }}>
-                          ✓ Your LCAT list appears comprehensive for your selected SINs and services.
+                          {"\u2713"} Your LCAT list appears comprehensive for your selected SINs and services.
+                        </div>
+                      )}
+
+                      {gapAnalysis.pricingJustification && (
+                        <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(200,155,60,.04)", border: "1px solid rgba(200,155,60,.12)", borderRadius: "var(--r)" }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 4 }}>Pricing Justification Language (saved for Price Proposal)</div>
+                          <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>{gapAnalysis.pricingJustification}</div>
                         </div>
                       )}
                     </div>

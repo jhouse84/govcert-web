@@ -99,6 +99,7 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
   const [gapAnalysis, setGapAnalysis] = useState<GapAnalysis | null>(null);
   const [runningGapAnalysis, setRunningGapAnalysis] = useState(false);
   const [benchmarkingId, setBenchmarkingId] = useState<string | null>(null);
+  const [idealListStatus, setIdealListStatus] = useState<"none" | "loading" | "cached" | "fresh">("none");
 
   // Price Proposal state
   const [priceProposal, setPriceProposal] = useState<string>("");
@@ -276,6 +277,25 @@ Return ONLY the JSON array.`,
     setEditingId(null);
     setGapAnalysis(null);
   }
+
+  // ── AUTO-ESTABLISH IDEAL LCAT LIST when entering CSP-1 tab ──
+  useEffect(() => {
+    if (activeTab === "csp1" && cert?.clientId && idealListStatus === "none") {
+      setIdealListStatus("loading");
+      apiRequest("/api/applications/ai/ideal-lcat-list", {
+        method: "POST",
+        body: JSON.stringify({ clientId: cert.clientId, certType: cert.type }),
+      })
+        .then(data => {
+          setIdealListStatus(data.cached ? "cached" : "fresh");
+          console.log(`[IDEAL LCAT] ${data.cached ? "Loaded cached" : "Generated new"} ideal list: ${data.idealLcatList?.idealLcats?.length || 0} LCATs`);
+        })
+        .catch(err => {
+          console.error("Failed to establish ideal LCAT list:", err);
+          setIdealListStatus("none");
+        });
+    }
+  }, [activeTab, cert?.clientId]);
 
   // ── GAP ANALYSIS ──
   async function runGapAnalysis() {
@@ -1223,7 +1243,10 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                         </div>
                       </div>
                     </div>
-                    <button onClick={() => { console.log("Gap analysis clicked"); runGapAnalysis(); }} disabled={runningGapAnalysis}
+                    {idealListStatus === "loading" && (
+                      <span style={{ fontSize: 11, color: "var(--gold)", marginRight: 8 }}>Establishing ideal LCAT list...</span>
+                    )}
+                    <button onClick={() => { console.log("Gap analysis clicked"); runGapAnalysis(); }} disabled={runningGapAnalysis || idealListStatus === "loading"}
                       style={{ padding: "8px 18px", background: runningGapAnalysis ? "var(--gold)" : "var(--navy)", border: "none", borderRadius: "var(--r)", color: runningGapAnalysis ? "#fff" : "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: runningGapAnalysis ? "not-allowed" : "pointer", opacity: runningGapAnalysis ? 0.9 : 1, flexShrink: 0 }}>
                       {runningGapAnalysis ? "Analyzing your LCATs against SINs... (this takes 30-45 seconds)" : gapAnalysis ? "✦ Re-analyze" : "✦ Run Gap Analysis"}
                     </button>

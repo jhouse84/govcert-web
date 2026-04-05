@@ -98,6 +98,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   /* ── Area 1: References ── */
   const [references, setReferences] = useState<PastPerfReference[]>([]);
   const [uploadingRef, setUploadingRef] = useState(false);
+  const [expandedRef, setExpandedRef] = useState<number | null>(null);
   const [ppqModal, setPpqModal] = useState<{
     open: boolean; step: 1 | 2 | 3;
     refIndex: number | null;
@@ -978,82 +979,64 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
 
             {references.map((ref, index) => {
               const sc = STATUS_COLORS[ref.status];
+              const isOpen = expandedRef === index;
               return (
-                <div key={ref.id || index} style={{
-                  background: "#fff",
-                  border: `1px solid ${ref.status === "COMPLETE" ? "var(--green-b)" : "var(--border)"}`,
-                  borderRadius: "var(--rl)", marginBottom: 10, boxShadow: "var(--shadow)", overflow: "hidden",
-                }}>
-                  <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                      background: ref.status === "COMPLETE" ? "var(--green)" : ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED" ? "#1A3F7A" : "var(--cream2)",
-                      border: `2px solid ${ref.status === "COMPLETE" ? "var(--green)" : ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED" ? "#1A3F7A" : "var(--border2)"}`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 14, color: "#fff", fontWeight: 600,
-                    }}>
+                <div key={ref.id || index} style={{ background: "#fff", border: `1px solid ${ref.status === "COMPLETE" ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", marginBottom: 10, boxShadow: "var(--shadow)", overflow: "hidden" }}>
+                  {/* Header — click to expand */}
+                  <div onClick={() => setExpandedRef(isOpen ? null : index)} style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: ref.status === "COMPLETE" ? "var(--green)" : ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED" ? "#1A3F7A" : "var(--cream2)", border: `2px solid ${ref.status === "COMPLETE" ? "var(--green)" : ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED" ? "#1A3F7A" : "var(--border2)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff", fontWeight: 600 }}>
                       {ref.status === "COMPLETE" ? "\u2713" : index + 1}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>
-                        {ref.name || "Reference " + (index + 1)}
-                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)", marginBottom: 2 }}>{ref.name || "Reference " + (index + 1)}</div>
                       <div style={{ fontSize: 12, color: "var(--ink4)" }}>
-                        {ref.agency}
-                        {ref.contractDetails?.contractNumber ? " \u00B7 #" + ref.contractDetails.contractNumber : ""}
-                        {ref.contractDetails?.contractValue ? " \u00B7 " + ref.contractDetails.contractValue : ""}
+                        {ref.agency}{ref.contractDetails?.contractNumber ? " \u00B7 #" + ref.contractDetails.contractNumber : ""}{ref.contractDetails?.contractValue ? " \u00B7 " + ref.contractDetails.contractValue : ""}
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                      <span style={{ padding: "4px 12px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: sc.bg, color: sc.color }}>
-                        {sc.label}
-                      </span>
-                      {ref.fileName && (
-                        <span style={{ fontSize: 11, color: "var(--ink4)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={ref.fileName}>
-                          {ref.fileName}
-                        </span>
-                      )}
-                      {ref.documentId && (
-                        <button onClick={async () => {
-                          try {
-                            const docIdClean = (ref.documentId || "").startsWith("doc-") ? (ref.documentId || "").slice(4) : ref.documentId;
-                            const resp = await fetch(
-                              `${API}/api/documents/download/${docIdClean}`,
-                              { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-                            );
-                            if (!resp.ok) { setError("Download failed"); return; }
-                            const blob = await resp.blob();
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url; a.download = ref.fileName || "reference.pdf"; a.click();
-                            URL.revokeObjectURL(url);
-                          } catch { setError("Download failed"); }
-                        }}
-                          style={{ padding: "3px 10px", fontSize: 11, fontWeight: 600, color: "var(--green)", border: "1px solid var(--green-b)", borderRadius: 5, background: "transparent", cursor: "pointer" }}
-                          title="Download file to your computer for eOffer upload">
-                          Download
-                        </button>
-                      )}
-                      <button onClick={() => deleteReference(index)}
-                        style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "var(--ink4)", padding: "2px 6px" }}
-                        title="Remove reference">
-                        &times;
-                      </button>
+                      <span style={{ padding: "4px 12px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: sc.bg, color: sc.color }}>{sc.label}</span>
+                      <span style={{ fontSize: 14, color: "var(--gold)" }}>{isOpen ? "\u25B2" : "\u25BC"}</span>
                     </div>
                   </div>
 
-                  {/* Contract details if available */}
-                  {ref.contractDetails && ref.contractDetails.description && (
-                    <div style={{ padding: "0 20px 14px", borderTop: "1px solid var(--border)" }}>
-                      <div style={{ padding: "12px 0", fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
-                        {ref.contractDetails.description.substring(0, 300)}
-                        {ref.contractDetails.description.length > 300 ? "..." : ""}
+                  {/* Expanded detail */}
+                  {isOpen && (
+                    <div style={{ padding: "0 20px 16px", borderTop: "1px solid var(--border)" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "14px 0" }}>
+                        <div><div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Agency</div><div style={{ fontSize: 13, color: "var(--navy)", marginTop: 2 }}>{ref.agency || "\u2014"}</div></div>
+                        <div><div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Contract #</div><div style={{ fontSize: 13, color: "var(--navy)", marginTop: 2 }}>{ref.contractDetails?.contractNumber || "\u2014"}</div></div>
+                        <div><div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Value</div><div style={{ fontSize: 13, color: "var(--navy)", marginTop: 2 }}>{ref.contractDetails?.contractValue || "\u2014"}</div></div>
+                        <div><div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Period</div><div style={{ fontSize: 13, color: "var(--navy)", marginTop: 2 }}>{ref.contractDetails?.periodStart || "?"} \u2014 {ref.contractDetails?.periodEnd || "Present"}</div></div>
                       </div>
-                      {(ref.contractDetails.periodStart || ref.contractDetails.periodEnd) && (
-                        <div style={{ fontSize: 11, color: "var(--ink4)" }}>
-                          {ref.contractDetails.periodStart} &mdash; {ref.contractDetails.periodEnd || "Present"}
-                        </div>
+                      {ref.contractDetails?.description && (
+                        <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 12 }}>{ref.contractDetails.description}</div>
                       )}
+                      {/* File */}
+                      <div style={{ padding: "10px 14px", background: ref.fileName ? "var(--green-bg)" : "var(--cream)", borderRadius: "var(--r)", border: `1px solid ${ref.fileName ? "var(--green-b)" : "var(--border)"}`, marginBottom: 10 }}>
+                        {ref.fileName ? (
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ fontSize: 13, color: "var(--navy)" }}>{ref.fileName}</div>
+                            {ref.documentId && (
+                              <button onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const docIdClean = (ref.documentId || "").startsWith("doc-") ? (ref.documentId || "").slice(4) : ref.documentId;
+                                  const resp = await fetch(`${API}/api/documents/download/${docIdClean}`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+                                  if (!resp.ok) { setError("Download failed"); return; }
+                                  const blob = await resp.blob();
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement("a"); a.href = url; a.download = ref.fileName || "reference.pdf"; a.click(); URL.revokeObjectURL(url);
+                                } catch { setError("Download failed"); }
+                              }} style={{ padding: "4px 12px", fontSize: 11, fontWeight: 600, color: "var(--green)", border: "1px solid var(--green-b)", borderRadius: 5, background: "transparent", cursor: "pointer" }}>Download</button>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 12, color: "var(--ink4)" }}>No file attached. Upload a PPQ or CPARS above, or request a PPQ via email.</div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <button onClick={() => deleteReference(index)} style={{ padding: "5px 14px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 11, color: "var(--red)", cursor: "pointer" }}>Remove</button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1064,15 +1047,67 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
           {/* ═══════════════════════════════════════════════════════ */}
           {/* AREA 2 — SIN NARRATIVES                               */}
           {/* ═══════════════════════════════════════════════════════ */}
-          {selectedSINs.length > 0 && (
-            <div style={{ marginBottom: 36 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, margin: 0 }}>Relevant Project Experience</h2>
-                <span style={{ fontSize: 12, color: "var(--ink4)" }}>1 narrative per SIN for eOffer Tab 3</span>
+          <div style={{ marginBottom: 36 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, margin: 0 }}>Relevant Project Experience</h2>
+              <span style={{ fontSize: 12, color: "var(--ink4)" }}>1 narrative per SIN for eOffer Tab 3</span>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 12 }}>
+              Write or generate a narrative for each selected SIN describing your relevant project experience, methodology, and outcomes.
+            </p>
+
+            {/* SIN Management */}
+            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "14px 18px", marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink3)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>
+                  Selected SINs ({selectedSINs.length})
+                </div>
+                <select
+                  onChange={async (e) => {
+                    const newSin = e.target.value;
+                    if (!newSin || selectedSINs.includes(newSin)) return;
+                    const updated = [...selectedSINs, newSin].join(",");
+                    try {
+                      await apiRequest("/api/applications", {
+                        method: "POST",
+                        body: JSON.stringify({ certificationId: certId, clientId: cert?.clientId || cert?.client?.id, certType: cert?.type, currentStep: cert?.application?.currentStep || 1, selectedSINs: updated }),
+                      });
+                      setCert((prev: any) => ({ ...prev, application: { ...prev.application, selectedSINs: updated } }));
+                    } catch { setError("Failed to add SIN"); }
+                    e.target.value = "";
+                  }}
+                  style={{ padding: "5px 10px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, color: "var(--ink3)", background: "#fff", cursor: "pointer" }}>
+                  <option value="">+ Add SIN...</option>
+                  {Object.entries(SIN_DESCRIPTIONS).filter(([code]) => !selectedSINs.includes(code)).map(([code, desc]) => (
+                    <option key={code} value={code}>{code} — {desc}</option>
+                  ))}
+                </select>
               </div>
-              <p style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 16 }}>
-                Write or generate a narrative for each selected SIN describing your relevant project experience, methodology, and outcomes.
-              </p>
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                {selectedSINs.map(sin => (
+                  <div key={sin} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", background: sinNarratives[sin] ? "var(--green-bg)" : "var(--cream)", border: `1px solid ${sinNarratives[sin] ? "var(--green-b)" : "var(--border)"}`, borderRadius: 100, fontSize: 12 }}>
+                    <span style={{ fontWeight: 500, color: "var(--navy)" }}>{sin}</span>
+                    <span style={{ color: "var(--ink4)", fontSize: 10 }}>{(SIN_DESCRIPTIONS[sin] || "").substring(0, 25)}</span>
+                    {sinNarratives[sin] && <span style={{ color: "var(--green)", fontSize: 10 }}>{"\u2713"}</span>}
+                    <button onClick={async () => {
+                      const updated = selectedSINs.filter(s => s !== sin).join(",");
+                      try {
+                        await apiRequest("/api/applications", {
+                          method: "POST",
+                          body: JSON.stringify({ certificationId: certId, clientId: cert?.clientId || cert?.client?.id, certType: cert?.type, currentStep: cert?.application?.currentStep || 1, selectedSINs: updated }),
+                        });
+                        setCert((prev: any) => ({ ...prev, application: { ...prev.application, selectedSINs: updated } }));
+                      } catch { setError("Failed to remove SIN"); }
+                    }}
+                      style={{ background: "none", border: "none", color: "var(--ink4)", cursor: "pointer", fontSize: 12, padding: "0 2px", lineHeight: 1 }}
+                      title={`Remove SIN ${sin}`}>&times;</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          {selectedSINs.length > 0 && (
+            <div>
 
               {selectedSINs.map(sin => {
                 const desc = SIN_DESCRIPTIONS[sin] || sin;
@@ -1207,15 +1242,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
               </div>
             </div>
           )}
-
-          {/* No SINs selected notice */}
-          {selectedSINs.length === 0 && (
-            <div style={{ background: "var(--cream)", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 24, textAlign: "center" }}>
-              <div style={{ fontSize: 13, color: "var(--ink3)" }}>
-                No SINs selected yet. Select your SINs in the eligibility step to see narrative sections here.
-              </div>
-            </div>
-          )}
+          </div>
 
           {/* Bottom nav */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 32 }}>

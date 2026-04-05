@@ -95,6 +95,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   /* ── Area 1: References ── */
   const [references, setReferences] = useState<PastPerfReference[]>([]);
   const [uploadingRef, setUploadingRef] = useState(false);
+  const [expandedRef, setExpandedRef] = useState<number | null>(null);
   const [ppqModal, setPpqModal] = useState<{
     open: boolean; step: 1 | 2 | 3;
     refIndex: number | null;
@@ -973,13 +974,14 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
 
             {references.map((ref, index) => {
               const sc = STATUS_COLORS[ref.status];
+              const isOpen = expandedRef === index;
               return (
                 <div key={ref.id || index} style={{
                   background: "#fff",
                   border: `1px solid ${ref.status === "COMPLETE" ? "var(--green-b)" : "var(--border)"}`,
                   borderRadius: "var(--rl)", marginBottom: 10, boxShadow: "var(--shadow)", overflow: "hidden",
                 }}>
-                  <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+                  <div onClick={() => setExpandedRef(isOpen ? null : index)} style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
                       background: ref.status === "COMPLETE" ? "var(--green)" : ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED" ? "#1A3F7A" : "var(--cream2)",
@@ -1003,52 +1005,47 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                       <span style={{ padding: "4px 12px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: sc.bg, color: sc.color }}>
                         {sc.label}
                       </span>
-                      {ref.fileName && (
-                        <span style={{ fontSize: 11, color: "var(--ink4)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={ref.fileName}>
-                          {ref.fileName}
-                        </span>
-                      )}
-                      {ref.documentId && (
-                        <button onClick={async () => {
-                          try {
-                            const docIdClean = (ref.documentId || "").startsWith("doc-") ? (ref.documentId || "").slice(4) : ref.documentId;
-                            const resp = await fetch(
-                              `${API}/api/documents/download/${docIdClean}`,
-                              { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-                            );
-                            if (!resp.ok) { setError("Download failed"); return; }
-                            const blob = await resp.blob();
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url; a.download = ref.fileName || "reference.pdf"; a.click();
-                            URL.revokeObjectURL(url);
-                          } catch { setError("Download failed"); }
-                        }}
-                          style={{ padding: "3px 10px", fontSize: 11, fontWeight: 600, color: "var(--green)", border: "1px solid var(--green-b)", borderRadius: 5, background: "transparent", cursor: "pointer" }}
-                          title="Download file to your computer for eOffer upload">
-                          Download
-                        </button>
-                      )}
-                      <button onClick={() => deleteReference(index)}
-                        style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "var(--ink4)", padding: "2px 6px" }}
-                        title="Remove reference">
-                        &times;
-                      </button>
+                      <span style={{ fontSize: 14, color: "var(--gold)" }}>{isOpen ? "\u25B2" : "\u25BC"}</span>
                     </div>
                   </div>
 
-                  {/* Contract details if available */}
-                  {ref.contractDetails && ref.contractDetails.description && (
-                    <div style={{ padding: "0 20px 14px", borderTop: "1px solid var(--border)" }}>
-                      <div style={{ padding: "12px 0", fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
-                        {ref.contractDetails.description.substring(0, 300)}
-                        {ref.contractDetails.description.length > 300 ? "..." : ""}
+                  {isOpen && (
+                    <div style={{ padding: "0 20px 16px", borderTop: "1px solid var(--border)" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "14px 0" }}>
+                        <div><div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Agency</div><div style={{ fontSize: 13, color: "var(--navy)", marginTop: 2 }}>{ref.agency || "\u2014"}</div></div>
+                        <div><div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Contract #</div><div style={{ fontSize: 13, color: "var(--navy)", marginTop: 2 }}>{ref.contractDetails?.contractNumber || "\u2014"}</div></div>
+                        <div><div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Value</div><div style={{ fontSize: 13, color: "var(--navy)", marginTop: 2 }}>{ref.contractDetails?.contractValue || "\u2014"}</div></div>
+                        <div><div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".06em" }}>Period</div><div style={{ fontSize: 13, color: "var(--navy)", marginTop: 2 }}>{ref.contractDetails?.periodStart || "?"} \u2014 {ref.contractDetails?.periodEnd || "Present"}</div></div>
                       </div>
-                      {(ref.contractDetails.periodStart || ref.contractDetails.periodEnd) && (
-                        <div style={{ fontSize: 11, color: "var(--ink4)" }}>
-                          {ref.contractDetails.periodStart} &mdash; {ref.contractDetails.periodEnd || "Present"}
+                      {ref.contractDetails?.description && (
+                        <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 12 }}>{ref.contractDetails.description}</div>
+                      )}
+                      {ref.fileName && (
+                        <div style={{ padding: "10px 14px", background: "var(--green-bg)", borderRadius: "var(--r)", border: "1px solid var(--green-b)", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ fontSize: 13, color: "var(--navy)" }}>{ref.fileName}</div>
+                          {ref.documentId && (
+                            <button onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const docIdClean = (ref.documentId || "").startsWith("doc-") ? (ref.documentId || "").slice(4) : ref.documentId;
+                                const resp = await fetch(`${API}/api/documents/download/${docIdClean}`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+                                if (!resp.ok) { setError("Download failed"); return; }
+                                const blob = await resp.blob();
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a"); a.href = url; a.download = ref.fileName || "reference.pdf"; a.click(); URL.revokeObjectURL(url);
+                              } catch { setError("Download failed"); }
+                            }} style={{ padding: "4px 12px", fontSize: 11, fontWeight: 600, color: "var(--green)", border: "1px solid var(--green-b)", borderRadius: 5, background: "transparent", cursor: "pointer" }}>Download</button>
+                          )}
                         </div>
                       )}
+                      {!ref.fileName && (
+                        <div style={{ padding: "10px 14px", background: "var(--cream)", borderRadius: "var(--r)", border: "1px solid var(--border)", marginBottom: 10, fontSize: 12, color: "var(--ink4)" }}>
+                          No file attached. Upload a PPQ or CPARS above.
+                        </div>
+                      )}
+                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <button onClick={(e) => { e.stopPropagation(); deleteReference(index); }} style={{ padding: "5px 14px", background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--r)", fontSize: 11, color: "var(--red)", cursor: "pointer" }}>Remove</button>
+                      </div>
                     </div>
                   )}
                 </div>

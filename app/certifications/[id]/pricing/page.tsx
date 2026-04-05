@@ -104,6 +104,7 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
   const [priceProposal, setPriceProposal] = useState<string>("");
   const [generatingProposal, setGeneratingProposal] = useState(false);
   const [proposalSaved, setProposalSaved] = useState(false);
+  const [showUpdateProposalPrompt, setShowUpdateProposalPrompt] = useState(false);
 
   const invoiceInputRef = useRef<HTMLInputElement>(null);
   const MIN_LCATS = 5;
@@ -332,24 +333,9 @@ Return ONLY the JSON array.`,
         }),
       });
 
-      // Step 4: Auto-regenerate Price Proposal with justification language
-      if (data.pricingJustification) {
-        setGeneratingProposal(true);
-        try {
-          const proposalData = await apiRequest("/api/applications/ai/generate-price-proposal", {
-            method: "POST",
-            body: JSON.stringify({ clientId, certType: cert?.type }),
-          });
-          if (proposalData.document) {
-            setPriceProposal(proposalData.document);
-            setProposalSaved(true);
-          }
-        } catch (e) {
-          console.error("Price proposal regeneration failed:", e);
-          // Non-fatal — gap analysis still succeeded
-        } finally {
-          setGeneratingProposal(false);
-        }
+      // Step 4: If Price Proposal already exists, prompt to update it
+      if (priceProposal && data.pricingJustification) {
+        setShowUpdateProposalPrompt(true);
       }
     } catch (err: any) {
       setError("Gap analysis failed: " + (err.message || ""));
@@ -1500,6 +1486,51 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                   <textarea value={notes} onChange={e => setNotes(e.target.value)}
                     placeholder="Any additional pricing context — seasonal rates, volume discounts, special terms, etc."
                     style={{ width: "100%", minHeight: 80, padding: "10px 12px", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box" as const }} />
+                </div>
+              )}
+
+              {/* Update Proposal Prompt — appears after gap analysis adds new LCATs */}
+              {showUpdateProposalPrompt && (
+                <div style={{ background: "linear-gradient(135deg, rgba(200,155,60,.08), rgba(200,155,60,.02))", border: "2px solid var(--gold)", borderRadius: "var(--rl)", padding: "24px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#fff", flexShrink: 0 }}>{"\u26A0\uFE0F"}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>Your LCATs have changed</div>
+                      <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.6, marginBottom: 12 }}>
+                        The gap analysis added {gapAnalysis?.suggestedLcats?.length || 0} new labor categories to your CSP-1. Your existing Price Proposal needs to be updated to include justification for these additional LCATs — particularly those without direct invoice backup.
+                      </div>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <button
+                          onClick={async () => {
+                            setShowUpdateProposalPrompt(false);
+                            setGeneratingProposal(true);
+                            try {
+                              const clientId = cert?.clientId || cert?.client?.id;
+                              const data = await apiRequest("/api/applications/ai/generate-price-proposal", {
+                                method: "POST",
+                                body: JSON.stringify({ clientId, certType: cert?.type }),
+                              });
+                              if (data.document) {
+                                setPriceProposal(data.document);
+                                setProposalSaved(true);
+                              }
+                            } catch (err: any) {
+                              setError("Failed to update proposal: " + (err.message || ""));
+                            } finally {
+                              setGeneratingProposal(false);
+                            }
+                          }}
+                          disabled={generatingProposal}
+                          style={{ padding: "10px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: generatingProposal ? "wait" : "pointer" }}>
+                          {generatingProposal ? "Rewriting Price Proposal..." : "Update Price Proposal Now"}
+                        </button>
+                        <button onClick={() => setShowUpdateProposalPrompt(false)}
+                          style={{ padding: "10px 20px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", color: "var(--ink3)", fontSize: 13, cursor: "pointer" }}>
+                          Later
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

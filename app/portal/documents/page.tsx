@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { SecurityBanner } from "@/components/SecurityBadge";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Constants
@@ -610,6 +611,11 @@ export default function PortalDocumentsPage() {
             </p>
           </div>
 
+          <SecurityBanner
+            message="Your document vault is encrypted. Only you control who can access your files."
+            badges={["encrypted-at-rest", "audit-logged"]}
+          />
+
           {/* Success banner */}
           {uploadSuccess && (
             <div style={{
@@ -1051,7 +1057,11 @@ export default function PortalDocumentsPage() {
                                 );
                                 if (!resp.ok) {
                                   const err = await resp.json().catch(() => ({}));
-                                  alert(err.error || 'Download failed');
+                                  if (err.reuploadRequired) {
+                                    alert(`"${err.documentName}" was uploaded before our cloud storage upgrade and needs to be re-uploaded. Please upload it again through the document manager.`);
+                                  } else {
+                                    alert(err.error || 'Download failed');
+                                  }
                                   return;
                                 }
                                 const blob = await resp.blob();

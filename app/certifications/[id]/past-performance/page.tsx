@@ -416,6 +416,14 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   /* ── Delete reference ── */
   async function deleteReference(index: number) {
     const ref = references[index];
+
+    // SAFETY: Never delete a reference that has a PPQ sent — the PPQ link would break
+    if (ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED") {
+      if (!confirm(`This reference has a PPQ request outstanding (status: ${ref.status}). Deleting it will invalidate the PPQ link sent to the reference. Are you sure?`)) return;
+    }
+
+    if (!confirm(`Remove ${ref.name || "this reference"}? This cannot be undone.`)) return;
+
     try {
       // Delete PastPerformance record if it exists (non-document-sourced)
       if (ref.id && !ref.id.startsWith("doc-") && cert?.application?.id) {
@@ -426,7 +434,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         const docId = ref.documentId.startsWith("doc-") ? ref.documentId.slice(4) : ref.documentId;
         try {
           await apiRequest(`/api/upload/documents/${docId}`, { method: "DELETE" });
-        } catch {} // Non-fatal — document may already be gone
+        } catch {}
       }
       setReferences(prev => prev.filter((_, i) => i !== index));
     } catch (err) {
@@ -498,18 +506,27 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
       if (ppId && ppId.startsWith("doc-")) ppId = null;
 
       if (!ppId) {
-        // Create a new past performance entry for this reference
-        const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
-          method: "POST",
-          body: JSON.stringify({
-            agencyName: ppqModal.agency,
-            referenceFirstName: ppqModal.name.split(" ")[0] || "",
-            referenceLastName: ppqModal.name.split(" ").slice(1).join(" ") || "",
-            referenceEmail: ppqModal.email,
-            referenceTitle: ppqModal.title,
-          }),
-        });
-        ppId = result.id;
+        // Check if a PP record already exists for this reference (prevent duplicates)
+        const existing = references.find(r =>
+          !r.id.startsWith("doc-") &&
+          (r.name || "").toLowerCase() === (ppqModal.name || "").toLowerCase()
+        );
+        if (existing) {
+          ppId = existing.id;
+        } else {
+          // Create a new past performance entry
+          const result = await apiRequest(`/api/applications/${appId}/past-performance`, {
+            method: "POST",
+            body: JSON.stringify({
+              agencyName: ppqModal.agency,
+              referenceFirstName: ppqModal.name.split(" ")[0] || "",
+              referenceLastName: ppqModal.name.split(" ").slice(1).join(" ") || "",
+              referenceEmail: ppqModal.email,
+              referenceTitle: ppqModal.title,
+            }),
+          });
+          ppId = result.id;
+        }
       }
 
       await apiRequest("/api/ppq", {

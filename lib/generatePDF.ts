@@ -32,7 +32,7 @@ export async function generatePDF(opts: {
     page = pdf.addPage([pageWidth, pageHeight]);
     y = pageHeight - margin;
     // Page header
-    page.drawText(opts.companyName + " — " + opts.title, { x: margin, y, font, size: 8, color: rgb(0.55, 0.55, 0.55) });
+    page.drawText(sanitize(opts.companyName + " -- " + opts.title), { x: margin, y, font, size: 8, color: rgb(0.55, 0.55, 0.55) });
     y -= 24;
   }
 
@@ -41,20 +41,34 @@ export async function generatePDF(opts: {
   }
 
   // ── Header ──
-  page.drawText(opts.companyName, { x: margin, y, font, size: 9, color: rgb(0.45, 0.45, 0.45) });
+  page.drawText(sanitize(opts.companyName), { x: margin, y, font, size: 9, color: rgb(0.45, 0.45, 0.45) });
   const headerRight = "GSA MAS eOffer Submission Document";
   const hrWidth = font.widthOfTextAtSize(headerRight, 9);
   page.drawText(headerRight, { x: pageWidth - margin - hrWidth, y, font, size: 9, color: rgb(0.45, 0.45, 0.45) });
   y -= 28;
 
   // ── Title ──
-  page.drawText(opts.title, { x: margin, y, font: fontBold, size: 17, color: rgb(0.1, 0.14, 0.2) });
+  page.drawText(sanitize(opts.title), { x: margin, y, font: fontBold, size: 17, color: rgb(0.1, 0.14, 0.2) });
   y -= 10;
   page.drawLine({ start: { x: margin, y }, end: { x: pageWidth - margin, y }, thickness: 2, color: rgb(0.78, 0.61, 0.24) });
   y -= 24;
 
+  // ── Sanitize text for pdf-lib (StandardFonts only support WinAnsi/Latin1) ──
+  function sanitize(text: string): string {
+    return text
+      .replace(/[\u2018\u2019\u201A]/g, "'")   // smart single quotes → '
+      .replace(/[\u201C\u201D\u201E]/g, '"')   // smart double quotes → "
+      .replace(/\u2014/g, '--')                 // em dash → --
+      .replace(/\u2013/g, '-')                  // en dash → -
+      .replace(/\u2026/g, '...')                // ellipsis → ...
+      .replace(/\u2022/g, '*')                  // bullet → *
+      .replace(/\u00A0/g, ' ')                  // non-breaking space
+      .replace(/\u2019/g, "'")                  // right single quote
+      .replace(/[^\x00-\xFF]/g, '');            // strip anything outside Latin1
+  }
+
   // ── Body — wrap text manually ──
-  const paragraphs = opts.content.split("\n");
+  const paragraphs = sanitize(opts.content).split("\n");
 
   for (const para of paragraphs) {
     if (para.trim() === "") { y -= 10; continue; }
@@ -65,7 +79,7 @@ export async function generatePDF(opts: {
     if (isHeader) {
       checkPage(30);
       y -= 6;
-      page.drawText(para.trim(), { x: margin, y, font: fontBold, size: 11.5, color: rgb(0.1, 0.14, 0.2) });
+      page.drawText(sanitize(para.trim()), { x: margin, y, font: fontBold, size: 11.5, color: rgb(0.1, 0.14, 0.2) });
       y -= 20;
       continue;
     }

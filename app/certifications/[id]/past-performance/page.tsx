@@ -417,9 +417,10 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   async function deleteReference(index: number) {
     const ref = references[index];
 
-    // SAFETY: Never delete a reference that has a PPQ sent — the PPQ link would break
+    // BLOCK: Never delete a reference that has a PPQ sent — the PPQ link would break
     if (ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED") {
-      if (!confirm(`This reference has a PPQ request outstanding (status: ${ref.status}). Deleting it will invalidate the PPQ link sent to the reference. Are you sure?`)) return;
+      setError(`Cannot delete ${ref.name || "this reference"} — a PPQ request has been sent. Wait for the response or contact support to cancel the PPQ.`);
+      return;
     }
 
     if (!confirm(`Remove ${ref.name || "this reference"}? This cannot be undone.`)) return;

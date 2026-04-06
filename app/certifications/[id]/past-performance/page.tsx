@@ -485,6 +485,8 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
       // Ensure we have a past performance record
       const appId = await ensureApplication();
       let ppId = ppqModal.refIndex !== null ? references[ppqModal.refIndex]?.id : null;
+      // doc- prefixed IDs are from Document records, not PastPerformance — treat as null
+      if (ppId && ppId.startsWith("doc-")) ppId = null;
 
       if (!ppId) {
         // Create a new past performance entry for this reference

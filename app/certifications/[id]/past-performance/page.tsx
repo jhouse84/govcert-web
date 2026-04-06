@@ -480,6 +480,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   }
 
   async function sendPPQFromModal() {
+    if (ppqModal.sending) return; // Guard against double-clicks
     setPpqModal(prev => ({ ...prev, sending: true }));
     try {
       // Ensure we have a past performance record

@@ -32,6 +32,10 @@ export default function EightAReviewPage({ params }: { params: Promise<{ id: str
   const [review, setReview] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [reviewHistory, setReviewHistory] = useState<{ score: number; date: string }[]>([]);
+  const [reviewId, setReviewId] = useState<string | null>(null);
+  const [resolvedIssues, setResolvedIssues] = useState<Record<string, any>>({});
+  const [adjustedScore, setAdjustedScore] = useState<number | null>(null);
+  const [resolvingKey, setResolvingKey] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -60,7 +64,13 @@ export default function EightAReviewPage({ params }: { params: Promise<{ id: str
             disclaimer: latest.disclaimer,
           };
           setReview(parsed);
-          setReviewHistory(savedReviews.map((r: any) => ({ score: r.overallScore, date: r.createdAt })));
+          setReviewId(latest.id);
+          try {
+            const ri = JSON.parse(latest.resolvedIssues || '{}');
+            setResolvedIssues(ri);
+            if (latest.adjustedScore != null) setAdjustedScore(latest.adjustedScore);
+          } catch {}
+          setReviewHistory(savedReviews.map((r: any) => ({ score: r.adjustedScore || r.overallScore, date: r.createdAt })));
         } else {
           // Fallback to localStorage
           const stored = localStorage.getItem(`govcert-review-${certId}`);
@@ -86,6 +96,22 @@ export default function EightAReviewPage({ params }: { params: Promise<{ id: str
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }
+
+  async function resolveIssue(issueKey: string, resolved: boolean) {
+    if (!reviewId) return;
+    setResolvingKey(issueKey);
+    try {
+      const result = await apiRequest(`/api/applications/ai/reviews/${reviewId}/resolve`, {
+        method: "PATCH",
+        body: JSON.stringify({ issueKey, resolved }),
+      });
+      setResolvedIssues(result.resolvedIssues);
+      setAdjustedScore(result.adjustedScore);
+    } catch (err) { console.error(err); }
+    finally { setResolvingKey(null); }
+  }
+
+  const displayScore = adjustedScore ?? review?.overallScore;
 
   async function runReview() {
     setAnalyzing(true);
@@ -115,7 +141,7 @@ export default function EightAReviewPage({ params }: { params: Promise<{ id: str
     <div style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink4)" }}>Loading...</div>
   );
 
-  const scoreColor = !review ? "var(--ink4)" : review.overallScore >= 80 ? "var(--green)" : review.overallScore >= 60 ? "var(--gold)" : review.overallScore >= 40 ? "#F59E0B" : "var(--red)";
+  const scoreColor = !review ? "var(--ink4)" : (displayScore || 0) >= 80 ? "var(--green)" : (displayScore || 0) >= 60 ? "var(--gold)" : (displayScore || 0) >= 40 ? "#F59E0B" : "var(--red)";
   const verdictColors: Record<string, string> = { STRONG: "var(--green)", COMPETITIVE: "#2563EB", NEEDS_IMPROVEMENT: "var(--gold)", NEEDS_WORK: "var(--gold)", NOT_READY: "var(--red)", ERROR: "var(--red)" };
 
   return (
@@ -196,7 +222,10 @@ export default function EightAReviewPage({ params }: { params: Promise<{ id: str
           <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 20, marginBottom: 28 }}>
             <div style={{ background: "#fff", border: `3px solid ${scoreColor}`, borderRadius: "var(--rl)", padding: "28px", textAlign: "center" as const, boxShadow: "var(--shadow)" }}>
               <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--ink4)", marginBottom: 8 }}>Overall Score</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 72, color: scoreColor, lineHeight: 1 }}>{review.overallScore}</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 72, color: scoreColor, lineHeight: 1 }}>{displayScore}</div>
+              {adjustedScore != null && adjustedScore !== review.overallScore && (
+                <div style={{ fontSize: 11, color: "var(--green)", marginTop: 4 }}>+{adjustedScore - review.overallScore} from fixes (was {review.overallScore})</div>
+              )}
               <div style={{ fontSize: 14, color: scoreColor, fontWeight: 600, marginTop: 4 }}>/100</div>
               <div style={{ marginTop: 12, padding: "6px 16px", background: `${verdictColors[review.readinessLevel] || "var(--ink4)"}15`, border: `1px solid ${verdictColors[review.readinessLevel] || "var(--ink4)"}30`, borderRadius: 100, display: "inline-block", fontSize: 12, fontWeight: 600, color: verdictColors[review.readinessLevel] || "var(--ink4)" }}>
                 {(review.readinessLevel || review.overallVerdict || "").replace(/_/g, " ")}
@@ -220,11 +249,28 @@ export default function EightAReviewPage({ params }: { params: Promise<{ id: str
               {review.criticalIssues?.length > 0 && (
                 <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--rl)", padding: "18px 22px" }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: "var(--red)", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: ".08em" }}>Critical Issues — Must Fix</div>
-                  {review.criticalIssues.map((issue: string, i: number) => (
-                    <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6, fontSize: 13, color: "#991B1B", lineHeight: 1.5 }}>
-                      <span style={{ flexShrink: 0 }}>🚨</span> {issue}
-                    </div>
-                  ))}
+                  {review.criticalIssues.map((issue: string, i: number) => {
+                    const key = `critical:${i}`;
+                    const isResolved = resolvedIssues[key]?.resolved;
+                    return (
+                      <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 13, lineHeight: 1.5, padding: "8px 10px", borderRadius: 6, background: isResolved ? "rgba(5,150,105,.06)" : undefined }}>
+                        <span style={{ flexShrink: 0 }}>{isResolved ? "✅" : "🚨"}</span>
+                        <div style={{ flex: 1, color: isResolved ? "#065F46" : "#991B1B", textDecoration: isResolved ? "line-through" : undefined }}>
+                          {issue}
+                        </div>
+                        <button
+                          disabled={resolvingKey === key}
+                          onClick={() => resolveIssue(key, !isResolved)}
+                          style={{
+                            padding: "4px 10px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" as const,
+                            background: isResolved ? "rgba(200,155,60,.08)" : "var(--green)", color: isResolved ? "var(--gold)" : "#fff",
+                            border: isResolved ? "1px solid rgba(200,155,60,.2)" : "none",
+                          }}>
+                          {resolvingKey === key ? "..." : isResolved ? "Undo" : "Fixed ✓"}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
               {/* Strengths */}
@@ -291,11 +337,35 @@ export default function EightAReviewPage({ params }: { params: Promise<{ id: str
                 {section.improvements?.length > 0 && (
                   <div style={{ background: "rgba(200,155,60,.04)", border: "1px solid rgba(200,155,60,.12)", borderRadius: "var(--r)", padding: "10px 14px" }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "var(--gold)", marginBottom: 4 }}>How to Improve:</div>
-                    {section.improvements.map((imp: string, i: number) => (
-                      <div key={i} style={{ display: "flex", gap: 6, marginBottom: 3, fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.5 }}>
-                        <span style={{ color: "var(--gold)", flexShrink: 0 }}>→</span> {imp}
-                      </div>
-                    ))}
+                    {section.improvements.map((imp: string, i: number) => {
+                      const key = `${section.id}:${i}`;
+                      const isResolved = resolvedIssues[key]?.resolved;
+                      const sectionLink = SECTION_LINKS[section.id];
+                      return (
+                        <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6, fontSize: 12.5, lineHeight: 1.5, padding: "6px 8px", borderRadius: 5, background: isResolved ? "rgba(5,150,105,.06)" : undefined }}>
+                          <span style={{ color: isResolved ? "var(--green)" : "var(--gold)", flexShrink: 0 }}>{isResolved ? "✓" : "→"}</span>
+                          <div style={{ flex: 1, color: isResolved ? "#065F46" : "var(--ink2)", textDecoration: isResolved ? "line-through" : undefined }}>{imp}</div>
+                          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                            {!isResolved && sectionLink && (
+                              <a href={`/certifications/${certId}/${sectionLink}`}
+                                style={{ padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, color: "var(--navy)", background: "rgba(11,25,41,.05)", border: "1px solid rgba(11,25,41,.1)", textDecoration: "none" }}>
+                                Fix this →
+                              </a>
+                            )}
+                            <button
+                              disabled={resolvingKey === key}
+                              onClick={() => resolveIssue(key, !isResolved)}
+                              style={{
+                                padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: "pointer",
+                                background: isResolved ? "rgba(200,155,60,.08)" : "var(--green)", color: isResolved ? "var(--gold)" : "#fff",
+                                border: isResolved ? "1px solid rgba(200,155,60,.2)" : "none",
+                              }}>
+                              {resolvingKey === key ? "..." : isResolved ? "Undo" : "Done ✓"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 

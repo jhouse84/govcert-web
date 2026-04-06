@@ -220,9 +220,14 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         } catch {}
       }
 
-      // Run smart scan (clientId already declared above)
+      // Smart scan — only run if no cached results or document count changed
       if (clientId) {
-        runSmartScan(clientId);
+        const cached = sessionStorage.getItem(`ppScan_${certId}`);
+        if (cached) {
+          try { setScanResults(JSON.parse(cached)); } catch {}
+        } else {
+          runSmartScan(clientId);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -241,6 +246,7 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
         body: JSON.stringify({ clientId }),
       });
       setScanResults(data);
+      try { sessionStorage.setItem(`ppScan_${certId}`, JSON.stringify(data)); } catch {}
     } catch (err) {
       console.error("Smart scan failed:", err);
       // Silently fail — show manual entry UI
@@ -276,6 +282,8 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
     if (fileArr.length === 0) return;
     setUploadingRef(true);
     setError(null);
+    // Clear scan cache so next visit triggers a fresh scan with new docs
+    try { sessionStorage.removeItem(`ppScan_${certId}`); } catch {}
     const appId = await ensureApplication();
 
     let successCount = 0;
@@ -924,8 +932,14 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
             {/* Smart Scan Suggestions */}
             {scanResults?.potentialReferences?.length > 0 && (
               <div style={{ background: "#fff", border: "1px solid rgba(200,155,60,.2)", borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 16, boxShadow: "var(--shadow)" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)", marginBottom: 12 }}>
-                  Smart Scan Found {scanResults.potentialReferences.length} Potential Reference{scanResults.potentialReferences.length !== 1 ? "s" : ""}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--gold)" }}>
+                    Smart Scan Found {scanResults.potentialReferences.length} Potential Reference{scanResults.potentialReferences.length !== 1 ? "s" : ""}
+                  </div>
+                  <button onClick={() => { sessionStorage.removeItem(`ppScan_${certId}`); const cid = cert?.clientId || cert?.client?.id; if (cid) runSmartScan(cid); }}
+                    style={{ padding: "3px 10px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 10, color: "var(--ink4)", cursor: "pointer" }}>
+                    Re-scan
+                  </button>
                 </div>
                 {scanResults.potentialReferences.map((suggestion: any, idx: number) => (
                   <div key={idx} style={{

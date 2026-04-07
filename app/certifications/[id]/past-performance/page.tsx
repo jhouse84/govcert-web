@@ -417,13 +417,12 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
   async function deleteReference(index: number) {
     const ref = references[index];
 
-    // BLOCK: Never delete a reference that has a PPQ sent — the PPQ link would break
-    if (ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED") {
-      setError(`Cannot delete ${ref.name || "this reference"} — a PPQ request has been sent. Wait for the response or contact support to cancel the PPQ.`);
-      return;
-    }
+    // Warn (but don't block) if a PPQ has been sent
+    const ppqWarning = (ref.status === "PPQ_SENT" || ref.status === "PPQ_OPENED")
+      ? `\n\nWARNING: A PPQ request has been sent to this reference. Removing them will invalidate that PPQ link.`
+      : "";
 
-    if (!confirm(`Remove ${ref.name || "this reference"}? This cannot be undone.`)) return;
+    if (!confirm(`Remove ${ref.name || "this reference"}?${ppqWarning}\n\nThis cannot be undone.`)) return;
 
     try {
       // Delete PastPerformance record if it exists (non-document-sourced)

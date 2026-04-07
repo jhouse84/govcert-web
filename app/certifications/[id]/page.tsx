@@ -56,14 +56,17 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
       if (data.application && !data.application.coachingCompleted) {
         setShowCoaching(true);
       }
-      // Trigger document analysis on first load (if not already cached)
+      // Load cached document analysis — only re-run if stale (>1 hour) or user requests
       const cacheKey = `docAnalysis_${certId}`;
-      const cached = sessionStorage.getItem(cacheKey);
+      const cached = localStorage.getItem(cacheKey);
       if (cached) {
-        try { setDocAnalysis(JSON.parse(cached)); } catch {}
-      } else if (data.clientId) {
-        runDocAnalysis(data.clientId, data.type);
+        try {
+          const parsed = JSON.parse(cached);
+          setDocAnalysis(parsed);
+          // Don't auto-re-run — user can click "Refresh" if needed
+        } catch {}
       }
+      // No auto-run on page load — too expensive. User clicks "Analyze Documents" if needed.
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }
@@ -78,7 +81,7 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
         body: JSON.stringify({ clientId, certType, existingFingerprints }),
       });
       setDocAnalysis(report);
-      sessionStorage.setItem(`docAnalysis_${certId}`, JSON.stringify(report));
+      localStorage.setItem(`docAnalysis_${certId}`, JSON.stringify({ ...report, cachedAt: new Date().toISOString() }));
     } catch (err) {
       console.error("Document analysis failed:", err);
     } finally {
@@ -471,13 +474,13 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
                       {analyzingDocs ? "Analyzing your documents..." : `Document Readiness: ${docAnalysis?.readinessLabel || "Unknown"}`}
                     </div>
                     <div style={{ fontSize: 12, color: "var(--ink3)" }}>
-                      {analyzingDocs ? "Scanning all uploaded files to assess submission readiness" : `${docAnalysis?.documentsAnalyzed || 0} documents analyzed · ${docAnalysis?.sections?.filter((s: any) => s.status === "ready").length || 0} sections ready`}
+                      {analyzingDocs ? "Scanning all uploaded files to assess submission readiness" : docAnalysis ? `${docAnalysis?.documentsAnalyzed || 0} documents analyzed · ${docAnalysis?.sections?.filter((s: any) => s.status === "ready").length || 0} sections ready${docAnalysis?.cachedAt ? ` · Last run: ${new Date(docAnalysis.cachedAt).toLocaleDateString()}` : ""}` : "Click refresh to analyze your documents"}
                     </div>
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {!analyzingDocs && (
-                    <button onClick={(e) => { e.stopPropagation(); const clientId = cert?.clientId || cert?.client?.id; if (clientId) { sessionStorage.removeItem(`docAnalysis_${certId}`); runDocAnalysis(clientId, cert.type); } }}
+                    <button onClick={(e) => { e.stopPropagation(); const clientId = cert?.clientId || cert?.client?.id; if (clientId) { localStorage.removeItem(`docAnalysis_${certId}`); runDocAnalysis(clientId, cert.type); } }}
                       style={{ padding: "6px 14px", background: "transparent", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 11, color: "var(--ink3)", cursor: "pointer" }}>
                       Re-scan
                     </button>

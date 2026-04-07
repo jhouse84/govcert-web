@@ -107,15 +107,28 @@ export default function OASISSubmitPage({ params }: { params: Promise<{ id: stri
   const app = cert?.application;
   const client = cert?.client;
 
-  // Parse OASIS data
+  // Parse OASIS data — check for review fixes from AI review panel
   let qpData: any[] = [];
-  try { qpData = JSON.parse(app?.oasisQPData || "[]"); } catch {}
+  try {
+    const qpParsed = JSON.parse(app?.oasisQPData || "[]");
+    qpData = Array.isArray(qpParsed) ? qpParsed : (qpParsed._reviewFixes ? qpParsed : []);
+  } catch {}
   let ppData: any[] = [];
   try { ppData = JSON.parse(app?.oasisPPData || "[]"); } catch {}
   let systemsData: any = {};
-  try { systemsData = JSON.parse(app?.oasisSystemsData || "{}"); } catch {}
+  try {
+    const sysParsed = JSON.parse(app?.oasisSystemsData || "{}");
+    systemsData = sysParsed;
+  } catch {}
   let corpNarratives: Record<string, string> = {};
-  try { const p = JSON.parse(app?.narrativeCorp || "{}"); corpNarratives = p.narratives || p; } catch {}
+  try {
+    const p = JSON.parse(app?.narrativeCorp || "{}");
+    if (p._reviewFixes?.["corporate"]?.content) {
+      corpNarratives = { ...(p.narratives || p), _reviewFixed: p._reviewFixes["corporate"].content };
+    } else {
+      corpNarratives = p.narratives || p;
+    }
+  } catch {}
 
   type Step = { id: string; label: string; portalLocation: string; type: "info" | "text" | "files"; status: "ready" | "partial" | "missing"; content?: any };
 

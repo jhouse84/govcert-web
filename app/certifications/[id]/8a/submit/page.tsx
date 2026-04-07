@@ -116,14 +116,27 @@ export default function Submit8aPage({ params }: { params: Promise<{ id: string 
   const app = cert?.application;
   const client = cert?.client;
 
-  // Parse narratives
+  // Parse narratives — check for review fixes (from AI review "Fix with AI" panel)
   const socialNarrative = app?.socialDisadvantageNarrative || "";
   let businessPlanSections: Record<string, string> = {};
-  try { businessPlanSections = JSON.parse(app?.businessPlanData || "{}"); } catch {}
+  try {
+    const bpParsed = JSON.parse(app?.businessPlanData || "{}");
+    // If review fixes exist for business-plan, merge them in
+    if (bpParsed._reviewFixes?.["business-plan"]?.content) {
+      businessPlanSections = { ...bpParsed, _reviewFixed: bpParsed._reviewFixes["business-plan"].content };
+    } else {
+      businessPlanSections = bpParsed;
+    }
+  } catch {}
   let corpNarratives: Record<string, string> = {};
   try {
     const parsed = JSON.parse(app?.narrativeCorp || "{}");
-    corpNarratives = parsed.narratives || parsed;
+    // If review fixes exist, merge them
+    if (parsed._reviewFixes?.["corporate"]?.content) {
+      corpNarratives = { ...(parsed.narratives || parsed), _reviewFixed: parsed._reviewFixes["corporate"].content };
+    } else {
+      corpNarratives = parsed.narratives || parsed;
+    }
   } catch {}
 
   type Step = { id: string; label: string; portalLocation: string; type: "info" | "text" | "files"; status: "ready" | "partial" | "missing"; content?: any };

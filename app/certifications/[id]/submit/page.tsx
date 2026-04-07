@@ -17,6 +17,8 @@ function extractNarrativeField(narrativeJson: string | undefined, key: string): 
   if (!narrativeJson) return "";
   try {
     const parsed = JSON.parse(narrativeJson);
+    // If a review-fixed version exists for this specific subsection, prefer it
+    if (parsed._reviewFixes?.[key]?.content) return parsed._reviewFixes[key].content;
     if (parsed.narratives) return parsed.narratives[key] || "";
     if (parsed.answers) return parsed.answers[key] || "";
     return parsed[key] || "";

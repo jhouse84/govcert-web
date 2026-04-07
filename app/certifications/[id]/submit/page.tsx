@@ -559,6 +559,43 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                       {/* TEXT type — narratives */}
                       {step.type === "text" && step.content?.narratives && (
                         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                          {/* Combined copy button for eOffer single-field paste */}
+                          {(step.id === "narr-corp" || step.id === "narr-qcp") && step.content.narratives.some((n: any) => n.value) && (() => {
+                            const combined = step.content.narratives
+                              .filter((n: any) => n.value)
+                              .map((n: any) => n.value)
+                              .join("\n\n");
+                            const combinedChars = combined.length;
+                            const limit = 10000;
+                            const isOver = combinedChars > limit;
+                            return (
+                              <div style={{
+                                padding: "14px 18px", borderRadius: "var(--rl)",
+                                background: isOver ? "rgba(220,50,50,.04)" : "var(--navy)",
+                                border: isOver ? "1px solid rgba(220,50,50,.2)" : "none",
+                                display: "flex", justifyContent: "space-between", alignItems: "center",
+                              }}>
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 600, color: isOver ? "#b91c1c" : "#fff" }}>
+                                    {step.id === "narr-corp" ? "eOffer Factor 1" : "eOffer Factor 3"} — Single Text Field
+                                  </div>
+                                  <div style={{ fontSize: 11, color: isOver ? "#b91c1c" : "rgba(255,255,255,.6)", marginTop: 2 }}>
+                                    {combinedChars.toLocaleString()} / {limit.toLocaleString()} characters combined
+                                    {isOver ? ` — ${(combinedChars - limit).toLocaleString()} over limit!` : ""}
+                                  </div>
+                                </div>
+                                <button onClick={() => copyText(combined, `${step.id}-combined`)}
+                                  style={{
+                                    padding: "8px 20px",
+                                    background: copiedId === `${step.id}-combined` ? "var(--green)" : isOver ? "#b91c1c" : "var(--gold)",
+                                    border: "none", borderRadius: "var(--r)",
+                                    fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer",
+                                  }}>
+                                  {copiedId === `${step.id}-combined` ? "✓ Copied All" : "Copy All for eOffer →"}
+                                </button>
+                              </div>
+                            );
+                          })()}
                           {step.content.narratives.length === 0 && step.content.emptyMessage && (
                             <div style={{ fontSize: 13, color: "var(--ink4)", fontStyle: "italic", padding: "12px 0" }}>{step.content.emptyMessage}</div>
                           )}

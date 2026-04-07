@@ -62,15 +62,48 @@ export default function GuidedFixPanel({
 
   function fixManually() {
     // Navigate to the section — construct URL from sectionId
+    // Keys match the REQUIRED SECTION IDs from the AI review prompt
     const SECTION_LINKS: Record<string, Record<string, string>> = {
-      EIGHT_A: { "social-disadvantage": "8a/social-disadvantage", "economic-disadvantage": "8a/economic-disadvantage", "business-plan": "8a/business-plan", "corporate": "8a/corporate", "past-performance": "8a/past-performance", "financials": "8a/financials" },
-      GSA_MAS: { "corporate": "corporate", "experience": "experience", "past-performance": "past-performance", "pricing": "pricing", "qcp": "qcp", "financials": "financials" },
-      OASIS_PLUS: { "domains": "oasis-plus/domains", "contract-history": "oasis-plus/contract-history", "past-performance": "oasis-plus/past-performance", "federal-experience": "oasis-plus/federal-experience", "qualifying-projects": "oasis-plus/qualifying-projects", "systems-certs": "oasis-plus/systems-certs" },
+      EIGHT_A: {
+        "social-disadvantage": "8a/social-disadvantage",
+        "economic-disadvantage": "8a/economic-disadvantage",
+        "business-plan": "8a/business-plan",
+        "corporate": "8a/corporate",
+        "past-performance": "8a/past-performance",
+        "financials": "8a/financials",
+      },
+      GSA_MAS: {
+        "corporate-experience": "corporate",
+        "corporate": "corporate",
+        "quality-control": "qcp",
+        "qcp": "qcp",
+        "past-performance": "past-performance",
+        "project-experience": "past-performance",
+        "pricing": "pricing",
+        "company-info": "submit",
+        "experience": "corporate",
+        "financials": "submit",
+      },
+      OASIS_PLUS: {
+        "corporate-experience": "oasis-plus/submit",
+        "corporate": "oasis-plus/submit",
+        "qualifying-projects": "oasis-plus/submit",
+        "past-performance": "oasis-plus/submit",
+        "domains": "oasis-plus/submit",
+        "contract-history": "oasis-plus/submit",
+        "federal-experience": "oasis-plus/submit",
+        "systems": "oasis-plus/submit",
+        "systems-certs": "oasis-plus/submit",
+      },
     };
     const links = SECTION_LINKS[certType] || {};
     const link = links[sectionId];
     if (link) {
       window.location.href = `/certifications/${certificationId}/${link}`;
+    } else {
+      // Fallback: go to the submit page for the current cert type
+      const fallback = certType === "EIGHT_A" ? "8a/submit" : certType === "OASIS_PLUS" ? "oasis-plus/submit" : "submit";
+      window.location.href = `/certifications/${certificationId}/${fallback}`;
     }
     onClose();
   }

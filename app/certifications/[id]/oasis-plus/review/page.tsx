@@ -153,11 +153,12 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
         method: "PUT",
         body: JSON.stringify({ content: newContent }),
       });
+      await resolveIssue(issueKey, true);
+      setGuidedFix(null);
     } catch (err) {
       console.error("Failed to save section content:", err);
+      alert("Failed to save fix — please try again.");
     }
-    await resolveIssue(issueKey, true);
-    setGuidedFix(null);
   }
 
   const displayScore = adjustedScore ?? reviewResult?.overallScore;

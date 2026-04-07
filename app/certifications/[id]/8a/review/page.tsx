@@ -118,21 +118,20 @@ export default function EightAReviewPage({ params }: { params: Promise<{ id: str
   }
 
   async function handleGuidedFixed(issueKey: string, newContent: string) {
-    // If content provided, save it to the section
-    if (newContent) {
-      const sectionId = guidedFix?.sectionId || issueKey.split(":")[0];
-      try {
+    const sectionId = guidedFix?.sectionId || issueKey.split(":")[0];
+    try {
+      if (newContent) {
         await apiRequest(`/api/applications/${certId}/sections/${sectionId}`, {
           method: "PUT",
           body: JSON.stringify({ content: newContent }),
         });
-      } catch (err) {
-        console.error("Failed to save section content:", err);
       }
+      await resolveIssue(issueKey, true);
+      setGuidedFix(null);
+    } catch (err) {
+      console.error("Failed to save section content:", err);
+      alert("Failed to save fix — please try again.");
     }
-    // Mark the issue as resolved
-    await resolveIssue(issueKey, true);
-    setGuidedFix(null);
   }
 
   const displayScore = adjustedScore ?? review?.overallScore;

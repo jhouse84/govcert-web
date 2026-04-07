@@ -137,11 +137,12 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
         method: "PUT",
         body: JSON.stringify({ content: newContent }),
       });
+      await resolveIssue(issueKey, true);
+      setGuidedFix(null);
     } catch (err) {
       console.error("Failed to save section content:", err);
+      alert("Failed to save fix — please try again.");
     }
-    await resolveIssue(issueKey, true);
-    setGuidedFix(null);
   }
 
   const displayScore = adjustedScore ?? review?.overallScore;

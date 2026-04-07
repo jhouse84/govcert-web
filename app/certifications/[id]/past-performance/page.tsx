@@ -1110,7 +1110,19 @@ export default function PastPerformancePage({ params }: { params: Promise<{ id: 
                       <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", gap: 6 }}>
                           {!ref.fileName && (
-                            <button onClick={(e) => { e.stopPropagation(); openPPQModalManual(); }} style={{ padding: "5px 14px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 500, color: "var(--gold2)", cursor: "pointer" }}>Request PPQ via Email</button>
+                            <button onClick={(e) => {
+                              e.stopPropagation();
+                              setPpqModal({
+                                open: true, step: 1, refIndex: index,
+                                name: ref.name || "",
+                                email: "",
+                                title: "",
+                                agency: ref.agency || ref.contractDetails?.agencyName || "",
+                                relationship: "Contracting Officer",
+                                emailSubject: "", emailBody: "",
+                                drafting: false, sending: false,
+                              });
+                            }} style={{ padding: "5px 14px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 500, color: "var(--gold2)", cursor: "pointer" }}>Request PPQ via Email</button>
                           )}
                           {editingRef === index ? (
                             <div style={{ display: "flex", gap: 6 }}>

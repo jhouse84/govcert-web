@@ -451,7 +451,7 @@ export default function CorporateExperiencePage({ params }: { params: Promise<{ 
     router.push("/login");
   }
 
-  const totalNarrativeChars = Object.values(narratives).join("").length;
+  const totalNarrativeChars = NARRATIVE_SECTIONS.reduce((sum, s) => sum + (narratives[s.id] || "").length, 0);
   const totalGuidedFilled = GUIDED_QUESTIONS.filter(q => guidedAnswers[q.id]?.trim()).length;
   const totalNarrativeFilled = NARRATIVE_SECTIONS.filter(s => narratives[s.id]?.trim()).length;
 

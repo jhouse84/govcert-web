@@ -38,27 +38,44 @@ export default function ExecutiveReview({ cert, certId }: { cert: any; certId: s
     const sections: { title: string; content: string }[] = [];
 
     if (certType === "GSA_MAS" || certType === "OASIS_PLUS") {
-      // Corporate Experience
+      // Corporate Experience (shared between GSA MAS and OASIS+)
       const corpKeys = ["overview", "capabilities", "employees", "org_controls", "resources", "past_projects", "marketing", "subcontractors"];
       for (const key of corpKeys) {
         const val = extractNarrativeField(app?.narrativeCorp, key);
         if (val) sections.push({ title: `Corporate Experience: ${key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}`, content: val });
       }
-      // QCP
-      const qcpKeys = ["overview", "supervision", "personnel", "subcontractors", "corrective", "urgent"];
-      for (const key of qcpKeys) {
-        const val = extractNarrativeField(app?.narrativeQCP, key);
-        if (val) sections.push({ title: `Quality Control Plan: ${key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}`, content: val });
-      }
-      // SIN Narratives
-      try {
-        const sins = JSON.parse(app?.sinNarratives || "{}");
-        for (const [sin, text] of Object.entries(sins)) {
-          if (text) sections.push({ title: `SIN ${sin} — Relevant Project Experience`, content: text as string });
+
+      // GSA MAS only: QCP, SIN Narratives, Price Proposal
+      if (certType === "GSA_MAS") {
+        const qcpKeys = ["overview", "supervision", "personnel", "subcontractors", "corrective", "urgent"];
+        for (const key of qcpKeys) {
+          const val = extractNarrativeField(app?.narrativeQCP, key);
+          if (val) sections.push({ title: `Quality Control Plan: ${key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}`, content: val });
         }
-      } catch {}
-      // Price Proposal
-      if (app?.priceProposal) sections.push({ title: "Price Proposal / Commercial Sales Practices", content: app.priceProposal });
+        try {
+          const sins = JSON.parse(app?.sinNarratives || "{}");
+          for (const [sin, text] of Object.entries(sins)) {
+            if (text) sections.push({ title: `SIN ${sin} — Relevant Project Experience`, content: text as string });
+          }
+        } catch {}
+        if (app?.priceProposal) sections.push({ title: "Price Proposal / Commercial Sales Practices", content: app.priceProposal });
+      }
+
+      // OASIS+ only: Qualifying Project narratives
+      if (certType === "OASIS_PLUS") {
+        try {
+          const qpParsed = JSON.parse(app?.oasisQPData || "[]");
+          const qps = Array.isArray(qpParsed) ? qpParsed : [];
+          for (let i = 0; i < qps.length; i++) {
+            const qp = qps[i];
+            const text = [qp.scopeNarrative, qp.managementNarrative].filter(Boolean).join("\n\n");
+            if (text) sections.push({
+              title: `Qualifying Project ${i + 1}: ${qp.agencyName || qp.contractNumber || "Project " + (i + 1)}`,
+              content: text,
+            });
+          }
+        } catch {}
+      }
     }
 
     if (certType === "EIGHT_A") {

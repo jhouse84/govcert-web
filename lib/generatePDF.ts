@@ -13,6 +13,7 @@ export async function generatePDF(opts: {
   clientId?: string | null;
   category?: string | null;
   apiUrl?: string;
+  headerLabel?: string;
 }): Promise<void> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -42,7 +43,7 @@ export async function generatePDF(opts: {
 
   // ── Header ──
   page.drawText(sanitize(opts.companyName), { x: margin, y, font, size: 9, color: rgb(0.45, 0.45, 0.45) });
-  const headerRight = "GSA MAS eOffer Submission Document";
+  const headerRight = opts.headerLabel || "GSA MAS eOffer Submission Document";
   const hrWidth = font.widthOfTextAtSize(headerRight, 9);
   page.drawText(headerRight, { x: pageWidth - margin - hrWidth, y, font, size: 9, color: rgb(0.45, 0.45, 0.45) });
   y -= 28;

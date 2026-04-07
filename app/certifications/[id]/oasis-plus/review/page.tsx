@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { trackPageView } from "@/lib/activity";
 import CertSidebar from "@/components/CertSidebar";
+import GuidedFixPanel from "@/components/GuidedFixPanel";
 import { OASIS_SECTIONS, OASIS_SCORING_CATEGORIES } from "@/lib/oasis-domains";
 
 const SECTION_LINKS: Record<string, string> = {
@@ -48,6 +49,7 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
   const [resolvedIssues, setResolvedIssues] = useState<Record<string, any>>({});
   const [adjustedScore, setAdjustedScore] = useState<number | null>(null);
   const [resolvingKey, setResolvingKey] = useState<string | null>(null);
+  const [guidedFix, setGuidedFix] = useState<{ isOpen: boolean; issueKey: string; issueText: string; sectionId: string; sectionLabel: string } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -138,6 +140,20 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
       setAdjustedScore(result.adjustedScore);
     } catch (err) { console.error(err); }
     finally { setResolvingKey(null); }
+  }
+
+  async function handleGuidedFixed(issueKey: string, newContent: string) {
+    const sectionId = guidedFix?.sectionId || issueKey.split(":")[0];
+    try {
+      await apiRequest(`/api/applications/${certId}/sections/${sectionId}`, {
+        method: "PUT",
+        body: JSON.stringify({ content: newContent }),
+      });
+    } catch (err) {
+      console.error("Failed to save section content:", err);
+    }
+    await resolveIssue(issueKey, true);
+    setGuidedFix(null);
   }
 
   const displayScore = adjustedScore ?? reviewResult?.overallScore;
@@ -325,16 +341,28 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
                             <div style={{ flex: 1, color: isResolved ? "#065F46" : "#991B1B", textDecoration: isResolved ? "line-through" : undefined }}>
                               {issue}
                             </div>
-                            <button
-                              disabled={resolvingKey === key}
-                              onClick={() => resolveIssue(key, !isResolved)}
-                              style={{
-                                padding: "4px 10px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" as const,
-                                background: isResolved ? "rgba(200,155,60,.08)" : "var(--green)", color: isResolved ? "var(--gold)" : "#fff",
-                                border: isResolved ? "1px solid rgba(200,155,60,.2)" : "none",
-                              }}>
-                              {resolvingKey === key ? "..." : isResolved ? "Undo" : "Fixed ✓"}
-                            </button>
+                            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                              {!isResolved && (
+                                <button
+                                  onClick={() => setGuidedFix({ isOpen: true, issueKey: key, issueText: issue, sectionId: "critical", sectionLabel: "Critical Issue" })}
+                                  style={{
+                                    padding: "4px 10px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const,
+                                    background: "var(--gold)", color: "#fff", border: "none",
+                                  }}>
+                                  Fix with AI →
+                                </button>
+                              )}
+                              <button
+                                disabled={resolvingKey === key}
+                                onClick={() => resolveIssue(key, !isResolved)}
+                                style={{
+                                  padding: "4px 10px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const,
+                                  background: isResolved ? "rgba(200,155,60,.08)" : "var(--green)", color: isResolved ? "var(--gold)" : "#fff",
+                                  border: isResolved ? "1px solid rgba(200,155,60,.2)" : "none",
+                                }}>
+                                {resolvingKey === key ? "..." : isResolved ? "Undo" : "Fixed ✓"}
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
@@ -418,11 +446,12 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
                               <span style={{ color: isResolved ? "var(--green)" : "var(--gold)", flexShrink: 0 }}>{isResolved ? "✓" : "→"}</span>
                               <div style={{ flex: 1, color: isResolved ? "#065F46" : "var(--ink2)", textDecoration: isResolved ? "line-through" : undefined }}>{imp}</div>
                               <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                                {!isResolved && sectionLink && (
-                                  <a href={`/certifications/${certId}/${sectionLink}`}
-                                    style={{ padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, color: "var(--navy)", background: "rgba(11,25,41,.05)", border: "1px solid rgba(11,25,41,.1)", textDecoration: "none" }}>
-                                    Fix this →
-                                  </a>
+                                {!isResolved && (
+                                  <button
+                                    onClick={() => setGuidedFix({ isOpen: true, issueKey: key, issueText: imp, sectionId: sectionId, sectionLabel: section.label || section.name })}
+                                    style={{ padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: "pointer", color: "#fff", background: "var(--gold)", border: "none" }}>
+                                    Fix with AI →
+                                  </button>
                                 )}
                                 <button
                                   disabled={resolvingKey === key}
@@ -496,6 +525,19 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       </div>
+
+      {/* Guided Fix Panel */}
+      <GuidedFixPanel
+        isOpen={!!guidedFix?.isOpen}
+        onClose={() => setGuidedFix(null)}
+        issueKey={guidedFix?.issueKey || ""}
+        issueText={guidedFix?.issueText || ""}
+        sectionId={guidedFix?.sectionId || ""}
+        sectionLabel={guidedFix?.sectionLabel || ""}
+        certificationId={certId}
+        certType="OASIS_PLUS"
+        onFixed={handleGuidedFixed}
+      />
     </div>
   );
 }

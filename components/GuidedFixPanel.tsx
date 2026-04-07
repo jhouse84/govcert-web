@@ -42,6 +42,7 @@ export default function GuidedFixPanel({
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [generatedContent, setGeneratedContent] = useState("");
   const [charLimit, setCharLimit] = useState<number>(5000);
+  const [shortening, setShortening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Reset state when panel closes
@@ -131,6 +132,24 @@ export default function GuidedFixPanel({
   function handleApply() {
     onFixed(issueKey, generatedContent);
     onClose();
+  }
+
+  async function handleShorten() {
+    setShortening(true);
+    setError(null);
+    try {
+      const data = await apiRequest("/api/applications/ai/condense-narrative", {
+        method: "POST",
+        body: JSON.stringify({ narrative: generatedContent, charLimit }),
+      });
+      if (data.narrative) {
+        setGeneratedContent(data.narrative);
+      }
+    } catch (err: any) {
+      setError("Failed to shorten: " + (err.message || "Please try again."));
+    } finally {
+      setShortening(false);
+    }
   }
 
   if (!isOpen) return null;
@@ -479,6 +498,11 @@ export default function GuidedFixPanel({
                 {charCount.toLocaleString()} / {charLimit.toLocaleString()} characters
               </div>
 
+              {isOverLimit && (
+                <div style={{ background: "rgba(220,50,50,.06)", border: "1px solid rgba(220,50,50,.2)", borderRadius: "var(--r)", padding: "10px 14px", marginBottom: 10, fontSize: 12, color: "#b91c1c", lineHeight: 1.5 }}>
+                  ⚠️ Content exceeds the {charLimit.toLocaleString()}-character portal limit by {(charCount - charLimit).toLocaleString()} characters. Use <strong>Shorten to Fit</strong> to auto-condense while preserving all key details, or apply as-is and trim manually.
+                </div>
+              )}
               <div style={{ display: "flex", gap: 10 }}>
                 <button
                   onClick={() => {
@@ -498,25 +522,43 @@ export default function GuidedFixPanel({
                 >
                   Regenerate
                 </button>
+                {isOverLimit && (
+                  <button
+                    onClick={handleShorten}
+                    disabled={shortening}
+                    style={{
+                      flex: 1,
+                      padding: "12px",
+                      background: shortening ? "var(--ink4)" : "#b91c1c",
+                      border: "none",
+                      borderRadius: "var(--r)",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "#fff",
+                      cursor: shortening ? "wait" : "pointer",
+                    }}
+                  >
+                    {shortening ? "Shortening..." : "Shorten to Fit"}
+                  </button>
+                )}
                 <button
                   onClick={handleApply}
-                  disabled={isOverLimit}
                   style={{
                     flex: 2,
                     padding: "12px",
                     background: isOverLimit
-                      ? "var(--ink4)"
+                      ? "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)"
                       : "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
                     border: "none",
                     borderRadius: "var(--r)",
                     fontSize: 14,
                     fontWeight: 600,
                     color: "#fff",
-                    cursor: isOverLimit ? "not-allowed" : "pointer",
-                    boxShadow: isOverLimit ? "none" : "0 4px 16px rgba(200,155,60,.3)",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 16px rgba(200,155,60,.3)",
                   }}
                 >
-                  Apply Fix
+                  Apply Fix{isOverLimit ? " (Over Limit)" : ""}
                 </button>
               </div>
             </div>

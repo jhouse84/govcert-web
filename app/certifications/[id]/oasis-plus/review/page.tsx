@@ -6,6 +6,30 @@ import { trackPageView } from "@/lib/activity";
 import CertSidebar from "@/components/CertSidebar";
 import { OASIS_SECTIONS, OASIS_SCORING_CATEGORIES } from "@/lib/oasis-domains";
 
+const SECTION_LINKS: Record<string, string> = {
+  "domains": "oasis-plus/domains",
+  "domain-selection": "oasis-plus/domains",
+  "contract-history": "oasis-plus/scorecard",
+  "scorecard": "oasis-plus/scorecard",
+  "past-performance": "oasis-plus/past-performance",
+  "federal-experience": "oasis-plus/federal-experience",
+  "qualifying-projects": "oasis-plus/qualifying-projects",
+  "systems-certs": "oasis-plus/systems-certs",
+  "systems": "oasis-plus/systems-certs",
+  "certifications": "oasis-plus/systems-certs",
+};
+
+const STATUS_CONFIG: Record<string, { color: string; bg: string; border: string; label: string }> = {
+  strong: { color: "var(--green)", bg: "var(--green-bg)", border: "var(--green-b)", label: "Strong" },
+  adequate: { color: "#2563EB", bg: "rgba(37,99,235,.06)", border: "rgba(37,99,235,.2)", label: "Adequate" },
+  needs_improvement: { color: "var(--gold)", bg: "rgba(200,155,60,.06)", border: "rgba(200,155,60,.2)", label: "Needs Improvement" },
+  critical: { color: "var(--red)", bg: "var(--red-bg)", border: "var(--red-b)", label: "Critical" },
+  missing: { color: "#6B7280", bg: "var(--cream2)", border: "var(--border)", label: "Missing" },
+  pass: { color: "var(--green)", bg: "var(--green-bg)", border: "var(--green-b)", label: "Pass" },
+  warning: { color: "#f39c12", bg: "rgba(243,156,18,.06)", border: "rgba(243,156,18,.2)", label: "Needs Attention" },
+  fail: { color: "var(--red)", bg: "var(--red-bg)", border: "var(--red-b)", label: "Issue Found" },
+};
+
 export default function OASISReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
@@ -20,6 +44,10 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
   const [reviewResult, setReviewResult] = useState<any>(null);
   const [reviewHistory, setReviewHistory] = useState<{ score: number; date: string }[]>([]);
   const [completedSections, setCompletedSections] = useState<Record<string, boolean>>({});
+  const [reviewId, setReviewId] = useState<string | null>(null);
+  const [resolvedIssues, setResolvedIssues] = useState<Record<string, any>>({});
+  const [adjustedScore, setAdjustedScore] = useState<number | null>(null);
+  const [resolvingKey, setResolvingKey] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -61,7 +89,13 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
             disclaimer: latest.disclaimer,
           };
           setReviewResult(parsed);
-          setReviewHistory(savedReviews.map((r: any) => ({ score: r.overallScore, date: r.createdAt })));
+          setReviewId(latest.id);
+          try {
+            const ri = JSON.parse(latest.resolvedIssues || '{}');
+            setResolvedIssues(ri);
+            if (latest.adjustedScore != null) setAdjustedScore(latest.adjustedScore);
+          } catch {}
+          setReviewHistory(savedReviews.map((r: any) => ({ score: r.adjustedScore || r.overallScore, date: r.createdAt })));
         } else {
           // Fallback to localStorage
           const stored = localStorage.getItem(`govcert-review-${certId}`);
@@ -91,6 +125,22 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
       setLoading(false);
     }
   }
+
+  async function resolveIssue(issueKey: string, resolved: boolean) {
+    if (!reviewId) return;
+    setResolvingKey(issueKey);
+    try {
+      const result = await apiRequest(`/api/applications/ai/reviews/${reviewId}/resolve`, {
+        method: "PATCH",
+        body: JSON.stringify({ issueKey, resolved }),
+      });
+      setResolvedIssues(result.resolvedIssues);
+      setAdjustedScore(result.adjustedScore);
+    } catch (err) { console.error(err); }
+    finally { setResolvingKey(null); }
+  }
+
+  const displayScore = adjustedScore ?? reviewResult?.overallScore;
 
   async function runReview() {
     setReviewing(true);
@@ -225,51 +275,181 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Review Results */}
-          {reviewResult && (
+          {reviewResult && (() => {
+            const scoreColor = (displayScore || 0) >= 80 ? "var(--green)" : (displayScore || 0) >= 60 ? "var(--gold)" : (displayScore || 0) >= 40 ? "#F59E0B" : "var(--red)";
+            const verdictColors: Record<string, string> = { STRONG: "var(--green)", COMPETITIVE: "#2563EB", NEEDS_IMPROVEMENT: "var(--gold)", NEEDS_WORK: "var(--gold)", NOT_READY: "var(--red)", ERROR: "var(--red)" };
+            return (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              {/* Overall Score */}
-              {reviewResult.overallScore !== undefined && (
-                <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "28px", boxShadow: "var(--shadow)", textAlign: "center" }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--gold)", marginBottom: 8 }}>GovCert Review Score</div>
-                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 64, color: reviewResult.overallScore >= 80 ? "var(--green)" : reviewResult.overallScore >= 60 ? "var(--gold)" : "#e74c3c", fontWeight: 400, lineHeight: 1 }}>
-                    {reviewResult.overallScore}
-                  </div>
-                  <div style={{ fontSize: 14, color: "var(--ink3)", marginTop: 8 }}>{reviewResult.overallAssessment || "Review complete"}</div>
-                </div>
-              )}
+              {/* Disclaimer */}
+              <div style={{ background: "rgba(99,102,241,.04)", border: "1px solid rgba(99,102,241,.15)", borderRadius: "var(--r)", padding: "12px 16px", fontSize: 11.5, color: "var(--ink3)", lineHeight: 1.6 }}>
+                <strong>Disclaimer:</strong> {reviewResult.disclaimer || "This AI-generated review is for guidance purposes only and does not constitute legal advice. It does not guarantee approval or predict agency decisions. Consult a government contracting attorney before submitting."}
+              </div>
 
-              {/* Section Analysis */}
-              {reviewResult.sections && Array.isArray(reviewResult.sections) && reviewResult.sections.map((section: any, idx: number) => (
-                <div key={idx} style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px", boxShadow: "var(--shadow)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div style={{ fontSize: 15, fontWeight: 500, color: "var(--navy)" }}>{section.name}</div>
-                    <span style={{
-                      padding: "4px 12px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                      background: section.status === "pass" ? "var(--green-bg)" : section.status === "warning" ? "rgba(243,156,18,.1)" : "rgba(231,76,60,.08)",
-                      color: section.status === "pass" ? "var(--green)" : section.status === "warning" ? "#f39c12" : "#e74c3c",
-                    }}>
-                      {section.status === "pass" ? "Pass" : section.status === "warning" ? "Needs Attention" : "Issue Found"}
-                    </span>
+              {/* Overall Score + Verdict */}
+              <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 20 }}>
+                <div style={{ background: "#fff", border: `3px solid ${scoreColor}`, borderRadius: "var(--rl)", padding: "28px", textAlign: "center" as const, boxShadow: "var(--shadow)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--ink4)", marginBottom: 8 }}>Overall Score</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 72, color: scoreColor, lineHeight: 1 }}>{displayScore}</div>
+                  {adjustedScore != null && adjustedScore !== reviewResult.overallScore && (
+                    <div style={{ fontSize: 11, color: "var(--green)", marginTop: 4 }}>+{adjustedScore - reviewResult.overallScore} from fixes (was {reviewResult.overallScore})</div>
+                  )}
+                  <div style={{ fontSize: 14, color: scoreColor, fontWeight: 600, marginTop: 4 }}>/100</div>
+                  <div style={{ marginTop: 12, padding: "6px 16px", background: `${verdictColors[reviewResult.readinessLevel] || "var(--ink4)"}15`, border: `1px solid ${verdictColors[reviewResult.readinessLevel] || "var(--ink4)"}30`, borderRadius: 100, display: "inline-block", fontSize: 12, fontWeight: 600, color: verdictColors[reviewResult.readinessLevel] || "var(--ink4)" }}>
+                    {(reviewResult.readinessLevel || reviewResult.overallVerdict || "").replace(/_/g, " ")}
                   </div>
-                  <div style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, marginBottom: 12 }}>{section.analysis}</div>
-                  {section.recommendations && section.recommendations.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>Recommendations:</div>
-                      {section.recommendations.map((rec: string, rIdx: number) => (
-                        <div key={rIdx} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
-                          <span style={{ color: "var(--gold)", fontSize: 11, marginTop: 2 }}>-</span>
-                          <span style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.5 }}>{rec}</span>
+                  {/* History */}
+                  {reviewHistory.length > 1 && (
+                    <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                      <div style={{ fontSize: 10, color: "var(--ink4)", textTransform: "uppercase" as const, letterSpacing: ".08em", marginBottom: 6 }}>History</div>
+                      {reviewHistory.slice(-5).map((h, i) => (
+                        <div key={i} style={{ fontSize: 11, color: "var(--ink3)", display: "flex", justifyContent: "space-between" }}>
+                          <span>{new Date(h.date).toLocaleDateString()}</span>
+                          <span style={{ fontWeight: 600, color: h.score >= 70 ? "var(--green)" : "var(--gold)" }}>{h.score}</span>
                         </div>
                       ))}
                     </div>
                   )}
-                  {section.href && (
-                    <a href={`/certifications/${certId}/oasis-plus/${section.href}`} style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: "var(--gold)", fontWeight: 500, textDecoration: "none" }}>
-                      Go to Section →
-                    </a>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
+                  {/* Critical Issues */}
+                  {reviewResult.criticalIssues?.length > 0 && (
+                    <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: "var(--rl)", padding: "18px 22px" }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--red)", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: ".08em" }}>Critical Issues — Must Fix</div>
+                      {reviewResult.criticalIssues.map((issue: string, i: number) => {
+                        const key = `critical:${i}`;
+                        const isResolved = resolvedIssues[key]?.resolved;
+                        return (
+                          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 13, lineHeight: 1.5, padding: "8px 10px", borderRadius: 6, background: isResolved ? "rgba(5,150,105,.06)" : undefined }}>
+                            <span style={{ flexShrink: 0 }}>{isResolved ? "✅" : "🚨"}</span>
+                            <div style={{ flex: 1, color: isResolved ? "#065F46" : "#991B1B", textDecoration: isResolved ? "line-through" : undefined }}>
+                              {issue}
+                            </div>
+                            <button
+                              disabled={resolvingKey === key}
+                              onClick={() => resolveIssue(key, !isResolved)}
+                              style={{
+                                padding: "4px 10px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" as const,
+                                background: isResolved ? "rgba(200,155,60,.08)" : "var(--green)", color: isResolved ? "var(--gold)" : "#fff",
+                                border: isResolved ? "1px solid rgba(200,155,60,.2)" : "none",
+                              }}>
+                              {resolvingKey === key ? "..." : isResolved ? "Undo" : "Fixed ✓"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* Strengths */}
+                  {reviewResult.strengths?.length > 0 && (
+                    <div style={{ background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--rl)", padding: "18px 22px" }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green)", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: ".08em" }}>Application Strengths</div>
+                      {reviewResult.strengths.map((s: string, i: number) => (
+                        <div key={i} style={{ display: "flex", gap: 8, marginBottom: 4, fontSize: 13, color: "#065F46", lineHeight: 1.5 }}>
+                          <span style={{ flexShrink: 0 }}>✅</span> {s}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-              ))}
+              </div>
+
+              {/* Section-by-Section Analysis */}
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".1em", color: "var(--gold)", marginBottom: -6 }}>Section-by-Section Analysis</div>
+
+              {(reviewResult.sections || []).map((section: any) => {
+                const sectionId = section.id || section.href || "";
+                const cfg = STATUS_CONFIG[section.status] || STATUS_CONFIG.missing;
+                const sectionLink = SECTION_LINKS[sectionId] || (section.href ? `oasis-plus/${section.href}` : undefined);
+                return (
+                  <div key={sectionId || section.name} style={{ background: "#fff", border: `1px solid ${cfg.border}`, borderLeft: `4px solid ${cfg.color}`, borderRadius: "var(--rl)", padding: "22px 26px", boxShadow: "var(--shadow)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--navy)" }}>{section.label || section.name}</span>
+                          <span style={{ padding: "2px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                        {section.regulatoryBasis && (
+                          <div style={{ fontSize: 11, color: "var(--ink4)", fontStyle: "italic", lineHeight: 1.5 }}>{section.regulatoryBasis}</div>
+                        )}
+                        {section.analysis && (
+                          <div style={{ fontSize: 12.5, color: "var(--ink3)", lineHeight: 1.6, marginTop: 4 }}>{section.analysis}</div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        {section.score !== undefined && (
+                          <div style={{ textAlign: "center" as const }}>
+                            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, color: cfg.color, lineHeight: 1 }}>{section.score}</div>
+                            <div style={{ fontSize: 10, color: "var(--ink4)" }}>/10</div>
+                          </div>
+                        )}
+                        {sectionLink && (
+                          <a href={`/certifications/${certId}/${sectionLink}`}
+                            style={{ padding: "6px 14px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 11, fontWeight: 500, color: "var(--gold2)", textDecoration: "none", whiteSpace: "nowrap" as const }}>
+                            Go to Section →
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Findings */}
+                    {section.findings?.length > 0 && (
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink3)", marginBottom: 4 }}>Findings:</div>
+                        {section.findings.map((f: string, i: number) => (
+                          <div key={i} style={{ display: "flex", gap: 6, marginBottom: 3, fontSize: 12.5, color: "var(--ink2)", lineHeight: 1.5 }}>
+                            <span style={{ color: cfg.color, flexShrink: 0 }}>•</span> {f}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Improvements / Recommendations */}
+                    {((section.improvements && section.improvements.length > 0) || (section.recommendations && section.recommendations.length > 0)) && (
+                      <div style={{ background: "rgba(200,155,60,.04)", border: "1px solid rgba(200,155,60,.12)", borderRadius: "var(--r)", padding: "10px 14px" }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--gold)", marginBottom: 4 }}>How to Improve:</div>
+                        {(section.improvements || section.recommendations || []).map((imp: string, i: number) => {
+                          const key = `${sectionId}:${i}`;
+                          const isResolved = resolvedIssues[key]?.resolved;
+                          return (
+                            <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6, fontSize: 12.5, lineHeight: 1.5, padding: "6px 8px", borderRadius: 5, background: isResolved ? "rgba(5,150,105,.06)" : undefined }}>
+                              <span style={{ color: isResolved ? "var(--green)" : "var(--gold)", flexShrink: 0 }}>{isResolved ? "✓" : "→"}</span>
+                              <div style={{ flex: 1, color: isResolved ? "#065F46" : "var(--ink2)", textDecoration: isResolved ? "line-through" : undefined }}>{imp}</div>
+                              <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                                {!isResolved && sectionLink && (
+                                  <a href={`/certifications/${certId}/${sectionLink}`}
+                                    style={{ padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, color: "var(--navy)", background: "rgba(11,25,41,.05)", border: "1px solid rgba(11,25,41,.1)", textDecoration: "none" }}>
+                                    Fix this →
+                                  </a>
+                                )}
+                                <button
+                                  disabled={resolvingKey === key}
+                                  onClick={() => resolveIssue(key, !isResolved)}
+                                  style={{
+                                    padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: "pointer",
+                                    background: isResolved ? "rgba(200,155,60,.08)" : "var(--green)", color: isResolved ? "var(--gold)" : "#fff",
+                                    border: isResolved ? "1px solid rgba(200,155,60,.2)" : "none",
+                                  }}>
+                                  {resolvingKey === key ? "..." : isResolved ? "Undo" : "Done ✓"}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Score bar */}
+                    {section.score !== undefined && (
+                      <div style={{ height: 4, background: "var(--cream2)", borderRadius: 100, marginTop: 12, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${section.score * 10}%`, background: cfg.color, borderRadius: 100, transition: "width .5s" }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Scoring Gap Analysis */}
               {reviewResult.scoringGaps && Array.isArray(reviewResult.scoringGaps) && reviewResult.scoringGaps.length > 0 && (
@@ -297,7 +477,8 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
                 </div>
               )}
             </div>
-          )}
+            );
+          })()}
 
           {/* Navigation */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 32, paddingTop: 24, borderTop: "1px solid var(--border)" }}>

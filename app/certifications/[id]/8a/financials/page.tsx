@@ -354,7 +354,7 @@ RULES:
           </div>
 
           <SecurityBanner
-            message="Business and personal financial data is protected with bank-grade encryption and strict access controls."
+            message="Financial data is protected with bank-grade encryption and never shared without your consent."
             badges={["bank-grade", "encrypted-at-rest", "audit-logged"]}
           />
 

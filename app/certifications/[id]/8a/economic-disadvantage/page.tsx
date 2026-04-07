@@ -351,7 +351,7 @@ export default function EconomicDisadvantagePage({ params }: { params: Promise<{
           )}
 
           <SecurityBanner
-            message="Your financial data is protected with bank-grade encryption. Net worth and income details are never shared without your explicit consent."
+            message="Your financial information is encrypted and never visible to GovCert staff."
             badges={["bank-grade", "pii-protected", "audit-logged"]}
           />
 

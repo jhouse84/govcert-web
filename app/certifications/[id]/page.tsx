@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { trackPageView } from "@/lib/activity";
+import { ApplicationCoachingModal } from "@/components/ApplicationCoachingModal";
 
 const CERT_LABELS: Record<string, string> = {
   GSA_MAS: "GSA Multiple Award Schedule",
@@ -35,6 +36,9 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
   const [analyzingDocs, setAnalyzingDocs] = useState(false);
   const [analysisExpanded, setAnalysisExpanded] = useState(true);
 
+  // Coaching modal state
+  const [showCoaching, setShowCoaching] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -48,6 +52,10 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
     try {
       const data = await apiRequest(`/api/certifications/${certId}`);
       setCert(data);
+      // Show coaching modal on first visit if not yet completed
+      if (data.application && !data.application.coachingCompleted) {
+        setShowCoaching(true);
+      }
       // Trigger document analysis on first load (if not already cached)
       const cacheKey = `docAnalysis_${certId}`;
       const cached = sessionStorage.getItem(cacheKey);
@@ -101,6 +109,23 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
     } finally {
       setSavingSINs(false);
     }
+  }
+
+  async function dismissCoaching() {
+    try {
+      await apiRequest("/api/applications", {
+        method: "POST",
+        body: JSON.stringify({
+          certificationId: certId,
+          clientId: cert?.clientId,
+          certType: cert?.type,
+          coachingCompleted: true,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to mark coaching complete:", err);
+    }
+    setShowCoaching(false);
   }
 
   function logout() {
@@ -708,6 +733,19 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
           </div>
         </div>
       </div>
+
+      {/* Application Coaching Modal — shown on first visit */}
+      {showCoaching && cert && (
+        <ApplicationCoachingModal
+          clientId={cert.clientId}
+          certType={cert.type}
+          onClose={dismissCoaching}
+          onUploadClick={() => {
+            dismissCoaching();
+            router.push("/portal/documents");
+          }}
+        />
+      )}
     </div>
   );
 }

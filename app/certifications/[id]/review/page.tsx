@@ -206,7 +206,11 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
       if (newContent) {
         await apiRequest(`/api/applications/${certId}/sections/${sectionId}`, {
           method: "PUT",
-          body: JSON.stringify({ content: newContent }),
+          body: JSON.stringify({
+            content: newContent,
+            findingSummary: guidedFix?.issueText?.substring(0, 200),
+            findingId: guidedFix?.issueKey,
+          }),
         });
       }
       await resolveIssue(issueKey, true);

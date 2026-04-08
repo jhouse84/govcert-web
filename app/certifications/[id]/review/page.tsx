@@ -159,7 +159,9 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
       try {
         const savedReviews = await apiRequest(`/api/applications/ai/reviews/${certId}`);
         if (savedReviews && savedReviews.length > 0) {
-          const latest = savedReviews[0];
+          // Prefer the latest v2 review; fall back to latest of any version
+          const latestV2 = savedReviews.find((r: any) => r.version === 'v2' && r.status === 'completed');
+          const latest = latestV2 || savedReviews[0];
           parseReviewRecord(latest);
           setReviewHistory(savedReviews.map((r: any) => ({ score: r.adjustedScore || r.overallScore, date: r.createdAt })));
         } else {

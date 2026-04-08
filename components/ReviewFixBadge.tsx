@@ -40,7 +40,7 @@ export function ReviewFixBadge({ fixes }: { fixes?: { fixedAt: string; findingSu
  * Hook to fetch fix history for a certification.
  * Returns a map of sectionId → fix array for badge display.
  */
-export function useFixHistory(certId: string) {
+export function useFixHistory(certId: string, refreshKey?: number) {
   const [fixHistory, setFixHistory] = React.useState<Record<string, any[]>>({});
 
   React.useEffect(() => {
@@ -56,7 +56,7 @@ export function useFixHistory(certId: string) {
         if (data.bySection) setFixHistory(data.bySection);
       })
       .catch(() => {});
-  }, [certId]);
+  }, [certId, refreshKey]);
 
   return fixHistory;
 }

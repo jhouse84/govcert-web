@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import ExecutiveReview from "@/components/ExecutiveReview";
 import GuidedFixPanel from "@/components/GuidedFixPanel";
+import { ReviewFixBadge, useFixHistory } from "@/components/ReviewFixBadge";
 
 /* ── v1 helpers ── */
 const SECTION_LINKS: Record<string, string> = {
@@ -91,6 +92,8 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
   const [adjustedScore, setAdjustedScore] = useState<number | null>(null);
   const [resolvingKey, setResolvingKey] = useState<string | null>(null);
   const [guidedFix, setGuidedFix] = useState<{ isOpen: boolean; issueKey: string; issueText: string; sectionId: string; sectionLabel: string } | null>(null);
+  const [fixRefreshKey, setFixRefreshKey] = useState(0);
+  const fixHistory = useFixHistory(certId, fixRefreshKey);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [expandedFindings, setExpandedFindings] = useState<Set<string>>(new Set());
   const [expandedCRB, setExpandedCRB] = useState(false);
@@ -215,6 +218,7 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
       }
       await resolveIssue(issueKey, true);
       setGuidedFix(null);
+      setFixRefreshKey(k => k + 1); // Trigger badge refresh
     } catch (err) {
       console.error("Failed to save section content:", err);
       alert("Failed to save fix — please try again.");
@@ -514,6 +518,7 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
                     <span style={{ padding: "2px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
                       {sc.label}
                     </span>
+                    <ReviewFixBadge fixes={fixHistory[item.stepId]} />
                     {findingCount > 0 && (
                       <span style={{ fontSize: 11, color: "var(--ink4)" }}>
                         {findingCount} finding{findingCount !== 1 ? "s" : ""}

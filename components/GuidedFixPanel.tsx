@@ -43,6 +43,8 @@ export default function GuidedFixPanel({
   const [generatedContent, setGeneratedContent] = useState("");
   const [charLimit, setCharLimit] = useState<number>(5000);
   const [shortening, setShortening] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackText, setFeedbackText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   // Confirm before closing if user has work in progress
@@ -167,7 +169,7 @@ export default function GuidedFixPanel({
     }
   }
 
-  async function generateFix() {
+  async function generateFix(feedback?: string) {
     setPhase("generating");
     setError(null);
     try {
@@ -179,16 +181,21 @@ export default function GuidedFixPanel({
           sectionId,
           issueKey,
           issueText,
-          currentContent: currentContent || "",
-          answers,
+          currentContent: feedback ? generatedContent : (currentContent || ""),
+          answers: {
+            ...answers,
+            ...(feedback ? { _regenerateFeedback: feedback } : {}),
+          },
         }),
       });
       setGeneratedContent(data.content || "");
       if (data.charLimit) setCharLimit(data.charLimit);
       setPhase("review");
+      setShowFeedback(false);
+      setFeedbackText("");
     } catch (err: any) {
       setError("Failed to generate fix: " + (err.message || "Please try again."));
-      setPhase("questions");
+      setPhase("review"); // Stay on review so they don't lose content
     }
   }
 
@@ -479,7 +486,7 @@ export default function GuidedFixPanel({
               ))}
 
               <button
-                onClick={generateFix}
+                onClick={() => generateFix()}
                 style={{
                   width: "100%",
                   padding: "14px",
@@ -566,11 +573,31 @@ export default function GuidedFixPanel({
                   ⚠️ Content exceeds the {charLimit.toLocaleString()}-character portal limit by {(charCount - charLimit).toLocaleString()} characters. Use <strong>Shorten to Fit</strong> to auto-condense while preserving all key details, or apply as-is and trim manually.
                 </div>
               )}
+              {/* Regenerate with feedback */}
+              {showFeedback && (
+                <div style={{ marginBottom: 10, background: "rgba(200,155,60,.04)", border: "1px solid rgba(200,155,60,.15)", borderRadius: "var(--r)", padding: "12px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>What would you like changed?</div>
+                  <textarea
+                    value={feedbackText}
+                    onChange={e => setFeedbackText(e.target.value)}
+                    placeholder='e.g., "Make it shorter", "Emphasize the USDA work more", "Remove the diplomatic missions reference", "Add more specific contract details"'
+                    style={{ width: "100%", minHeight: 60, padding: 10, borderRadius: 6, border: "1px solid var(--border2)", fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
+                  />
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button onClick={() => generateFix(feedbackText)} disabled={!feedbackText.trim()}
+                      style={{ flex: 1, padding: "8px", background: feedbackText.trim() ? "var(--gold)" : "var(--cream2)", color: feedbackText.trim() ? "#fff" : "var(--ink4)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, cursor: feedbackText.trim() ? "pointer" : "not-allowed" }}>
+                      Regenerate with Feedback
+                    </button>
+                    <button onClick={() => { setShowFeedback(false); setFeedbackText(""); }}
+                      style={{ padding: "8px 14px", background: "var(--cream2)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12, cursor: "pointer" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               <div style={{ display: "flex", gap: 10 }}>
                 <button
-                  onClick={() => {
-                    setPhase("questions");
-                  }}
+                  onClick={() => setShowFeedback(true)}
                   style={{
                     flex: 1,
                     padding: "12px",
@@ -583,7 +610,7 @@ export default function GuidedFixPanel({
                     cursor: "pointer",
                   }}
                 >
-                  Regenerate
+                  Regenerate with Edits
                 </button>
                 {isOverLimit && (
                   <button

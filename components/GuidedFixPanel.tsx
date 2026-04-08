@@ -45,19 +45,49 @@ export default function GuidedFixPanel({
   const [shortening, setShortening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset state when panel closes
+  // Confirm before closing if user has work in progress
+  const hasProgress = Object.keys(answers).some(k => answers[k]?.trim()) || generatedContent.trim();
+
+  function handleClose() {
+    if (hasProgress) {
+      if (!window.confirm("You have unsaved progress. Are you sure you want to close? Your answers will be lost.")) {
+        return;
+      }
+    }
+    setPhase("choose");
+    setQuestions([]);
+    setAnswers({});
+    setGeneratedContent("");
+    setError(null);
+    onClose();
+  }
+
+  // Don't auto-reset on close — the handleClose function handles cleanup
+  // Only reset if the issueKey changes (user opened a different issue)
+  const prevIssueKey = React.useRef(issueKey);
   React.useEffect(() => {
-    if (!isOpen) {
+    if (issueKey !== prevIssueKey.current) {
       setPhase("choose");
       setQuestions([]);
       setAnswers({});
       setGeneratedContent("");
       setError(null);
+      prevIssueKey.current = issueKey;
     }
-  }, [isOpen]);
+  }, [issueKey]);
 
   function startAIFix() {
     fetchQuestions();
+  }
+
+  function closeClean() {
+    // Close without confirmation — used after a deliberate action (apply, navigate, dismiss)
+    setPhase("choose");
+    setQuestions([]);
+    setAnswers({});
+    setGeneratedContent("");
+    setError(null);
+    onClose();
   }
 
   function fixManually() {
@@ -105,12 +135,12 @@ export default function GuidedFixPanel({
       const fallback = certType === "EIGHT_A" ? "8a/submit" : certType === "OASIS_PLUS" ? "oasis-plus/submit" : "submit";
       window.location.href = `/certifications/${certificationId}/${fallback}`;
     }
-    onClose();
+    closeClean();
   }
 
   function markAlreadyFixed() {
     onFixed(issueKey, "");
-    onClose();
+    closeClean();
   }
 
   async function fetchQuestions() {
@@ -164,7 +194,7 @@ export default function GuidedFixPanel({
 
   function handleApply() {
     onFixed(issueKey, generatedContent);
-    onClose();
+    closeClean();
   }
 
   async function handleShorten() {
@@ -194,7 +224,7 @@ export default function GuidedFixPanel({
     <>
       {/* Overlay */}
       <div
-        onClick={onClose}
+        onClick={handleClose}
         style={{
           position: "fixed",
           inset: 0,
@@ -260,7 +290,7 @@ export default function GuidedFixPanel({
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               style={{
                 background: "rgba(255,255,255,.1)",
                 border: "none",

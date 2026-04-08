@@ -167,12 +167,10 @@ export default function OASISReviewPage({ params }: { params: Promise<{ id: stri
     setReviewing(true);
     setError(null);
     try {
-      const data = await apiRequest("/api/applications/ai/review", {
+      const data = await apiRequest("/api/applications/ai/review-v2", {
         method: "POST",
         body: JSON.stringify({
           certificationId: certId,
-          clientId: cert?.clientId,
-          certType: "OASIS_PLUS",
         }),
       });
       setReviewResult(data);

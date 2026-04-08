@@ -230,9 +230,9 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
     setAnalyzing(true);
     setError(null);
     try {
-      await apiRequest("/api/applications/ai/review", {
+      await apiRequest("/api/applications/ai/review-v2", {
         method: "POST",
-        body: JSON.stringify({ certificationId: certId, clientId: cert?.clientId, certType: "GSA_MAS" }),
+        body: JSON.stringify({ certificationId: certId }),
       });
       // Start polling for completed review
       if (pollRef.current) clearInterval(pollRef.current);

@@ -197,9 +197,9 @@ export default function EightAReviewPage({ params }: { params: Promise<{ id: str
     setAnalyzing(true);
     setError(null);
     try {
-      await apiRequest("/api/applications/ai/review", {
+      await apiRequest("/api/applications/ai/review-v2", {
         method: "POST",
-        body: JSON.stringify({ certificationId: certId, clientId: cert?.clientId, certType: "EIGHT_A" }),
+        body: JSON.stringify({ certificationId: certId }),
       });
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {

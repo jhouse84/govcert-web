@@ -83,6 +83,7 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [reviewPending, setReviewPending] = useState(false);
   const [review, setReview] = useState<any>(null);
   const [rawSections, setRawSections] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -227,40 +228,42 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
 
   /* ── Run Review (v2 poll-based) ── */
   async function runReview() {
-    setAnalyzing(true);
     setError(null);
     try {
-      await apiRequest("/api/applications/ai/review-v2", {
+      const result = await apiRequest("/api/applications/ai/review-v2", {
         method: "POST",
         body: JSON.stringify({ certificationId: certId }),
       });
-      // Start polling for completed review
+
+      // Show non-blocking notification — user can navigate away
+      setReviewPending(true);
+      setAnalyzing(false); // Don't block the UI
+
+      // Start background polling (continues even if user navigates within the app)
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
         try {
           const savedReviews = await apiRequest(`/api/applications/ai/reviews/${certId}`);
           if (savedReviews && savedReviews.length > 0) {
             const latest = savedReviews[0];
-            if (latest.status === "completed") {
+            if (latest.status === "completed" && latest.version === "v2" && new Date(latest.createdAt) > new Date(Date.now() - 15 * 60 * 1000)) {
               if (pollRef.current) clearInterval(pollRef.current);
               parseReviewRecord(latest);
               setReviewHistory(savedReviews.map((r: any) => ({ score: r.adjustedScore || r.overallScore, date: r.createdAt })));
-              setAnalyzing(false);
+              setReviewPending(false);
             }
           }
         } catch {}
       }, 10000);
-      // Safety timeout: stop polling after 10 minutes
+      // Safety timeout: stop polling after 15 minutes
       setTimeout(() => {
         if (pollRef.current) {
           clearInterval(pollRef.current);
-          setAnalyzing(false);
-          setError("Review is taking longer than expected. Please check back shortly.");
+          setReviewPending(false);
         }
-      }, 600000);
+      }, 900000);
     } catch (err: any) {
       setError("Review failed: " + (err.message || "Please try again."));
-      setAnalyzing(false);
     }
   }
 
@@ -398,15 +401,15 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
                 AI-powered analysis of your application against GSA MAS solicitation evaluation criteria and current approval patterns.
               </p>
             </div>
-            <button onClick={runReview} disabled={analyzing}
+            <button onClick={runReview} disabled={analyzing || reviewPending}
               style={{
                 padding: "14px 32px",
-                background: analyzing ? "var(--ink4)" : "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
+                background: (analyzing || reviewPending) ? "var(--ink4)" : "linear-gradient(135deg, #C89B3C 0%, #E8B84B 100%)",
                 border: "none", borderRadius: "var(--r)", fontSize: 15, fontWeight: 600, color: "#fff",
-                cursor: analyzing ? "wait" : "pointer",
-                boxShadow: analyzing ? "none" : "0 4px 24px rgba(200,155,60,.4)",
+                cursor: (analyzing || reviewPending) ? "wait" : "pointer",
+                boxShadow: (analyzing || reviewPending) ? "none" : "0 4px 24px rgba(200,155,60,.4)",
               }}>
-              {analyzing ? "Analyzing..." : review ? "Re-Run Analysis" : "Run GovCert Review"}
+              {reviewPending ? "Review in Progress..." : analyzing ? "Analyzing..." : review ? "Re-Run Analysis" : "Run GovCert Review"}
             </button>
           </div>
         </div>
@@ -419,8 +422,28 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
           </div>
         )}
 
+        {/* ── Review in progress banner — non-blocking ── */}
+        {reviewPending && (
+          <div style={{
+            background: "linear-gradient(135deg, rgba(200,155,60,.06), rgba(200,155,60,.02))",
+            border: "1px solid rgba(200,155,60,.2)",
+            borderRadius: "var(--rl)", padding: "20px 24px", marginBottom: 20,
+            display: "flex", alignItems: "center", gap: 16,
+          }}>
+            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(200,155,60,.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: 20, animation: "spin 2s linear infinite" }}>⚙️</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)" }}>Your review is being generated</div>
+              <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 2 }}>
+                This is a thorough analysis — typically 5-7 minutes. <strong>You can continue working in the app.</strong> We'll email you when the full review is ready, or stay on this page and it will load automatically.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── No review yet ── */}
-        {!review && !analyzing && (
+        {!review && !analyzing && !reviewPending && (
           <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "48px", textAlign: "center" as const, boxShadow: "var(--shadow)" }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "var(--navy)", fontWeight: 400, marginBottom: 12 }}>Ready for your application review?</h2>

@@ -23,7 +23,7 @@ interface GuidedQuestion {
   placeholder?: string;
 }
 
-type Phase = "choose" | "loading" | "questions" | "generating" | "review";
+type Phase = "choose" | "loading" | "questions" | "simple-fix" | "generating" | "review";
 
 export default function GuidedFixPanel({
   isOpen,
@@ -160,12 +160,19 @@ export default function GuidedFixPanel({
           currentContent: currentContent || "",
         }),
       });
-      setQuestions(data.questions || []);
+      const qs = data.questions || [];
       setCharLimit(data.charLimit || 5000);
-      setPhase("questions");
+      if (qs.length === 0) {
+        // No guided questions available — show simple fix options instead
+        setPhase("simple-fix");
+      } else {
+        setQuestions(qs);
+        setPhase("questions");
+      }
     } catch (err: any) {
-      setError("Failed to load guided questions: " + (err.message || "Please try again."));
-      setPhase("questions");
+      // API error or JSON parse failure — fall back to simple fix options
+      console.warn("[GuidedFix] Questions failed, showing simple options:", err.message);
+      setPhase("simple-fix");
     }
   }
 
@@ -388,6 +395,47 @@ export default function GuidedFixPanel({
               <div style={{ fontSize: 14, fontWeight: 500, color: "var(--navy)" }}>Preparing guided questions...</div>
               <div style={{ fontSize: 12, color: "var(--ink4)", marginTop: 4 }}>
                 Analyzing the issue to ask the right questions.
+              </div>
+            </div>
+          )}
+
+          {/* Phase: Simple Fix — no guided questions, offer direct actions */}
+          {phase === "simple-fix" && (
+            <div>
+              <div style={{ background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.15)", borderRadius: 8, padding: "14px 16px", marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>This finding doesn't need guided questions.</div>
+                <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
+                  {issueText}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <button onClick={() => generateFix("Soften the language in this section to be less committal. Replace specific guarantees, timelines, or certifications claims with advisory language that doesn't create enforceable obligations. Keep the substance but reduce the contractual exposure.")}
+                  style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "14px 16px", border: "2px solid var(--gold)", borderRadius: 8, background: "rgba(200,155,60,.04)", cursor: "pointer", textAlign: "left" as const }}>
+                  <span style={{ fontSize: 20, flexShrink: 0 }}>✏️</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 3 }}>Soften this language</div>
+                    <div style={{ fontSize: 11, color: "var(--ink3)", lineHeight: 1.5 }}>AI will rewrite the relevant sentence(s) to reduce contractual exposure while keeping the substance.</div>
+                  </div>
+                </button>
+
+                <button onClick={() => { onFixed(issueKey, ""); closeClean(); }}
+                  style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "14px 16px", border: "1px solid var(--border)", borderRadius: 8, background: "#fff", cursor: "pointer", textAlign: "left" as const }}>
+                  <span style={{ fontSize: 20, flexShrink: 0 }}>✅</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 3 }}>I can substantiate this</div>
+                    <div style={{ fontSize: 11, color: "var(--ink3)", lineHeight: 1.5 }}>Mark as resolved — you have the documentation to back this claim if the CO asks.</div>
+                  </div>
+                </button>
+
+                <button onClick={() => fixManually()}
+                  style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "14px 16px", border: "1px solid var(--border)", borderRadius: 8, background: "#fff", cursor: "pointer", textAlign: "left" as const }}>
+                  <span style={{ fontSize: 20, flexShrink: 0 }}>📝</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 3 }}>Edit manually</div>
+                    <div style={{ fontSize: 11, color: "var(--ink3)", lineHeight: 1.5 }}>Go to the section and make the edit yourself.</div>
+                  </div>
+                </button>
               </div>
             </div>
           )}

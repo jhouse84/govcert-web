@@ -1618,7 +1618,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                   )}
 
                   {!priceProposal ? (
-                    <button
+                    <><button
                       onClick={async () => {
                         setGeneratingProposal(true);
                         try {
@@ -1636,10 +1636,22 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                         }
                       }}
                       disabled={generatingProposal}
-                      style={{ padding: "12px 24px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: generatingProposal ? "not-allowed" : "pointer", width: "100%" }}>
-                      {generatingProposal ? "Generating Price Proposal..." : "Generate Price Proposal from Your Pricing Data"}
+                      style={{ padding: "12px 24px", background: generatingProposal ? "var(--navy)" : "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: generatingProposal ? "not-allowed" : "pointer", width: "100%" }}>
+                      {generatingProposal ? "⚙️ Generating Price Proposal..." : "Generate Price Proposal from Your Pricing Data"}
                     </button>
-                  ) : (
+                    {generatingProposal && (
+                      <div style={{ marginTop: 12, padding: "16px 20px", background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.15)", borderRadius: "var(--r)", textAlign: "center" as const }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>Building your Price Proposal / Commercial Sales Practices document</div>
+                        <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
+                          This is a comprehensive document that analyzes your {lcats.length} labor categories, invoicing history, MFC pricing rationale, and discount structure. It typically takes <strong>1-2 minutes</strong> because GovCert is building a detailed, GSA-compliant narrative that explains your pricing methodology to the Contracting Officer.
+                        </div>
+                        <div style={{ marginTop: 10, height: 4, background: "var(--cream2)", borderRadius: 100, overflow: "hidden" }}>
+                          <div style={{ height: "100%", background: "var(--gold)", borderRadius: 100, animation: "indeterminate 2s ease-in-out infinite", width: "40%" }} />
+                        </div>
+                        <style dangerouslySetInnerHTML={{ __html: `@keyframes indeterminate { 0% { margin-left: 0; width: 30%; } 50% { margin-left: 30%; width: 50%; } 100% { margin-left: 70%; width: 30%; } }` }} />
+                      </div>
+                    )}
+                  </>) : (
                     <div>
                       <textarea
                         value={priceProposal}

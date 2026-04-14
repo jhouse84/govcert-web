@@ -169,17 +169,16 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     try { lcats = JSON.parse(cert?.application?.pricingData || "{}").lcats || []; } catch {}
     if (lcats.length === 0) return;
     const selectedSINs = cert?.application?.selectedSINs || "";
-    const headers = ["SIN(s) Proposed", "Labor Category / Service Proposed (Title)", "Labor Category / Service Description", "Minimum Education / Certification Level", "Minimum Years of Experience", "Domestic / Overseas", "Commercial Price List (CPL) or Market Rate", "Most Favored Customer (MFC)", "MFC Discount (%)", "Proposed GSA Rate (including IFF)", "Unit of Issue"];
+    const headers = ["SIN(s) Proposed", "Labor Category / Service Proposed (Title)", "Labor Category / Service Description", "Minimum Education / Certification Level", "Minimum Years of Experience", "Domestic / Overseas", "Commercial Rate", "Proposed GSA Rate (including IFF)", "Unit of Issue"];
     const rows = lcats.map((l: any) => {
-      const base = parseFloat(l.baseRate || l.mfcRate || "0"), mfc = parseFloat(l.mfcRate || "0"), gsa = parseFloat(l.gsaRate || "0");
-      const disc = base > 0 ? (((base - mfc) / base) * 100).toFixed(2) : "0.00";
-      return [selectedSINs, l.title || "", l.description || "", l.education || "", l.yearsExperience || l.experience || "", "Domestic", `$${(base || mfc).toFixed(2)}`, `$${mfc.toFixed(2)}`, `${disc}%`, `$${gsa.toFixed(2)}`, "Hourly"];
+      const base = parseFloat(l.baseRate || l.mfcRate || "0"), gsa = parseFloat(l.gsaRate || "0");
+      return [selectedSINs, l.title || "", l.description || "", l.education || "", l.yearsExperience || l.experience || "", "Domestic", `$${base.toFixed(2)}`, `$${gsa.toFixed(2)}`, "Hourly"];
     });
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws["!cols"] = [{ wch: 18 }, { wch: 35 }, { wch: 50 }, { wch: 30 }, { wch: 12 }, { wch: 15 }, { wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 22 }, { wch: 12 }];
+    ws["!cols"] = [{ wch: 18 }, { wch: 35 }, { wch: 50 }, { wch: 30 }, { wch: 12 }, { wch: 15 }, { wch: 22 }, { wch: 22 }, { wch: 12 }];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "CSP-1 Pricelist");
-    XLSX.writeFile(wb, `CSP-1_${cert?.client?.businessName?.replace(/\s+/g, "_") || "pricing"}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Pricing Support Documentation");
+    XLSX.writeFile(wb, `Pricing_${cert?.client?.businessName?.replace(/\s+/g, "_") || "pricing"}.xlsx`);
   }
 
   // ── Build steps ──
@@ -288,17 +287,17 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
       status: (clientDocs.PPQ_RESPONSE || []).length + (clientDocs.PPQ_COMPLETED || []).length + (clientDocs.CPARS_REPORT || []).length > 0 ? "ready" : "missing",
       content: { docs: [...(clientDocs.PPQ_RESPONSE || []), ...(clientDocs.PPQ_COMPLETED || []), ...(clientDocs.CPARS_REPORT || [])], note: "Minimum 3 references. Each file = one reference for eOffer. Drag and drop files here.", dropCategory: "PPQ_RESPONSE" } },
 
-    { id: "upload-csp1", label: "CSP-1 Pricelist (Excel)", eofferLocation: "eOffer → Upload Documents", type: "files",
+    { id: "upload-csp1", label: "Pricing Support Documentation (Excel)", eofferLocation: "eOffer → Upload Documents", type: "files",
       status: (() => { try { return (JSON.parse(app?.pricingData || "{}").lcats || []).length > 0 ? "ready" : "missing"; } catch { return "missing"; } })(),
-      content: { generated: true, generateLabel: "Download CSP-1 Excel", generateFn: downloadCSP1, docs: clientDocs.CSP1_GENERATED || [], note: "Generated from your Pricing page LCATs." } },
+      content: { generated: true, generateLabel: "Download Pricing Excel", generateFn: downloadCSP1, docs: clientDocs.CSP1_GENERATED || [], note: "Generated from your Pricing page rate table." } },
 
-    { id: "upload-price-proposal", label: "Price Proposal / Commercial Sales Practices", eofferLocation: "eOffer → Upload Documents (PDF)", type: "text",
+    { id: "upload-price-proposal", label: "Price Proposal (TDR)", eofferLocation: "eOffer → Upload Documents (PDF)", type: "text",
       status: app?.priceProposal ? "ready" : "missing",
       content: {
         narratives: app?.priceProposal ? [{ label: "Price Proposal", value: app.priceProposal, id: "price-proposal", charLimit: null }] : [],
         emptyMessage: "Generate on the Pricing page → Price Proposal section.",
         pdfDownload: app?.priceProposal ? () => generatePDF({
-          title: "Price Proposal / Commercial Sales Practices",
+          title: "Price Proposal",
           companyName: client?.businessName || "",
           content: app.priceProposal,
           fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Price_Proposal.pdf`,
@@ -307,7 +306,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           apiUrl: API_URL,
         }) : null,
         docxDownload: app?.priceProposal ? () => generateDOCX({
-          title: "Price Proposal / Commercial Sales Practices",
+          title: "Price Proposal",
           companyName: client?.businessName || "",
           content: app.priceProposal,
           fileName: `${(client?.businessName || "Company").replace(/\s+/g, "_")}_Price_Proposal.docx`,

@@ -211,7 +211,7 @@ export default function PricingPage({ params }: { params: Promise<{ id: string }
       const data = await apiRequest("/api/applications/ai/draft", {
         method: "POST",
         body: JSON.stringify({
-          section: "Invoice Analysis for GSA CSP-1 Pricing",
+          section: "Invoice Analysis for GSA Pricing",
           prompt: `Analyze these invoices/documents and extract all billable service line items. Group similar services together. Return a JSON array:
 [
   {
@@ -356,7 +356,7 @@ Return ONLY the JSON array.`,
           prompt: `Benchmark this GSA labor category rate against market data.
 
 LCAT: ${lcat.title}
-MFC Rate: $${lcat.mfcRate}/hr
+Commercial Rate: $${lcat.mfcRate}/hr
 GSA Rate: $${lcat.gsaRate}/hr
 Education: ${lcat.education}
 Experience: ${lcat.yearsExperience} years
@@ -415,7 +415,7 @@ Return ONLY valid JSON.`,
       const data = await apiRequest("/api/applications/ai/draft", {
         method: "POST",
         body: JSON.stringify({
-          section: "Invoice Analysis for GSA CSP-1 Pricing",
+          section: "Invoice Analysis for GSA Pricing",
           prompt: `Analyze these invoices/documents and extract all billable service line items. Group similar services together. Return a JSON array:
 [
   {
@@ -481,7 +481,7 @@ Return ONLY the JSON array.`,
       const data = await apiRequest("/api/applications/ai/draft", {
         method: "POST",
         body: JSON.stringify({
-          section: "Invoice Analysis for GSA CSP-1 Pricing",
+          section: "Invoice Analysis for GSA Pricing",
           prompt: `Analyze these invoices/documents and extract all billable service line items. Group similar services together. Return a JSON array:
 [
   {
@@ -610,7 +610,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
   async function exportCSP1() {
     const XLSX = await import("xlsx");
 
-    // GSA CSP-1 required columns
+    // GSA pricing support documentation columns (R31: no MFC/CSP-1)
     const headers = [
       "SIN(s) Proposed",
       "Labor Category / Service Proposed (Title)",
@@ -618,9 +618,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
       "Minimum Education / Certification Level",
       "Minimum Years of Experience",
       "Domestic / Overseas",
-      "Commercial Price List (CPL) or Market Rate",
-      "Most Favored Customer (MFC)",
-      "MFC Discount (%)",
+      "Commercial Rate",
       "Proposed GSA Rate (including IFF)",
       "Unit of Issue",
     ];
@@ -628,9 +626,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
     const selectedSINs = cert?.application?.selectedSINs || "";
     const rows = lcats.map(l => {
       const baseRate = parseFloat(l.baseRate || l.mfcRate || "0");
-      const mfcRate = parseFloat(l.mfcRate || "0");
       const gsaRate = parseFloat(l.gsaRate || "0");
-      const mfcDiscount = baseRate > 0 ? (((baseRate - mfcRate) / baseRate) * 100).toFixed(2) : "0.00";
       return [
         selectedSINs,
         l.title || "",
@@ -638,9 +634,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
         l.education || "Bachelor's Degree",
         l.yearsExperience || "",
         "Domestic",
-        baseRate > 0 ? `$${baseRate.toFixed(2)}` : `$${mfcRate.toFixed(2)}`,
-        `$${mfcRate.toFixed(2)}`,
-        `${mfcDiscount}%`,
+        baseRate > 0 ? `$${baseRate.toFixed(2)}` : "",
         `$${gsaRate.toFixed(2)}`,
         "Hourly",
       ];
@@ -652,13 +646,13 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
     // Set column widths for readability
     ws["!cols"] = [
       { wch: 18 }, { wch: 35 }, { wch: 50 }, { wch: 30 }, { wch: 12 },
-      { wch: 15 }, { wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 22 }, { wch: 12 },
+      { wch: 15 }, { wch: 22 }, { wch: 22 }, { wch: 12 },
     ];
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "CSP-1 Pricelist");
+    XLSX.utils.book_append_sheet(wb, ws, "Pricing Support Documentation");
 
-    const fileName = `${cert?.client?.businessName?.replace(/\s+/g, "_") || "Company"}_CSP-1_Pricelist.xlsx`;
+    const fileName = `${cert?.client?.businessName?.replace(/\s+/g, "_") || "Company"}_Pricing_Support.xlsx`;
 
     // 1. Download to user's computer
     XLSX.writeFile(wb, fileName);
@@ -698,7 +692,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
     { id: "ratelist", icon: "📋", label: "Your current rate sheet", desc: "A price list or rate card if you have one. Even an informal one is fine." },
     { id: "proposals", icon: "📄", label: "Past proposals with pricing", desc: "Any quotes or proposals you've sent that include hourly rates or project costs." },
     { id: "jobtitles", icon: "👥", label: "Your job titles and roles", desc: "What do your staff or contractors actually do? A simple org chart or list works." },
-    { id: "commercial", icon: "💼", label: "Commercial price list", desc: "What you charge non-government clients. This becomes your Most Favored Customer (MFC) rate." },
+    { id: "commercial", icon: "💼", label: "Commercial price list", desc: "What you charge non-government clients. This establishes your commercial rate baseline for GSA pricing." },
     { id: "prevgsa", icon: "🏛️", label: "Previous GSA price lists", desc: "If you've applied before or have a GSA contract, bring that price list." },
   ];
 
@@ -734,7 +728,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
           </a>
         </div>
         <div style={{ padding: "16px 12px", flex: 1, overflowY: "auto" }}>
-          <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 8, fontWeight: 600 }}>CSP-1 Progress</div>
+          <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.25)", padding: "0 9px", marginBottom: 8, fontWeight: 600 }}>Rate Table Progress</div>
           <div style={{ margin: "8px 9px 16px", padding: "12px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "var(--r)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <span style={{ fontSize: 11, color: "rgba(255,255,255,.35)", textTransform: "uppercase", letterSpacing: ".08em" }}>LCATs</span>
@@ -754,7 +748,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
             { id: "start", label: "📋 Getting Started" },
             { id: "invoices", label: "🧾 Upload Invoices" },
             { id: "library", label: "🔍 LCAT Library" },
-            { id: "csp1", label: "💰 My CSP-1" },
+            { id: "csp1", label: "💰 My Rate Table" },
           ].map(tab => (
             <div key={tab.id} onClick={() => setActiveTab(tab.id as any)}
               style={{ display: "flex", alignItems: "center", padding: "8px 9px", borderRadius: "var(--r)", marginBottom: 2, cursor: "pointer", background: activeTab === tab.id ? "rgba(200,155,60,.15)" : "transparent", color: activeTab === tab.id ? "var(--gold2)" : "rgba(255,255,255,.45)", fontSize: 12.5, fontWeight: activeTab === tab.id ? 500 : 400 }}>
@@ -789,7 +783,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
 
           <div style={{ marginTop: 20, marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 8 }}>Section 6 of 6</div>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Pricing (CSP-1)</h1>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 42, color: "var(--navy)", fontWeight: 400, lineHeight: 1.1, marginBottom: 8 }}>Pricing</h1>
             <p style={{ fontSize: 15, color: "var(--ink3)", fontWeight: 300 }}>Build your GSA Commercial Supplier Pricelist — labor categories, rates, and IFF-adjusted GSA prices.</p>
           </div>
 
@@ -818,12 +812,12 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
               </div>
 
               <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: "24px 28px", marginBottom: 20, boxShadow: "var(--shadow)" }}>
-                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 12 }}>What is a CSP-1?</h3>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: "var(--navy)", fontWeight: 400, marginBottom: 12 }}>How GSA Pricing Works</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                   {[
-                    { icon: "📋", title: "Your price list for the government", body: "CSP-1 stands for Commercial Supplier Pricelist. It lists every service you offer on your GSA Schedule with the price the government will pay." },
+                    { icon: "📋", title: "Your rate table for the government", body: "Your pricing documentation lists every service you offer on your GSA Schedule with the rate the government will pay. GSA evaluates rates for fairness and reasonableness." },
                     { icon: "👤", title: "Organized by Labor Categories (LCATs)", body: "Each row is a Labor Category — a type of worker or role. For example: 'Senior Project Manager' or 'Junior Software Developer.'" },
-                    { icon: "💰", title: "GSA gets a discount from your best price", body: "You must give the government a price equal to or better than your best commercial customer. This is your Most Favored Customer (MFC) rate." },
+                    { icon: "💰", title: "Rates must be fair and reasonable", body: "GSA evaluates your rates against CALC tool comparables, BLS wage data, and your commercial pricing history. Your rates should be competitive and well-documented." },
                     { icon: "📉", title: "The IFF is subtracted from your MFC rate", body: "GSA charges a 0.75% Industrial Funding Fee (IFF). GSA rate = MFC rate minus 0.75%. GovCert calculates this automatically." },
                   ].map((item, i) => (
                     <div key={i} style={{ display: "flex", gap: 12 }}>
@@ -914,7 +908,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                   {[
                     { step: "1", title: "Upload everything you have", body: "Invoices, rate sheets, proposals — any files with pricing." },
                     { step: "2", title: "GovCert finds your rates", body: "AI groups similar services and identifies your rate history." },
-                    { step: "3", title: "Map to GSA LCATs", body: "Confirm which groups become Labor Categories on your CSP-1." },
+                    { step: "3", title: "Map to GSA LCATs", body: "Confirm which groups become Labor Categories on your rate table." },
                   ].map(item => (
                     <div key={item.step} style={{ display: "flex", gap: 10 }}>
                       <div style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(200,155,60,.25)", border: "1px solid rgba(200,155,60,.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: "var(--gold2)", fontWeight: 700 }}>{item.step}</div>
@@ -1039,13 +1033,13 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                           newOnes.forEach(g => addGroupAsLcat(g));
                         }}
                           style={{ padding: "7px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                          Add All to CSP-1 ({invoiceGroups.filter(g => !lcats.some(l => l.title === g.suggestedLcatTitle)).length})
+                          Add All to Rate Table ({invoiceGroups.filter(g => !lcats.some(l => l.title === g.suggestedLcatTitle)).length})
                         </button>
                       )}
                       {lcats.length > 0 && (
                         <button onClick={exportCSP1}
                           style={{ padding: "7px 16px", background: "var(--green)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                          Export CSP-1 Excel
+                          Export Pricing Excel
                         </button>
                       )}
                     </div>
@@ -1083,7 +1077,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                               ) : (
                                 <button onClick={() => { addGroupAsLcat(group); }}
                                   style={{ padding: "9px 18px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-                                  Add to CSP-1 →
+                                  Add to Rate Table →
                                 </button>
                               )}
                             </div>
@@ -1096,7 +1090,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                     <div style={{ display: "flex", justifyContent: "center" }}>
                       <button onClick={() => setActiveTab("csp1")}
                         style={{ padding: "12px 32px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 16px rgba(200,155,60,.3)" }}>
-                        Review my CSP-1 ({lcats.length} LCATs) →
+                        Review my Rate Table ({lcats.length} LCATs) →
                       </button>
                     </div>
                   )}
@@ -1158,11 +1152,11 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                             <span>⏱ {lcat.yearsExperience}+ years</span>
                           </div>
                           {alreadyAdded ? (
-                            <div style={{ padding: "8px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--green)", textAlign: "center" as const }}>✓ Added to CSP-1</div>
+                            <div style={{ padding: "8px", background: "var(--green-bg)", border: "1px solid var(--green-b)", borderRadius: "var(--r)", fontSize: 12, color: "var(--green)", textAlign: "center" as const }}>✓ Added to Rate Table</div>
                           ) : (
                             <button onClick={() => { addLcat({ title: lcat.title, description: lcat.description, education: lcat.education, yearsExperience: lcat.yearsExperience, baseRate: "", mfcRate: "", gsaRate: "", rateStatus: null, rateNote: "" }); setGapAnalysis(null); }}
                               style={{ width: "100%", padding: "9px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-                              Add to CSP-1 →
+                              Add to Rate Table →
                             </button>
                           )}
                         </div>
@@ -1173,7 +1167,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                     <div style={{ display: "flex", justifyContent: "center" }}>
                       <button onClick={() => setActiveTab("csp1")}
                         style={{ padding: "12px 32px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 16px rgba(200,155,60,.3)" }}>
-                        Review my CSP-1 ({lcats.length} LCATs) →
+                        Review my Rate Table ({lcats.length} LCATs) →
                       </button>
                     </div>
                   )}
@@ -1194,7 +1188,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                       You have {lcats.length} labor categor{lcats.length !== 1 ? "ies" : "y"} — most GSA Schedule holders have {MIN_LCATS}–15
                     </div>
                     <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.6, marginBottom: 10 }}>
-                      A thin LCAT list may not cover the full range of work you plan to perform under your Schedule. GSA reviewers expect your CSP-1 to comprehensively reflect your service offerings. You need at least {MIN_LCATS - lcats.length} more labor categor{MIN_LCATS - lcats.length !== 1 ? "ies" : "y"} to reach the recommended minimum.
+                      A thin LCAT list may not cover the full range of work you plan to perform under your Schedule. GSA reviewers expect your rate table to comprehensively reflect your service offerings. You need at least {MIN_LCATS - lcats.length} more labor categor{MIN_LCATS - lcats.length !== 1 ? "ies" : "y"} to reach the recommended minimum.
                     </div>
                     <div style={{ display: "flex", gap: 10 }}>
                       <button onClick={() => setActiveTab("invoices")}
@@ -1330,7 +1324,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                                         });
                                       }}
                                         style={{ padding: "7px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", fontSize: 12, fontWeight: 600, color: "var(--gold2)", cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" as const }}>
-                                        Add to CSP-1
+                                        Add to Rate Table
                                       </button>
                                     )}
                                   </div>
@@ -1348,7 +1342,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                             Not in Ideal List — Consider Removing ({(gapAnalysis.extraLcats || []).length})
                           </div>
                           <div style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 10, lineHeight: 1.5 }}>
-                            These LCATs are on your CSP-1 but weren't identified as necessary for your selected SINs. You can keep them if they serve your business, or remove them to streamline your pricelist.
+                            These LCATs are on your rate table but weren't identified as necessary for your selected SINs. You can keep them if they serve your business, or remove them to streamline your pricelist.
                           </div>
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             {(gapAnalysis.extraLcats || []).map((lcat: any) => (
@@ -1453,7 +1447,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                   <button onClick={() => setAddingNew(true)} style={{ padding: "8px 14px", background: "var(--cream)", border: "1px solid var(--border2)", borderRadius: "var(--r)", fontSize: 12.5, cursor: "pointer", color: "var(--ink3)" }}>+ Add manually</button>
                   <button onClick={exportCSP1} disabled={lcats.length === 0}
                     style={{ padding: "8px 16px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 12.5, fontWeight: 500, cursor: lcats.length === 0 ? "not-allowed" : "pointer", opacity: lcats.length === 0 ? 0.5 : 1 }}>
-                    ⬇ Export CSP-1
+                    ⬇ Export Pricing Excel
                   </button>
                   <button onClick={() => savePricing(false)} disabled={saving}
                     style={{ padding: "8px 20px", background: "var(--gold)", border: "none", borderRadius: "var(--r)", color: "#fff", fontSize: 12.5, fontWeight: 500, cursor: "pointer" }}>
@@ -1571,13 +1565,13 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
 
               {/* nothing here — update prompt moved inline to Price Proposal section */}
 
-              {/* Price Proposal / Commercial Sales Practices */}
+              {/* Price Proposal (TDR) */}
               {lcats.length > 0 && (
                 <div style={{ background: "#fff", border: `1px solid ${priceProposal ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--rl)", padding: "24px", marginBottom: 24, boxShadow: "var(--shadow)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                     <div>
                       <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: "var(--navy)", fontWeight: 400, margin: 0 }}>
-                        Price Proposal / Commercial Sales Practices
+                        Price Proposal (TDR)
                       </h3>
                       <p style={{ fontSize: 12, color: "var(--ink3)", marginTop: 4, marginBottom: 0 }}>
                         Required eOffer upload — explains your pricing rationale, MFC identification, and discount structure to the GSA Contracting Officer.
@@ -1641,7 +1635,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                     </button>
                     {generatingProposal && (
                       <div style={{ marginTop: 12, padding: "16px 20px", background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.15)", borderRadius: "var(--r)", textAlign: "center" as const }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>Building your Price Proposal / Commercial Sales Practices document</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>Building your Price Proposal (TDR) document</div>
                         <div style={{ fontSize: 12, color: "var(--ink3)", lineHeight: 1.6 }}>
                           This is a comprehensive document that analyzes your {lcats.length} labor categories, invoicing history, MFC pricing rationale, and discount structure. It typically takes <strong>1-2 minutes</strong> because GovCert is building a detailed, GSA-compliant narrative that explains your pricing methodology to the Contracting Officer.
                         </div>
@@ -1700,7 +1694,7 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   {lcats.length > 0 && (
                     <button onClick={exportCSP1} style={{ padding: "12px 20px", background: "var(--navy)", border: "none", borderRadius: "var(--r)", color: "var(--gold2)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
-                      ⬇ Export CSP-1 Excel
+                      ⬇ Export Pricing Excel
                     </button>
                   )}
                   {saved && <span style={{ fontSize: 12, color: "var(--green)" }}>✓ Saved</span>}
@@ -1756,8 +1750,8 @@ function LcatForm({ lcat, onChange, onMfcChange, calcGsaRate }: {
         </div>
         <div>
           <label style={{ display: "block", fontSize: 11.5, color: "var(--ink3)", marginBottom: 4, fontWeight: 500 }}>
-            Most Favored Customer Rate ($/hr)
-            <span style={{ display: "block", fontSize: 10.5, color: "var(--ink4)", fontWeight: 400, marginTop: 1 }}>Your best commercial rate for this role</span>
+            Commercial Rate ($/hr)
+            <span style={{ display: "block", fontSize: 10.5, color: "var(--ink4)", fontWeight: 400, marginTop: 1 }}>Your standard commercial rate for this role</span>
           </label>
           <div style={{ position: "relative" }}>
             <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink3)" }}>$</span>

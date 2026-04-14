@@ -56,7 +56,8 @@ const REMEDIATION_LABELS: Record<string, string> = {
 const CRB_SECTION_LABELS: Record<string, string> = {
   sinScopeDefense: "SIN Scope Defense",
   pricingRationaleDefense: "Pricing Rationale Defense",
-  mfcBasisOfAwardDefense: "MFC / Basis of Award Defense",
+  fairAndReasonableDefense: "Fair & Reasonable Defense",
+  mfcBasisOfAwardDefense: "MFC / Basis of Award Defense", // pre-R31 reviews
   pastPerformanceSubstantiation: "Past Performance Substantiation",
   lcatSubstitutionRationale: "LCAT Substitution Rationale",
   financialResponsibility: "Financial Responsibility",

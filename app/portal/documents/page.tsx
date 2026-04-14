@@ -56,7 +56,7 @@ const AI_CLASSIFICATION: Record<string, string> = {
   CPARS_REPORT: "Used for: Past Performance Ratings, Government Reference Verification",
   PPQ_COMPLETED: "Used for: Past Performance Questionnaire Evidence, Reference Ratings",
   ORG_CHART: "Used for: Organizational Structure, Key Personnel, Management Approach",
-  RATE_CARD: "Used for: CSP-1 Labor Category Pricing, Commercial Price List",
+  RATE_CARD: "Used for: Labor Category Pricing, Commercial Price List",
   CONTRACT: "Used for: Past Performance Evidence, Period of Performance, Contract Values",
   CERTIFICATION_DOCUMENT: "Used for: Existing Certification Verification, Eligibility Documentation",
   OTHER: "Will be analyzed by our AI to determine relevance to your applications",
@@ -92,7 +92,7 @@ const RECOMMENDED_DOCS: RecommendedDoc[] = [
   { name: "Project Photos / Deliverable Samples", why: "Visual evidence of completed work quality and project scope.", category: "OTHER", mandatory: false },
 
   // ── GSA MAS MANDATORY ──
-  { name: "Commercial Price List / Rate Card", why: "Required as the pricing baseline for your GSA Schedule CSP-1.", category: "RATE_CARD", mandatory: true, certTypes: ["GSA_MAS"] },
+  { name: "Commercial Price List / Rate Card", why: "Required as the pricing baseline for your GSA Schedule rate table.", category: "RATE_CARD", mandatory: true, certTypes: ["GSA_MAS"] },
   { name: "Past Performance References (3+ contracts)", why: "Required — GSA requires documented past performance for evaluation.", category: "CONTRACT", mandatory: true, certTypes: ["GSA_MAS"] },
   // ── GSA MAS USEFUL ──
   { name: "Past Proposals or SOWs", why: "Technical writing samples and scope of work examples strengthen your narrative.", category: "PAST_PROPOSAL", mandatory: false, certTypes: ["GSA_MAS"] },

@@ -321,7 +321,7 @@ export default function GSAMASReviewPage({ params }: { params: Promise<{ id: str
       CAPABILITY_STATEMENT: { portal: "eOffer — Upload Documents — Technical Proposal", section: "Corporate Experience", instruction: "Supports your corporate experience narrative." },
       CERTIFICATION_DOCUMENT: { portal: "eOffer — Upload Documents", section: "Certifications & Legal Documents", instruction: "Upload as supporting documentation." },
       INVOICE: { portal: "eOffer — Upload Documents — Price Proposal support", section: "Pricing Evidence", instruction: "Supports your commercial pricing claims." },
-      RATE_CARD: { portal: "Supports CSP-1 pricing", section: "Pricing Support", instruction: "Your commercial rate card supports MFC pricing claims." },
+      RATE_CARD: { portal: "Supports pricing documentation", section: "Pricing Support", instruction: "Your commercial rate card supports fair-and-reasonable pricing claims." },
       CONTRACT: { portal: "Supports Past Performance narratives", section: "Contract Evidence", instruction: "Used to verify past performance claims." },
     };
     return placements[category] || { portal: "eOffer — Upload Documents", section: "Supporting Documents", instruction: "Upload as a supporting document." };

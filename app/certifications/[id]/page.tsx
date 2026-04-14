@@ -286,8 +286,8 @@ export default function CertificationDashboard({ params }: { params: Promise<{ i
     },
     {
       id: "pricing",
-      label: "Pricing (CSP-1)",
-      desc: "Labor categories, rates, Most Favored Customer pricing, Price Proposal",
+      label: "Pricing",
+      desc: "Labor categories, rates, fair-and-reasonable justification, Price Proposal",
       icon: "💰",
       href: `/certifications/${certId}/pricing`,
       complete: (() => { try { const p = JSON.parse(app?.pricingData || "{}"); return (p.lcats || []).length >= 3; } catch { return false; } })(),

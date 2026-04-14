@@ -141,7 +141,7 @@ export default function PortalApplicationPage({ params }: { params: Promise<{ ce
     },
     {
       id: "pricing",
-      label: "Pricing (CSP-1)",
+      label: "Pricing",
       icon: "💰",
       hasData: !!app?.pricingData,
       content: app?.pricingData ? (() => {

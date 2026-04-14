@@ -58,7 +58,7 @@ export default function ExecutiveReview({ cert, certId }: { cert: any; certId: s
             if (text) sections.push({ title: `SIN ${sin} — Relevant Project Experience`, content: text as string });
           }
         } catch {}
-        if (app?.priceProposal) sections.push({ title: "Price Proposal / Commercial Sales Practices", content: app.priceProposal });
+        if (app?.priceProposal) sections.push({ title: "Price Proposal", content: app.priceProposal });
       }
 
       // OASIS+ only: Qualifying Project narratives

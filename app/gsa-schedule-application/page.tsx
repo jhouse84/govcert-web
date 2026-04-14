@@ -1,25 +1,28 @@
 import { Metadata } from "next";
 import SEOPageLayout from "@/components/SEOPageLayout";
+import BreadcrumbSchema from "@/components/BreadcrumbSchema";
 
 export const metadata: Metadata = {
   title: "GSA Schedule Application Help — AI-Powered MAS Prep",
-  description: "Get help with your GSA Multiple Award Schedule application. GovCert uses AI to build corporate experience narratives, validate CSP-1 pricing, generate your QCP, and guide you through eOffer. $1,000 — human help included.",
+  description: "Get help with your GSA Multiple Award Schedule application. GovCert uses AI to build corporate experience narratives, validate pricing, generate your QCP, and guide you through eOffer. $1,000 — human help included.",
   alternates: { canonical: "/gsa-schedule-application" },
   openGraph: {
     title: "GSA Schedule Application Help — GovCert",
-    description: "AI-powered GSA MAS application prep. Corporate experience narratives, CSP-1 pricing, QCP, and eOffer submission guide.",
+    description: "AI-powered GSA MAS application prep. Corporate experience narratives, labor category pricing, QCP, and eOffer submission guide.",
     url: "https://govcert.ai/gsa-schedule-application",
   },
 };
 
 export default function GSAScheduleApplication() {
   return (
+    <>
+    <BreadcrumbSchema items={[{ name: "Home", url: "https://govcert.ai" }, { name: "GSA Schedule Application", url: "https://govcert.ai/gsa-schedule-application" }]} />
     <SEOPageLayout
       badge="GSA Multiple Award Schedule"
       title="GSA Schedule Application Help That Actually Works"
       subtitle="Stop paying consultants $15,000+ for GSA Schedule prep. GovCert builds your entire MAS offer package from your uploaded documents — with human help where you need it."
     >
-      <p style={{ fontSize: 17, lineHeight: 1.7, color: "#1a2b3c", marginBottom: 8 }}>A GSA Multiple Award Schedule (MAS) allows your business to sell products and services to federal agencies through a pre-negotiated contract vehicle. GovCert automates the application — corporate experience narratives, CSP-1 labor category pricing, quality control plans, and eOffer submission — for $1,000.</p>
+      <p style={{ fontSize: 17, lineHeight: 1.7, color: "#1a2b3c", marginBottom: 8 }}>A GSA Multiple Award Schedule (MAS) allows your business to sell products and services to federal agencies through a pre-negotiated contract vehicle. GovCert automates the application — corporate experience narratives, labor category pricing, quality control plans, and eOffer submission — for $1,000.</p>
       <p style={{ fontSize: 13, color: "#8B7A3E", marginBottom: 32 }}><em>Last updated: April 2, 2026</em></p>
 
       <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: "#0B1929", fontWeight: 400, marginBottom: 16 }}>What Is the GSA Multiple Award Schedule?</h2>
@@ -32,7 +35,7 @@ export default function GSAScheduleApplication() {
       <ul style={{ paddingLeft: 24, marginBottom: 24 }}>
         <li style={{ marginBottom: 12 }}><strong>SIN Selection &amp; Mapping:</strong> Upload your capability statement, past contracts, and invoices. GovCert analyzes your actual work history and maps it to the most appropriate Special Item Numbers (SINs) under the consolidated MAS solicitation. It flags SINs where your experience is weak and recommends alternatives.</li>
         <li style={{ marginBottom: 12 }}><strong>Corporate Experience Narratives:</strong> The offer requires detailed project narratives demonstrating relevant experience for each SIN. GovCert generates regulation-compliant narratives from your uploaded contracts, task orders, and performance evaluations — formatted to GSA&apos;s expectations with scope, period of performance, dollar value, and outcomes.</li>
-        <li style={{ marginBottom: 12 }}><strong>CSP-1 Pricing Worksheet:</strong> The Commercial Sales Practices format (CSP-1) is where most offers fail. GovCert structures your pricing data, identifies your Most Favored Customer, calculates discount relationships, and validates that your proposed GSA pricing reflects the required price-reduction clause provisions. It flags inconsistencies before they become rejection reasons.</li>
+        <li style={{ marginBottom: 12 }}><strong>Pricing &amp; Rate Table:</strong> Under Refresh 31 (effective April 2, 2026), GSA evaluates pricing on a &quot;fair and reasonable&quot; standard using CALC tool comparables and BLS wage data. GovCert structures your labor categories, benchmarks rates against government data, generates your pricing support documentation, and builds your Price Proposal with TDR compliance commitments. No more CSP-1 or MFC disclosure — GovCert prepares your offer under the current R31 requirements.</li>
         <li style={{ marginBottom: 12 }}><strong>Quality Control Plan (QCP):</strong> GSA requires a written plan describing how you maintain quality in delivering your products or services. GovCert generates a tailored QCP based on your business type, SINs, and service delivery model — no generic templates.</li>
         <li style={{ marginBottom: 12 }}><strong>Technical Proposal:</strong> For professional services SINs, GovCert builds the technical evaluation section with staffing plans, labor category descriptions, and methodology narratives drawn from your actual project history.</li>
         <li style={{ marginBottom: 12 }}><strong>eOffer Submission Guide:</strong> Step-by-step walkthrough of the GSA eOffer portal with copy-to-clipboard buttons, character counters, and attachment checklists matching the actual system requirements. Know exactly which documents go where.</li>
@@ -90,11 +93,12 @@ export default function GSAScheduleApplication() {
       <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>Do I need past performance?</h3>
       <p style={{ marginBottom: 24 }}>Yes. GSA requires demonstrated past performance on contracts relevant to the SINs you are proposing. You typically need at least two years of corporate experience supported by financial statements and tax returns, plus project references from government or commercial customers. GovCert generates compliant corporate experience narratives from your uploaded contracts and performance documentation.</p>
 
-      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>What is a CSP-1?</h3>
-      <p style={{ marginBottom: 24 }}>The Commercial Sales Practices format (CSP-1) is a disclosure document where you report your commercial pricing history, identify your Most Favored Customer, and explain your discount relationships. It is the section where GSA evaluates whether your proposed government pricing is fair and reasonable. Errors in the CSP-1 are one of the most common reasons offers are rejected or returned for revision.</p>
+      <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>What changed with Refresh 31?</h3>
+      <p style={{ marginBottom: 24 }}>As of April 2, 2026 (Refresh 31 / Mass Mod A914), GSA eliminated the CSP-1 Commercial Sales Practices form, Most Favored Customer (MFC) disclosure, and the legacy Price Reduction Clause. Pricing is now evaluated on a &quot;fair and reasonable&quot; standard using government data sources like the CALC tool and BLS wage data. Transactional Data Reporting (TDR) is mandatory for all SINs. GovCert prepares your offer under these current R31 requirements — not the old CSP-1/MFC framework.</p>
 
       <h3 style={{ fontSize: 18, color: "#0B1929", fontWeight: 600, marginBottom: 8 }}>How much does GSA Schedule application cost?</h3>
-      <p style={{ marginBottom: 24 }}>There is no government fee to submit a GSA Schedule offer. The costs come from preparation. Traditional GSA consultants charge $10,000 to $25,000, often with additional fees for FPR revisions. GovCert provides complete offer preparation — SIN selection, narratives, CSP-1 pricing, QCP, and eOffer submission guidance — for a flat $1,000 with unlimited revisions and human support included.</p>
+      <p style={{ marginBottom: 24 }}>There is no government fee to submit a GSA Schedule offer. The costs come from preparation. Traditional GSA consultants charge $10,000 to $25,000, often with additional fees for FPR revisions. GovCert provides complete Refresh 31-compliant offer preparation — SIN selection, narratives, pricing, QCP, and eOffer submission guidance — for a flat $1,000 with unlimited revisions and human support included.</p>
     </SEOPageLayout>
+    </>
   );
 }

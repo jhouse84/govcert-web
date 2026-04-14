@@ -529,7 +529,7 @@ export default function PortalPage() {
                             { key: "narrativeQCP", label: "Quality Control Plan", icon: "✅", hasData: !!cert.application?.narrativeQCP, href: `/certifications/${cert.id}/qcp` },
                             { key: "pp", label: "Past Performance & Project Experience", icon: "⭐", hasData: (cert.application?.pastPerformance?.length || 0) >= 3, count: cert.application?.pastPerformance?.length || 0, href: `/certifications/${cert.id}/past-performance` },
                             { key: "financialData", label: "Financial Statements", icon: "📊", hasData: !!cert.application?.financialData, href: `/certifications/${cert.id}/financials` },
-                            { key: "pricingData", label: "Pricing (CSP-1)", icon: "💰", hasData: !!cert.application?.pricingData, href: `/certifications/${cert.id}/pricing` },
+                            { key: "pricingData", label: "Pricing", icon: "💰", hasData: !!cert.application?.pricingData, href: `/certifications/${cert.id}/pricing` },
                           ]).map(section => (
                             <a key={section.key} href={section.href} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: section.hasData ? "var(--green-bg)" : "var(--cream)", border: `1px solid ${section.hasData ? "var(--green-b)" : "var(--border)"}`, borderRadius: "var(--r)", textDecoration: "none" }}
                               onMouseEnter={e => (e.currentTarget.style.boxShadow = "var(--shadow)")}

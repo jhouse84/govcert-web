@@ -45,6 +45,9 @@ export default function LandingPage() {
               onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,.9)")}
               onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,.6)")}>{l}</a>
           ))}
+          <a href="/blog" style={{ color: "rgba(255,255,255,.6)", textDecoration: "none", fontSize: 13.5, transition: "color .25s cubic-bezier(.4,0,.2,1)", letterSpacing: ".01em" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,.9)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,.6)")}>Blog</a>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <a href="tel:+14349815295" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", fontSize: 13, color: "rgba(255,255,255,.7)", textDecoration: "none", transition: "color .2s" }}

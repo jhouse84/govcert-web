@@ -15,6 +15,27 @@ export const metadata: Metadata = {
 
 const posts = [
   {
+    slug: "gsa-mas-refresh-31-tdr",
+    title: "GSA MAS Refresh 31: What Changed and What You Need to Do",
+    date: "April 14, 2026",
+    description:
+      "GSA eliminated CSP-1, MFC disclosure, and the legacy Price Reduction Clause. TDR is now mandatory for all SINs. Here is what every offeror needs to know.",
+  },
+  {
+    slug: "federal-procurement-centralization-gsa-mas",
+    title: "Federal Procurement Is Centralizing. Here Is Why Your GSA Schedule Just Became Essential.",
+    date: "April 7, 2026",
+    description:
+      "Executive Order 14240, OMB M-25-31, and FAR Part 8 changes are redirecting hundreds of billions in federal spending toward GSA vehicles. What contractors need to know.",
+  },
+  {
+    slug: "gsa-schedule-cost",
+    title: "How Much Does a GSA Schedule Cost in 2026?",
+    date: "April 7, 2026",
+    description:
+      "A transparent breakdown of every cost involved in getting a GSA Multiple Award Schedule — from DIY and consultants to GovCert. Know exactly what you will spend.",
+  },
+  {
     slug: "8a-certification-cost",
     title: "How Much Does 8(a) Certification Cost in 2026?",
     date: "March 28, 2026",

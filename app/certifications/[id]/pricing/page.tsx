@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import CureBanner from "@/components/CureBanner";
+import GsaSinManager from "@/components/GsaSinManager";
 
 const EDUCATION_LEVELS = [
   "High School Diploma / GED",
@@ -793,6 +794,9 @@ Levels: Junior, Mid-Level, Senior, Principal/Expert. Return ONLY the JSON array.
               <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16 }}>✕</button>
             </div>
           )}
+
+          {/* ── GSA SIN MANAGER — cascade picker + per-SIN scope/sales/max order ── */}
+          {cert?.application?.id && <GsaSinManager applicationId={cert.application.id} />}
 
           {/* ── GETTING STARTED TAB ── */}
           {activeTab === "start" && (

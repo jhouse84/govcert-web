@@ -76,7 +76,7 @@ export default function LandingPage() {
             Certifications that<br /><strong style={{ fontWeight: 500, color: "var(--gold2)" }}>open doors</strong>
           </h1>
           <p style={{ fontSize: 18, color: "rgba(255,255,255,.60)", maxWidth: 580, margin: "0 auto 38px", fontWeight: 300, lineHeight: 1.65 }}>
-            Automate your 8(a), GSA MAS, OASIS+, WOSB, HUBZone, and MBE certification applications — from document collection to submission.
+            Automate your 8(a) and GSA Multiple Award Schedule applications, from document collection to a submission-ready package.
           </p>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
@@ -91,7 +91,7 @@ export default function LandingPage() {
               }}
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 32px rgba(200,155,60,.55), 0 1px 3px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 24px rgba(200,155,60,.4), 0 1px 3px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "none"; }}>
-                Start Free Trial →
+                Start Your Application →
               </a>
               <a href="/register" style={{ padding: "14px 32px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.18)", borderRadius: "var(--r)", color: "#fff", fontSize: 15, textDecoration: "none", backdropFilter: "blur(8px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,.12)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.28)"; }}
@@ -184,7 +184,7 @@ export default function LandingPage() {
             </a>
           </div>
           <p style={{ fontSize: 12, color: "var(--ink4)", marginTop: 14, fontWeight: 300 }}>
-            Free to start. No credit card required.
+            Promotional pricing for our first wave of clients.
           </p>
         </div>
       </div>
@@ -275,7 +275,6 @@ export default function LandingPage() {
             {[
               { badge: "SBA", badgeColor: "#1A3F7A", badgeBg: "#E8EEF8", title: "8(a) Business Development", body: "Nine-year program for socially and economically disadvantaged businesses. Access to sole-source contracts up to $4M." },
               { badge: "GSA", badgeColor: "#1A6644", badgeBg: "#E6F4EE", title: "GSA Multiple Award Schedule", body: "Pre-negotiated contracts with federal agencies. The fastest path to consistent government revenue." },
-              { badge: "GSA", badgeColor: "#1A6644", badgeBg: "#E6F4EE", title: "GSA OASIS+", body: "Best-in-Class IDIQ for professional services across 13 domains. $60B+ vehicle with scorecard-based evaluation." },
               { badge: "SBA", badgeColor: "#8A5E10", badgeBg: "#FBF0DC", title: "WOSB / EDWOSB", body: "Women-Owned Small Business certification. Access to set-aside contracts in underrepresented industries." },
               { badge: "SBA", badgeColor: "#1A3F7A", badgeBg: "#E8EEF8", title: "HUBZone", body: "Historically Underutilized Business Zone program. 10% price evaluation preference on full and open competitions." },
               { badge: "State", badgeColor: "#5A1A6A", badgeBg: "#F0E8F8", title: "MBE / DBE", body: "Minority and Disadvantaged Business Enterprise certifications for state and local government contracts." },
@@ -320,10 +319,7 @@ export default function LandingPage() {
               </div>
               {/* Rows */}
               {[
-                { cert: "8(a) Business Development", consultant: "$3,000 – $5,000", price: "$1,000", save: "Up to 80%", popular: true },
-                { cert: "GSA Multiple Award Schedule", consultant: "$6,000 – $50,000", price: "$1,000", save: "Up to 98%", popular: true },
-                { cert: "GSA OASIS+", consultant: "$10,000 – $35,000", price: "$1,000", save: "Up to 97%", popular: true },
-                { cert: "Certification Bundle", consultant: "$10,000 – $30,000", price: "$2,000", save: "Up to 93%", popular: false },
+                { cert: "GSA Multiple Award Schedule", consultant: "$15,000 – $25,000", price: "$3,500", standard: "$5,000", save: "Up to 86%", popular: true },
               ].map(row => (
                 <div key={row.cert} style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr", padding: "16px 28px", borderBottom: "1px solid rgba(255,255,255,.05)", alignItems: "center" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,.03)")}
@@ -333,7 +329,11 @@ export default function LandingPage() {
                     {row.popular && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 100, background: "rgba(200,155,60,.2)", color: "var(--gold2)", fontWeight: 600 }}>POPULAR</span>}
                   </div>
                   <div style={{ fontSize: 13, color: "rgba(255,255,255,.35)", textDecoration: "line-through" }}>{row.consultant}</div>
-                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "var(--gold2)", fontWeight: 400 }}>{row.price}</div>
+                  <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
+                    {row.standard && <span style={{ fontSize: 12, color: "rgba(255,255,255,.3)", textDecoration: "line-through" }}>{row.standard}</span>}
+                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: "var(--gold2)", fontWeight: 400 }}>{row.price}</span>
+                    {row.standard && <span style={{ fontSize: 9, color: "var(--gold2)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", marginTop: 2 }}>Promo</span>}
+                  </div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#22C55E" }}>{row.save}</div>
                 </div>
               ))}
@@ -341,7 +341,7 @@ export default function LandingPage() {
             {/* Same price explanation */}
             <div style={{ padding: "14px 20px", background: "rgba(255,255,255,.04)", borderRadius: "var(--r)", border: "1px solid rgba(255,255,255,.08)", marginTop: 16, marginBottom: 8 }}>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,.55)", margin: 0, lineHeight: 1.6, textAlign: "center" }}>
-                Same price across certifications because the AI does the heavy lifting. Every application gets the same depth of AI analysis, narrative drafting, and regulatory validation — plus human support where you need it.
+                First-wave promotional pricing. The standard price is $5,000 per certification, and you are getting it at $3,500 while we onboard our first clients. Every application gets the same depth of AI analysis, narrative drafting, and regulatory validation, plus human support where you need it.
               </p>
             </div>
             {/* Callouts */}
@@ -357,6 +357,35 @@ export default function LandingPage() {
                   <span style={{ fontSize: 12, color: "rgba(255,255,255,.5)", fontWeight: 500 }}>{c.text}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* 8(a) — special situation + service options */}
+          <div style={{ marginBottom: 48 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold2)", marginBottom: 16 }}>8(a) Business Development: Read This First</div>
+            <div style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "var(--rl)", padding: "28px 32px" }}>
+              <p style={{ fontSize: 14.5, color: "rgba(255,255,255,.7)", lineHeight: 1.7, margin: "0 0 16px" }}>
+                Being straight with you: the SBA has effectively paused new 8(a) processing for the time being. That does not mean the door is closed. We prepared and won our own 8(a) approval in this same environment by being relentless about the details, and we bring that same persistence to every submission we touch.
+              </p>
+              <p style={{ fontSize: 14.5, color: "rgba(255,255,255,.7)", lineHeight: 1.7, margin: "0 0 20px" }}>
+                The 8(a) package is <strong style={{ color: "#fff" }}>$3,500</strong> right now as first-wave pricing (standard $5,000). You have three ways to work with us:
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 8 }}>
+                {[
+                  { t: "Use the platform", d: "Prepare your 8(a) submission yourself, with the AI doing the heavy lifting." },
+                  { t: "Assign us as your agent", d: "Jelani House handles your submission for you, end to end." },
+                  { t: "Do both (recommended)", d: "Use the platform to see how it works, and let us handle the actual filing so your odds of a first-time approval are as high as we can make them." },
+                ].map(o => (
+                  <div key={o.t} style={{ padding: "16px 18px", background: "rgba(200,155,60,.06)", borderRadius: 10, border: "1px solid rgba(200,155,60,.15)" }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: "#E8B84B", marginBottom: 6 }}>{o.t}</div>
+                    <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.55)", lineHeight: 1.6 }}>{o.d}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <a href="/register" style={{ padding: "11px 24px", background: "linear-gradient(135deg,#C89B3C,#E8B84B)", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", borderRadius: "var(--r)" }}>Start your 8(a) →</a>
+                <a href="tel:+14349815295" style={{ fontSize: 14, fontWeight: 600, color: "#E8B84B", textDecoration: "none" }}>Or talk to Jelani: (434) 981-5295</a>
+              </div>
             </div>
           </div>
 
@@ -399,7 +428,7 @@ export default function LandingPage() {
                     borderRadius: "var(--r)", color: "#fff", fontSize: 13, fontWeight: 500, textDecoration: "none",
                     transition: "all .25s cubic-bezier(.4,0,.2,1)"
                   }}>
-                    Start Free →
+                    Get Started →
                   </a>
                 </div>
               ))}

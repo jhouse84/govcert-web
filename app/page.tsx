@@ -80,7 +80,7 @@ export default function LandingPage() {
           </p>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-              <a href="/register" style={{
+              <a href="https://calendly.com/jelani-house-housestrategiesgroup" style={{
                 padding: "14px 34px",
                 background: "linear-gradient(135deg, #C89B3C 0%, #E8B84B 50%, #C89B3C 100%)",
                 backgroundSize: "200% auto",
@@ -91,7 +91,7 @@ export default function LandingPage() {
               }}
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 32px rgba(200,155,60,.55), 0 1px 3px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 24px rgba(200,155,60,.4), 0 1px 3px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "none"; }}>
-                Start Your Application →
+                Book a Free Call →
               </a>
               <a href="/register" style={{ padding: "14px 32px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.18)", borderRadius: "var(--r)", color: "#fff", fontSize: 15, textDecoration: "none", backdropFilter: "blur(8px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,.12)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.28)"; }}
@@ -344,6 +344,12 @@ export default function LandingPage() {
                 First-wave promotional pricing. The standard price is $5,000 per certification, and you are getting it at $3,500 while we onboard our first clients. Every application gets the same depth of AI analysis, narrative drafting, and regulatory validation, plus human support where you need it.
               </p>
             </div>
+            <div style={{ marginTop: 16, padding: "20px 24px", background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.18)", borderRadius: "var(--rl)", textAlign: "center" }}>
+              <div style={{ fontSize: 14, color: "rgba(255,255,255,.7)", lineHeight: 1.7, marginBottom: 16 }}>
+                Here is how it works: book a quick call, we confirm it is a fit and scope your offer, then you pay the $3,500 and we get started. Simple and personal.
+              </div>
+              <a href="https://calendly.com/jelani-house-housestrategiesgroup" style={{ display: "inline-block", padding: "13px 32px", background: "linear-gradient(135deg,#C89B3C,#E8B84B)", color: "#fff", fontSize: 15, fontWeight: 600, textDecoration: "none", borderRadius: "var(--r)" }}>Book your call →</a>
+            </div>
             {/* Callouts */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginTop: 16 }}>
               {[
@@ -383,7 +389,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <a href="/register" style={{ padding: "11px 24px", background: "linear-gradient(135deg,#C89B3C,#E8B84B)", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", borderRadius: "var(--r)" }}>Start your 8(a) →</a>
+                <a href="https://calendly.com/jelani-house-housestrategiesgroup" style={{ padding: "11px 24px", background: "linear-gradient(135deg,#C89B3C,#E8B84B)", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", borderRadius: "var(--r)" }}>Book a call about 8(a) →</a>
                 <a href="tel:+14349815295" style={{ fontSize: 14, fontWeight: 600, color: "#E8B84B", textDecoration: "none" }}>Or talk to Jelani: (434) 981-5295</a>
               </div>
             </div>

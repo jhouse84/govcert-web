@@ -76,7 +76,7 @@ export default function LandingPage() {
             Certifications that<br /><strong style={{ fontWeight: 500, color: "var(--gold2)" }}>open doors</strong>
           </h1>
           <p style={{ fontSize: 18, color: "rgba(255,255,255,.60)", maxWidth: 580, margin: "0 auto 38px", fontWeight: 300, lineHeight: 1.65 }}>
-            Automate your 8(a) and GSA Multiple Award Schedule applications, from document collection to a submission-ready package.
+            Get onto the GSA Schedule and 8(a) without doing it yourself. It starts with a conversation, and we prepare your application for you.
           </p>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
@@ -93,10 +93,10 @@ export default function LandingPage() {
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 24px rgba(200,155,60,.4), 0 1px 3px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "none"; }}>
                 Book a Free Call →
               </a>
-              <a href="/register" style={{ padding: "14px 32px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.18)", borderRadius: "var(--r)", color: "#fff", fontSize: 15, textDecoration: "none", backdropFilter: "blur(8px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
+              <a href="#pricing" style={{ padding: "14px 32px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.18)", borderRadius: "var(--r)", color: "#fff", fontSize: 15, textDecoration: "none", backdropFilter: "blur(8px)", transition: "all .25s cubic-bezier(.4,0,.2,1)" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,.12)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.28)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,.06)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.18)"; }}>
-                Start an Application →
+                See how it works →
               </a>
             </div>
             <a href="#demo" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,.6)", fontSize: 14, textDecoration: "none", transition: "color .25s cubic-bezier(.4,0,.2,1)" }}
@@ -299,7 +299,7 @@ export default function LandingPage() {
           <div style={{ marginBottom: 48, textAlign: "center" }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--gold)", marginBottom: 12 }}>Pricing</div>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(34px,4vw,52px)", color: "#fff", fontWeight: 400, lineHeight: 1.1, marginBottom: 16, letterSpacing: "-.03em" }}>A fraction of what consultants charge</h2>
-            <p style={{ fontSize: 16, color: "rgba(255,255,255,.45)", maxWidth: 600, margin: "0 auto", fontWeight: 300 }}>One-time fee per certification. No overpriced consultants — just some human help where needed, included in your cost.</p>
+            <p style={{ fontSize: 16, color: "rgba(255,255,255,.45)", maxWidth: 600, margin: "0 auto", fontWeight: 300 }}>One-time fee per certification. I prepare your application for you, with the AI doing the heavy lifting behind the scenes.</p>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(200,155,60,.15)", border: "1px solid rgba(200,155,60,.3)", borderRadius: 100, padding: "6px 16px", marginTop: 16 }}>
               <div style={{ width: 8, height: 8, background: "#C89B3C", borderRadius: "50%" }} />
               <span style={{ fontSize: 12, fontWeight: 600, color: "#E8B84B" }}>Human help included where needed — no hidden fees</span>
@@ -346,7 +346,7 @@ export default function LandingPage() {
             </div>
             <div style={{ marginTop: 16, padding: "20px 24px", background: "rgba(200,155,60,.06)", border: "1px solid rgba(200,155,60,.18)", borderRadius: "var(--rl)", textAlign: "center" }}>
               <div style={{ fontSize: 14, color: "rgba(255,255,255,.7)", lineHeight: 1.7, marginBottom: 16 }}>
-                Here is how it works: book a quick call, we confirm it is a fit and scope your offer, then you pay the $3,500 and we get started. Simple and personal.
+                Here is how it works: it starts with a conversation, not a signup. We confirm it is a fit and scope your offer, then I prepare your application for you and walk it through to submission. You do not learn a platform or do this alone.
               </div>
               <a href="https://calendly.com/jelani-house-housestrategiesgroup" style={{ display: "inline-block", padding: "13px 32px", background: "linear-gradient(135deg,#C89B3C,#E8B84B)", color: "#fff", fontSize: 15, fontWeight: 600, textDecoration: "none", borderRadius: "var(--r)" }}>Book your call →</a>
             </div>
